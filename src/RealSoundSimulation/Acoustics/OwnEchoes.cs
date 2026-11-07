@@ -129,7 +129,7 @@ namespace RealSoundSimulation.Acoustics
             GlassBarsTaps = 0; _glassMask = -1;
             _levelSum = _pathSum = 0f;
             _farTime = -100f;
-            Pending.Clear(); LoopEchoesSkipped = LoopEchoesLate = 0;
+            Pending.Clear(); LoopEchoesSkipped = LoopEchoesLate = 0; EchoVoices.CapDropped = 0;
             EchoVoices.StopAll();
         }
 
@@ -239,8 +239,17 @@ namespace RealSoundSimulation.Acoustics
                                      float volume, float pitch, Vector3 o, Vector3 fwd, string sample, float lateS)
         {
             float trim = Plugin.EchoLevelDb.Value;
-            for (int i = 0; i < n; i++)
+            // 0.6.16: loudest first, so the headroom cap drops the quietest
+            for (int i = 0; i < n; i++) Order[i] = i;
+            for (int i = 1; i < n; i++)
             {
+                int k = Order[i], j = i - 1;
+                while (j >= 0 && taps[Order[j]].LevelDb < taps[k].LevelDb) { Order[j + 1] = Order[j]; j--; }
+                Order[j + 1] = k;
+            }
+            for (int oi = 0; oi < n; oi++)
+            {
+                int i = Order[oi];
                 ref Tap t = ref taps[i];
                 float delay = t.Path / SpeedOfSound;
                 float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
@@ -248,6 +257,7 @@ namespace RealSoundSimulation.Acoustics
                 float cutoff = t.Cutoff * HeadShadow(o, fwd, t.Pos);
                 bool stole = EchoVoices.Play(owner, clip, t.Pos, startTime + lateS + delay, loop ? 0.0 : clipTime, loop, volume * DbToLin(lvl), pitch, cutoff, delay,
                                              lateS * (pitch > 0f ? pitch : 1f), startTime);
+                if (EchoVoices.LastDropped) continue; // at the headroom cap (counted there)
                 TapsPlayed++;
                 TapsByKind[(int)t.Kind]++;
                 TapsByMaterial.TryGetValue(t.Mat, out int c); TapsByMaterial[t.Mat] = c + 1;
@@ -260,6 +270,7 @@ namespace RealSoundSimulation.Acoustics
 
         // ---- 0.6.14: loop echoes held back until the loop has run LoopMinS ----
         public const double LoopMinS = 0.2;
+        private static readonly int[] Order = new int[16];
         private class PendingLoop { public object Owner; public AudioClip Clip; public double Start; public float Volume, Pitch; public Vector3 O, Fwd; public Tap[] T; public int N; }
         private static readonly List<PendingLoop> Pending = new List<PendingLoop>();
         public static int LoopEchoesSkipped, LoopEchoesLate;
@@ -584,7 +595,7 @@ namespace RealSoundSimulation.Acoustics
             sb.AppendLine($"  samples echoed {SamplesEchoed} (shots, firing loops, tails)   echoes played {TapsPlayed} = {(float)TapsPlayed / SamplesEchoed:0.0} per sample");
             sb.AppendLine($"  by kind: mirror {TapsByKind[0]}  scattered {TapsByKind[1]}  aim {TapsByKind[2]}  far {TapsByKind[3]}");
             if (TapsPlayed > 0) sb.AppendLine($"  mean level {_levelSum / TapsPlayed:0.0} dB   mean path {_pathSum / TapsPlayed:0.0} m");
-            sb.AppendLine($"  voices: max busy {MaxBusy} of {EchoVoices.PoolSize}, stolen {Stolen}; loop echoes held back for one-round loops (skipped) {LoopEchoesSkipped}, started 0.2 s late on longer loops {LoopEchoesLate}");
+            sb.AppendLine($"  voices: max busy {MaxBusy} of {EchoVoices.PoolSize}, stolen {Stolen}; loop echoes held back for one-round loops (skipped) {LoopEchoesSkipped}, started 0.2 s late on longer loops {LoopEchoesLate}; dropped by the headroom cap {EchoVoices.CapDropped} (cap = real voices - game sources playing - 16, 16..{EchoVoices.PoolSize}; at raid end {EchoVoices.Allowed()})");
             var mats = new List<string>();
             foreach (var kv in TapsByMaterial) mats.Add($"{kv.Key}:{kv.Value}");
             sb.AppendLine("  surfaces: " + string.Join("  ", mats) + "   (None = no bullet material tag found)");
@@ -660,11 +671,26 @@ namespace RealSoundSimulation.Acoustics
         }
 
         // Returns true if a busy voice had to be stopped to make room.
+        public static bool LastDropped; public static int CapDropped;
+        private static int _realVoices = -1;
+        public static int Allowed()
+        {
+            if (_realVoices < 0) _realVoices = AudioSettings.GetConfiguration().numRealVoices;
+            return Mathf.Clamp(_realVoices - Diagnostics.DiagRunner.LastPlayingInContainers - 16, 16, PoolSize);
+        }
+
         public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,
                                 float clipOffset = 0f, double loopStart = 0.0)
         {
             Build();
             double now = AudioSettings.dspTime;
+            // 0.6.16: headroom cap. Our busy voices stay under what Unity has left after the game's own playing sources
+            // (counted every 0.5 s) and a margin of 16, so the game's sounds are never virtualised for our echoes. At the
+            // cap the new echo is dropped (callers offer a shot's echoes loudest first). Quiet raids never reach it.
+            LastDropped = false;
+            int busy = 0;
+            foreach (Voice v in Pool) if (v.BusyUntil > now) busy++;
+            if (busy >= Allowed()) { LastDropped = true; CapDropped++; return false; }
             Voice pick = null; bool stole = false;
             foreach (Voice v in Pool) if (v.BusyUntil <= now) { pick = v; break; }
             if (pick == null)

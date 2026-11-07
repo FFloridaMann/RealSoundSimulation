@@ -169,6 +169,7 @@ namespace RealSoundSimulation.Fixes
                 float delay = dist / OwnEchoes.SpeedOfSound;
                 float p = pitch > 0f ? pitch : 1f;
                 EchoVoices.Play(__instance, clip, pos, startTime + delay, clip.length / p, false, vol, p, cut, delay);
+                if (EchoVoices.LastDropped) { Skip("headroom cap"); return; } // 0.6.16
 
                 PlayedThisCall = true; Played++;
                 if (!_haveOpening) Fallbacks++;

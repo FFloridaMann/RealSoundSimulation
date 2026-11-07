@@ -270,7 +270,7 @@ namespace RealSoundSimulation.Fixes
                     // 0.6.9: with two or more floors above (the exposure probe's 5 up-rays, held 0.5 s) there is no roof rain,
                     // whatever the probe's roof test says (raid 28 tag 4: 0.68 under two floors). One floor above stays the
                     // probe's call (the mezzanine edge flipped 0-1-0 in raid 26).
-                    bool u2 = OutdoorExposure.Valid && OutdoorExposure.FloorsAbove >= 2;
+                    bool u2 = OutdoorExposure.AboveValid && OutdoorExposure.FloorsAbove >= 2; // 0.6.16: the up-rays only
                     if (u2 != _under2Candidate) { _under2Candidate = u2; _under2Since = Time.time; }
                     if (Time.time - _under2Since >= 0.5f) _under2 = _under2Candidate;
                     RoofRainFactor = _under2 ? 0f : Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));

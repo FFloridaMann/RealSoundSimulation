@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.16 — 7 Nov 2026 (exposure sweep skipped under fix 9, echo headroom cap, probe batch within the frame)
+**Run in game:** not yet. From the 0.6.15 review (user: "Yes to the skip").
+- **Exposure probe:** while fix 9 runs, its 48-direction sweep is skipped (6–7 ms per second and the odd 50 ms frame, read only by exposure.csv and the marks columns). The 5 up-rays still run every 0.25 s for fix 9's roof rain cut under two floors (now gated on their own flag). The sweep resumes by itself when fix 9 is off. Summary counts the skipped frames. Longer term the floors count can come from probe v2's roof test and the exposure probe can go.
+- **Echo headroom cap:** echo voices busy at once ≤ clamp(Unity's real voices − game sources playing in sound containers (0.5 s count) − 16, 16, 96). At the cap a new echo is dropped rather than stealing; a shot's echoes are offered loudest first, so the quietest drop. The outdoor tail goes through it too (logged "headroom cap"). Summary: dropped by the cap, and the cap at raid end. Quiet raids never reach it; in a 157-source fight it holds echoes to ~23.
+- **Probe v2's batch is finished in LateUpdate of the same frame** (0.6.15 finished it in the next frame's Update, so it spanned FixedUpdate, where physics moves colliders - not documented as safe for raycast jobs). Still overlaps the rays with the frame's Update work.
+
 ## 0.6.15 — 7 Nov 2026 (raid 31 performance)
 **Run in game:** not yet. From the raid 31 performance review (FFloridaMann-FrameDiag/frames.log and summary.txt). Not done: gating the exposure probe off while fix 9 runs (user: leave it on), and the echo "headroom cap" (not defined; to discuss). The flashlight flicker was another mod (removed); NvgFlash's thermal update (114 ms per hit) is its own project.
 - **`Write logs` is live:** switched off in raid, no more log rows are built or written; settings.txt and summary.txt are still written. Switched on, logging starts at the next raid.

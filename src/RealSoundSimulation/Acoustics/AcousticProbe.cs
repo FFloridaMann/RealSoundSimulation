@@ -280,6 +280,18 @@ namespace RealSoundSimulation.Acoustics
             try { RayView.Tick(); } catch (Exception e) { DiagRunner.ReportOnce("probe ray view", e); }
         }
 
+        // 0.6.16: the batch scheduled in Update is finished here, in the same frame. 0.6.15 left it to the next frame's
+        // Update, so it spanned FixedUpdate, where physics moves colliders - not documented as safe for raycast jobs. This
+        // still overlaps the rays with the rest of the frame's Update work.
+        private void LateUpdate()
+        {
+            if (!_hasPending) return;
+            Perf.Begin();
+            try { FinishPending(); }
+            catch (Exception e) { DiagRunner.ReportOnce("acoustic probe v2 (finish)", e); }
+            finally { Perf.End(Perf.Part.AcousticProbe); }
+        }
+
         private static void Step(SpatialAudioSystem sas)
         {
             Transform lt = sas.ListenerTransform;
@@ -336,7 +348,9 @@ namespace RealSoundSimulation.Acoustics
             _acc.UpStarts += _startedUpW; _startedUpW = 0f;
             if (n > 0)
             {
-                // 0.6.15: the batch runs on the worker threads while the frame goes on; its hits are processed at the start
+                // 0.6.15: the batch runs on the worker threads while the frame goes on; since 0.6.16 its hits are processed in
+                // LateUpdate of the same frame (FinishPending; also at the start of the next Update if LateUpdate missed it).
+                // Was: at the start
                 // of the next frame (FinishPending) instead of the main thread waiting here (raid 31 performance review)
                 _pending = RaycastCommand.ScheduleBatch(_cmds.GetSubArray(0, n), _hits.GetSubArray(0, n), 8, 1);
                 JobHandle.ScheduleBatchedJobs();

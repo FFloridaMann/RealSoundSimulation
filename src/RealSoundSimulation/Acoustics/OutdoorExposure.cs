@@ -91,7 +91,7 @@ namespace RealSoundSimulation.Acoustics
         public static void Reset()
         {
             OpenSectors = 0; GlassRendererCache.Clear();
-            Valid = false; Updates = IndoorUpdates = 0; TotalMs = MaxMs = 0; TimedN = 0;
+            Valid = false; AboveValid = false; SweepSkipped = false; SkippedUpdates = 0; Updates = IndoorUpdates = 0; TotalMs = MaxMs = 0; TimedN = 0;
             BetweenHits.Clear();
             _otherMask = -1;
         }
@@ -109,7 +109,7 @@ namespace RealSoundSimulation.Acoustics
         private void Update()
         {
             bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
-            if (!inRaid || !Plugin.ExposureProbeOn.Value) { Valid = false; return; }
+            if (!inRaid || !Plugin.ExposureProbeOn.Value) { Valid = false; AboveValid = false; return; }
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try { Measure(MonoBehaviourSingleton<SpatialAudioSystem>.Instance); }
             catch (Exception e) { DiagRunner.ReportOnce("outdoor exposure", e); }
@@ -118,6 +118,8 @@ namespace RealSoundSimulation.Acoustics
         }
 
         public static double TotalMs, MaxMs; public static int TimedN;
+        public static bool AboveValid, SweepSkipped; // 0.6.16: the up-rays measured; the 48-direction sweep skipped (fix 9 on)
+        public static int SkippedUpdates;
 
         private static void Measure(SpatialAudioSystem sas)
         {
@@ -134,7 +136,12 @@ namespace RealSoundSimulation.Acoustics
             int mask = EnclosureProbe.CurrentMask();
             if (_otherMask == -1) BuildOtherMask(mask);
 
-            if (Time.time >= _nextAbove) { _nextAbove = Time.time + 0.25f; MeasureAbove(o, mask); }
+            if (Time.time >= _nextAbove) { _nextAbove = Time.time + 0.25f; MeasureAbove(o, mask); AboveValid = true; }
+            // 0.6.16: while fix 9 runs, nothing that changes sound reads the 48-direction sweep (only exposure.csv and the
+            // marks columns did: 6-7 ms per second plus the odd 50 ms frame). The 5 up-rays above stay - fix 9's roof rain
+            // cut under two floors uses them. The sweep resumes by itself when fix 9 is off.
+            SweepSkipped = Plugin.AmbienceV2On.Value && Plugin.AcousticProbeOn.Value && AcousticProbe.Valid;
+            if (SweepSkipped) { SkippedUpdates++; return; }
             ISpatialAudioRoom room = sas.ListenerCurrentRoom;
             ListenerIndoor = room != null && room.IsValid && !room.Type.IsOutdoor();
             RoomFloor = ListenerIndoor && room.RoomAmbientData != null ? room.RoomAmbientData.OutdoorAmbientVolume : float.NaN;
@@ -532,6 +539,7 @@ namespace RealSoundSimulation.Acoustics
         {
             var sb = new StringBuilder();
             sb.AppendLine("OUTDOOR EXPOSURE (drives fix 8)");
+            sb.AppendLine($"  0.6.16: 48-direction sweep skipped while fix 9 ran in {SkippedUpdates} frames (only the 5 up-rays measured then; exposure.csv and the marks exposure columns are stale in those)");
             sb.AppendLine($"  updates {Updates}, indoors {IndoorUpdates}   cost per update avg {(TimedN > 0 ? TotalMs / TimedN : 0):0.000} ms, max {MaxMs:0.00} ms (per frame)");
             sb.AppendLine($"  other-layer mask: {_otherMaskNames}");
             var top = new List<KeyValuePair<string, int>>(BetweenHits);

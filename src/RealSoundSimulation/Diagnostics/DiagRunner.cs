@@ -30,6 +30,7 @@ namespace RealSoundSimulation.Diagnostics
         private bool _inRaid;
         private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
         private int _framesInWindow, _maxActive, _maxContainers, _maxPlaying, _maxBetterSources, _maxContainerPlaying;
+        public static int LastPlayingInContainers; // 0.6.16: game sources playing in sound containers at the last sample (0.5 s)
         private long _activeSum, _activeSamples;
         private int _containerRows, _rowsTierLow, _rowsTierMed, _rowsTierHigh, _rowsPropagated, _rowsGunOccluded;
         private readonly HashSet<string> _dumpedSourceKeys = new HashSet<string>();
@@ -130,7 +131,7 @@ namespace RealSoundSimulation.Diagnostics
             _raidStart = Time.time;
             RaidStartTime = _raidStart;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
-            _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0;
+            _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0; LastPlayingInContainers = 0;
             _activeSum = _activeSamples = 0;
             _containerRows = _rowsTierLow = _rowsTierMed = _rowsTierHigh = _rowsPropagated = _rowsGunOccluded = 0;
             _dumpedSourceKeys.Clear();
@@ -272,6 +273,7 @@ namespace RealSoundSimulation.Diagnostics
             }
             if (_rows.Count > _maxContainers) _maxContainers = _rows.Count;
             if (playingInContainers > _maxContainerPlaying) _maxContainerPlaying = playingInContainers;
+            LastPlayingInContainers = playingInContainers; // 0.6.16: the echo headroom cap reads it
         }
 
         private void WriteRows(float t)
