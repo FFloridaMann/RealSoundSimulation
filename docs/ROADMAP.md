@@ -23,7 +23,7 @@ The agreed order of work (6 Nov 2026), and why. Each step ends with a test raid;
 0.5.0 → 0.5.7 went out in one afternoon, each fixing the last one's side effects. Before building more: checkpoint, clean up, one current-state design doc, a fixed test route, then one change per build.
 
 1. **Checkpoint — done.** Git repo, branch `main`, private GitHub remote (see README). Every build that goes into a raid gets a commit.
-2. **Clean-up — proposed, waiting for approval.** None of it changes the sound with your current F12 settings.
+2. **Clean-up — done (0.5.8, user approved all of A–E).** None of it changes the sound with your current F12 settings.
    - **A. Defaults = the tested setup?** The code defaults are "everything off", but every raid since raid 10 ran with your F12 values: all fixes on, `2 Obstruction score` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` HRTF on. Option: make those the defaults, so a reset or fresh install gives the tested setup (every fix stays switchable). Your own config file keeps its values either way.
    - **B. Remove `3h Ambience through glass`.** Fix 8 replaced it (0.4.2); with fix 8 on it does nothing. The setting, `DoorwayBlend.GlassLeak` and its ambience.csv column go.
    - **C. Remove dead code.** `AmbienceMix.IndoorFade()` (replaced by `IndoorLayers()` in 0.5.7, only logged) and the 0.5.0 opening "clusters" in `OutdoorExposure` (the opening sounds use the 6 fixed sectors since 0.5.2; the clusters are only logged, 3 exposure.csv columns).

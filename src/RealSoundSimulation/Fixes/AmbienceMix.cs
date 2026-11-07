@@ -9,27 +9,20 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // Fix 8: outdoor sound indoors from openings (roadmap step 4b, phase 2, 0.4.2). Design: docs/AMBIENCE.md.
-    // Needs fix 3 on (fix 3 is what takes the ambience over from the game).
-    //
-    //   Level     Indoors, the game's outdoor value (outdoor beds' volume + muffling, via the game's own curves) is the
-    //             exposure value from OutdoorExposure, smoothed over ~1 s, never below the room's baked floor. Open sides
-    //             count fully, glass by "8c Through glass", bars 80%. Replaces fix 3's doorway fade for the level (the
-    //             doorway blend still drives the indoor/outdoor reverb snapshot) and fix 3h's glass guess.
-    //   Indoor    The indoor layers (room tone, indoor wind/rain) fade by "8d" x exposure: a spot next to an open side
-    //             loses some indoor character, a deep interior keeps it all.
-    //   Roof rain The indoor rain player's volume: full with only the roof above you, x "8b" with one floor above, 0 with
-    //             two or more (0.5.0; raid 14: roof rain heard down the Nakatani exit stairs under 4 floors).
-    //   Openings  (0.5.0, phase 4) OpeningSounds: 3D copies of the outdoor beds placed at the openings; see that file.
-    //   Direction (cue until phase 4) The outdoor beds (wind, outdoor rain, day/night background) are 2D stereo loops. While
-    //             indoors they're panned toward the open side (left/right, by how one-sided it is) and dulled when the open
-    //             side is behind you (ear shadow), x "8a Direction cue strength". Outdoors they're left as the game plays them.
-    // 0.5.6 (raid 19): one continuous measure, one speed. Exposure is measured outdoors too (no step at the room boundary),
-    // and the outdoor level, the opening sounds' share, the indoor layers and the roof rain all follow it with the same
-    // smoothing (Smooth, ~0.35 s). Before, the level lagged ~2 s (1 s smoothing, 4 updates/s) while the opening sounds
-    // dropped in 0.6 s and the indoor layers switched instantly - "like the game is playing different audio loops".
-    // Roof rain is now set directly on the game's indoor rain player (no crossfade requests; 0.5.4 crashed asking an
-    // uninitialised player to crossfade and then only changed on the game's own room-change crossfades).
+    // Fix 8: outdoor sound indoors from openings (roadmap step 4b). Design and history: docs/AMBIENCE.md.
+    // Needs fix 3 on (fix 3 is what takes the ambience over from the game) and the outdoor exposure probe.
+    // Current behaviour (0.5.8). Everything below follows ONE measure (OutdoorExposure.Value, indoors and outdoors) with
+    // ONE smoothing time (Smooth, 0.35 s), so nothing switches at the room boundary:
+    //   Level      The game's outdoor value (outdoor beds' volume and muffling, through the game's own curves) is the
+    //              exposure value, smoothed (ExposureApplied); indoors never below the room's baked floor. Open sides count
+    //              fully, intact glass by "8c", bars 80%.
+    //   Indoor     The indoor layers (room tone, indoor wind/rain) follow IndoorLayers(): 1 when enclosed, 0 in open air;
+    //              "8d" sets how early openings fade them. Applied by DoorwayBlend.
+    //   Roof rain  The indoor rain player's sources are scaled directly: full with only the roof above you, x "8b" with
+    //              one floor above, 0 with two or more (a new level must hold 0.5 s).
+    //   Openings   OpeningSounds: "8e" x Enclosed() of the outdoor beds plays as 3D sound from 6 fixed world sectors.
+    //   Direction  The remaining flat beds are panned toward the open side and dulled when it is behind you, x "8a" x
+    //              how one-sided the opening is x Enclosed().
     internal class AmbienceMix : MonoBehaviour
     {
         public const float Smooth = 0.35f;
@@ -85,13 +78,6 @@ namespace RealSoundSimulation.Fixes
             float level = 1f - Mathf.SmoothStep(0f, 1f, open);
             // with 8d < 1 the indoor layers keep more level until close to open air
             return Mathf.Clamp01(Mathf.Lerp(1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.85f, 0.97f, ExposureApplied)), level, fade));
-        }
-
-        // Indoor-layer volume multiplier.
-        public static float IndoorFade()
-        {
-            if (!On || float.IsNaN(ExposureApplied)) return 1f;
-            return 1f - Mathf.Clamp01(Plugin.IndoorFadeNearOpenings.Value) * ExposureApplied;
         }
 
         // How enclosed you are, 0 (open air) .. 1 (inside): scales the opening sounds and the direction cue, so they fade in

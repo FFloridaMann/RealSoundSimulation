@@ -4,20 +4,19 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // Fix 8 phase 4 (roadmap step 4b, 0.5.0): the outside heard indoors comes FROM the openings. Design: docs/AMBIENCE.md.
-    //
-    // The game's outdoor beds (wind, outdoor rain, day/night background) are flat 2D loops. While you're indoors:
-    //   - 0.5.2: 6 fixed world sectors (60 deg each). OutdoorExposure sums each sector's exposed directions (weight,
-    //     weighted direction, glass share). Each sector has an emitter: a 3D copy of every bed that's playing, 4 m out in
-    //     the sector's weighted direction (it only moves within its sector), routed to the bed's own mixer group (so the
-    //     game's outdoor level and muffling - set by fix 8 - still apply). 0.5.0-0.5.1 used up to 3 "openings" that were
-    //     re-assigned each update and swept across the listener (raid 16).
-    //   - "8e" of the bed's sound moves to the emitters (the 2D bed keeps 1 - 8e), split between sectors by power
-    //     (gain = sqrt(weight / total)). Total loudness stays the same; only where it comes from changes.
-    //   - Each emitter is filtered by what it comes through: glass openings duller (down to 2.5 kHz at all-glass), and,
-    //     unless HRTF is on (8f), duller when the opening is behind you (ear shadow - the same cue as the echoes).
-    //   - Spread follows the opening's width (a wide open side sounds wide).
-    // Outdoors, with fix 8 off, or 8e = 0: emitters fade out and the beds get their full volume back.
+    // Fix 8 phase 4 (roadmap step 4b): the outside heard indoors comes FROM the openings. Design and history: docs/AMBIENCE.md.
+    // Current behaviour (0.5.8):
+    //   The game's outdoor beds (wind, outdoor rain, day/night background) are flat 2D loops. 6 fixed world sectors (60 deg
+    //   each) each have an emitter: a 3D copy of every bed that is playing, 4 m out in the sector's weighted direction (it
+    //   only moves within its sector), routed to the bed's own mixer group, so the game's outdoor level and muffling (set
+    //   by fix 8) still apply. Each copy starts at a random point in the loop, so the copies don't sound like one doubled
+    //   sound (0.5.4).
+    //   Share: "8e" x how enclosed you are (AmbienceMix.Enclosed) moves from the flat bed (which keeps 1 - share) to the
+    //   emitters, split between sectors by power (gain = sqrt(weight / total)). Total loudness stays the same; only where it
+    //   comes from changes. In open air the share is 0 and the beds play as the game plays them.
+    //   Each emitter is duller through glass (down to 2.5 kHz at all-glass) and, unless HRTF is on (8f), duller when it is
+    //   behind you. Spread 120 deg, so neighbouring sectors overlap and rain sounds like an area, not a point.
+    //   Everything uses the same smoothing time as the outdoor level (AmbienceMix.Smooth).
     //
     // Bed volume: the game writes the beds' volume itself (crossfades, day/night balance). Each frame (LateUpdate, after
     // the game's coroutines) the volume the game last wrote is captured and written back x (1 - share).
@@ -94,7 +93,7 @@ namespace RealSoundSimulation.Fixes
             foreach (Slot s in _slots) if (s == null || s.Lp == null) return;
             // 0.5.6: the share follows how enclosed you are (full deep inside, fading out toward open air), at the same speed
             // as the outdoor level - no switch at the room boundary.
-            float targetShare = active && OutdoorExposure.OpeningN > 0 ? Mathf.Clamp01(Plugin.OpeningShare.Value) * Mathf.Clamp01(enclosed) : 0f;
+            float targetShare = active && OutdoorExposure.OpenSectors > 0 ? Mathf.Clamp01(Plugin.OpeningShare.Value) * Mathf.Clamp01(enclosed) : 0f;
             Share += (targetShare - Share) * (1f - Mathf.Exp(-dt / AmbienceMix.Smooth));
             if (targetShare <= 0f && Share < 0.002f) { if (_tracking || Voices > 0) Restore(); return; }
 

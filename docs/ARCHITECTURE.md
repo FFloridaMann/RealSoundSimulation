@@ -40,7 +40,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   ├── MetaAcousticsCheck.cs counts Meta XR acoustic map/geometry components for the summary
 │   └── DiagLog.cs           one folder per raid, buffered CSV writing, errors.txt
 │
-└── Fixes/                   change sound; each one off by default and switchable live
+└── Fixes/                   change sound; each switchable live (defaults = the tested setup)
     ├── GunMixerFix.cs       fix 1: stop muffled/clear flip-flop on gunshots
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways

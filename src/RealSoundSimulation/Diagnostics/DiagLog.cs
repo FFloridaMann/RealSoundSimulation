@@ -19,12 +19,12 @@ namespace RealSoundSimulation.Diagnostics
             ["probe.csv"] = "t,x,y,z,roomIndoor,doorwayTarget,enclosure,horizontal,overhead,meanHitM,wallClosure,roofClosure,room,sizeFactor,thinShare,zenithClosure",
             ["ownshots.csv"] = "t,kind,source,gameEnvironment,doorwayTarget,enclosure,horizontal,overhead,aimEnclosure,aimNearestM,indoorWeight,applied,reverbBoostDb,wallClosure,roofClosure,room,sizeFactor,thinShare,aimClosure,zenithClosure,muzzleRoom,muzzleRoof,muzzleSize,muzzleFromHeadM,roomUsed,hardShare,hardRoom,glassShare",
             ["echoes.csv"] = "t,sample,taps,tap,kind,material,pathM,delayMs,levelDb,directivityDb,cutoffHz,azimuthDeg,elevationDeg,stolen",
-            ["marks.csv"] = "t,mark,x,y,z,roomIndoor,doorwayTarget,enclosure,wallClosure,roofClosure,zenithClosure,room,sizeFactor,thinShare,meanHitM,lastOwnShotT,lastIndoorWeight,surfaces,exposureOpen,exposureGlass,exposureOther,openRays,glassRays,blockedRays,nearestOpenM,nearestGlassM,roomOutdoorFloor,previewOutdoorValue,ceilingM,ceilingMat,floorsAbove,roofMat",
+            ["marks.csv"] = "t,mark,x,y,z,roomIndoor,doorwayTarget,enclosure,wallClosure,roofClosure,zenithClosure,room,sizeFactor,thinShare,meanHitM,lastOwnShotT,lastIndoorWeight,surfaces,exposureOpen,exposureGlass,exposureOther,openRays,glassRays,blockedRays,nearestOpenM,nearestGlassM,roomOutdoorFloor,outdoorValue,ceilingM,ceilingMat,floorsAbove,roofMat",
             ["exposure.csv"] = Acoustics.OutdoorExposure.Header,
             ["rain.csv"] = "t,environment,intensity,clip,targetVolume,gameWouldSilence,fixOn",
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
             ["transitions.csv"] = "t,system,now,x,y,z,fadeS,room",
-            ["ambience.csv"] = "t,x,y,z,snapshotIndoor,roomIndoor,outdoorAmbience,doorwayTarget,doorwayApplied,doorwayPortals,portalId,throughPlaneM,sidewaysM,glassLeak,exposureApplied,indoorFade,bedPan,bedCutoffHz,roofRainFactor,openingShare,openingVoices,opening1Az,opening1Gain",
+            ["ambience.csv"] = "t,x,y,z,snapshotIndoor,roomIndoor,outdoorAmbience,doorwayTarget,doorwayApplied,doorwayPortals,portalId,throughPlaneM,sidewaysM,exposureApplied,indoorLayers,bedPan,bedCutoffHz,roofRainFactor,openingShare,openingVoices,opening1Az,opening1Gain",
         };
         private static float _lastFlush;
 

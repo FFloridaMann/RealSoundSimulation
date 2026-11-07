@@ -102,7 +102,7 @@ namespace RealSoundSimulation.Diagnostics
                 _lastSnapshotIndoor ? "1" : "0", _haveRoomState ? (_lastRoomIndoor ? "1" : "0") : "", DiagLog.F(outdoor),
                 DiagLog.F(Fixes.DoorwayBlend.TargetOutdoorness), DiagLog.F(Fixes.DoorwayBlend.Outdoorness), Fixes.DoorwayBlend.PortalsConsidered.ToString(),
                 Fixes.DoorwayBlend.DebugPortalId.ToString(), DiagLog.F(Fixes.DoorwayBlend.DebugS, "0.00"), DiagLog.F(Fixes.DoorwayBlend.DebugLat, "0.00"),
-                DiagLog.F(Fixes.DoorwayBlend.GlassLeak), DiagLog.F(Fixes.AmbienceMix.ExposureApplied), DiagLog.F(Fixes.AmbienceMix.IndoorFade()),
+                DiagLog.F(Fixes.AmbienceMix.ExposureApplied), DiagLog.F(Fixes.AmbienceMix.On ? Fixes.AmbienceMix.IndoorLayers() : float.NaN),
                 DiagLog.F(Fixes.AmbienceMix.BedPan, "0.00"), DiagLog.F(Fixes.AmbienceMix.BedCutoff, "0"), DiagLog.F(Fixes.AmbienceMix.RoofRainFactor),
                 DiagLog.F(Fixes.OpeningSounds.Share), Fixes.OpeningSounds.Voices.ToString(),
                 DiagLog.F(Acoustics.OutdoorExposure.RelAz(Fixes.OpeningSounds.FirstDir()), "0"), DiagLog.F(Fixes.OpeningSounds.FirstGain())));

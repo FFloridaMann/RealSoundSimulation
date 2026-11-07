@@ -1,6 +1,6 @@
 # The fixes
 
-Each fix: the problem in the game, the evidence from our raid logs, exactly what the fix changes, its settings, and how to check it works. All are in F12 → Real Sound Simulation → **"2. Fixes (all off means vanilla audio)"**, start **off**, and switch live in raid.
+Each fix: the problem in the game, the evidence from our raid logs, exactly what the fix changes, its settings, and how to check it works. All are in F12 → Real Sound Simulation → **"2. Fixes (all off means vanilla audio)"**, switch live in raid. Since 0.5.8 their defaults are the tested setup (every fix on, `2` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` on); with every fix off you get the game's own audio.
 
 Status key: **Built** = in the plugin, not yet heard in game. **Heard** = heard in game, logs show it acting, but not fully confirmed. **Verified** = heard in game and confirmed in logs.
 
@@ -264,7 +264,9 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 ---
 
-## Fix 3h: Ambience through glass (0.3.3)
+## Fix 3h: Ambience through glass (0.3.3; removed in 0.5.8)
+
+**Removed in 0.5.8.** Fix 8 replaced it in 0.4.2 (with fix 8 on it did nothing). Kept here as history.
 
 **Problem.** Raid 9: glass buildings let too little rain and wind in. The game sets each indoor room's outdoor-ambience level from baked data, regardless of whether its walls are concrete or glass.
 
@@ -336,7 +338,7 @@ Background and design: [AMBIENCE.md](AMBIENCE.md). **Needs fix 3 on**, because f
 - Deep interior: unchanged.
 - Lower floors of a tall building in rain: quieter roof rain (with fix 7).
 
-Logs: `ambience.csv` (exposureApplied, indoorFade, bedPan, bedCutoffHz, roofRainFactor), `exposure.csv` (openSideAz, oneSided), and the summary's AMBIENCE MIX section.
+Logs: `ambience.csv` (exposureApplied, indoorLayers, bedPan, bedCutoffHz, roofRainFactor), `exposure.csv` (openSideAz, oneSided), and the summary's AMBIENCE MIX section.
 
 ---
 

@@ -2,8 +2,17 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.5.8 — 6 Nov 2026 (clean-up)
+**Run in game:** not yet (installed 20:59, game closed). With the settings you already had, nothing should sound different. Part of the consolidation (ROADMAP.md).
+- **Defaults are now the tested setup.** Every raid since raid 10 ran with: every fix on, `2 Obstruction score` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` HRTF on. The code defaults were "everything off", so a reset or a fresh install would have given an untested setup. Your config file keeps its own values; the section name is unchanged, so nothing was reset. Every fix is still switchable, and all off is still the game's own audio.
+- **Removed fix 3h "Ambience through glass".** Fix 8 replaced it in 0.4.2; with fix 8 on it did nothing. Its line stays in the config file, unused (BepInEx keeps unknown entries).
+- **Removed dead code:** `AmbienceMix.IndoorFade()` (replaced by `IndoorLayers()` in 0.5.7) and the 0.5.0 opening grouping in the exposure probe (the opening sounds use the 6 fixed sectors since 0.5.2; the grouping was only logged).
+- **Setting descriptions corrected:** `Outdoor exposure probe` (runs everywhere, 48 directions, drives fix 8), `3c` (acts everywhere in Enclosure mode), `8` (what it does now), `8b` (no longer needs fix 7), `8d` (how early the indoor sounds fade). No setting was renamed.
+- **Code comments** for the exposure probe, fix 8 and the opening sounds now describe what they do now. The history stays in this changelog and AMBIENCE.md.
+- **Logs:** `ambience.csv` drops `glassLeak`, and `indoorFade` becomes `indoorLayers`. `exposure.csv` and `marks.csv`: `previewOutdoorValue` becomes `outdoorValue`. `exposure.csv`: `openings, op1Az, op1DistM, op1Weight, op1Glass` become `openSectors`.
+
 ## 0.5.7 — 6 Nov 2026
-**Run in game:** not yet (installed 19:23, game closed).
+**Run in game:** not yet (installed 19:23). Included in 0.5.8.
 - **Exposure is measured continuously.** About 2 directions are re-measured every frame, cycling through all 48 (about 290 rays per second, the same as before). Each re-measure is nudged by a random amount, up to half the ray spacing, and the totals are rebuilt every frame.
   - Raid 20: measuring all 48 at once 8 times a second made the value jump around while walking (0.23 → 0.42 → 0.17 → 0.23 → 0.13 entering the Nakatani hallway), because rays found and lost the windows together. The game's steep volume curve made each jump an audible cut.
   - Now one direction changes at a time, the nudges cover every angle over time, and the cost no longer spikes (up to 12 ms before).

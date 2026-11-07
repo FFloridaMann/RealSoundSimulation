@@ -11,53 +11,41 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Acoustics
 {
-    // Outdoor exposure (roadmap step 4b, phase 1 = measure only, 0.4.0). How much of the outside reaches you indoors, and
-    // through what. Design and the reasons: docs/AMBIENCE.md.
-    //
-    // Every 0.25 s while you're in an indoor audio room:
-    //   48 directions (24 around, 15 deg apart, x level and +15 deg up; 12 around before 0.5.0 - raid 14 missed the open
-    //   windows of the Nakatani exit hallway, possibly between rays). For each, one ray on the game's sound-blocking layers to the
-    //   first wall (max 40 m). Points along it (1.5, 3, 5, 8, 12, 18, 25, 35 m, stopping short of the wall) are looked up
-    //   in the game's baked audio rooms; the first point in an OUTDOOR room is where this direction reaches the outside.
-    //   (Facade glass and broken windows aren't on the blocking layers, so the ray passes them - which is why this
-    //   lookup, not the ray, decides "outside".)
-    //   Then one ray on all the OTHER layers (not players, loot, triggers) up to that point says what's in between:
-    //     Glass    a glass surface (bullet material Glass, or a window/glass object)   -> will be quieter and muffled
-    //     Other    something else that isn't a sound blocker (railing, fence, prop)     -> logged, partly open
-    //     Open     nothing                                                               -> open air
-    //   Directions that never reach outside are Blocked.
-    //   Each open/glass direction counts by how near its opening is: 1 / (1 + (distance / 5 m)^2)  (1.5 m ~0.9, 5 m 0.5,
-    //   10 m 0.2). ExposureOpen / ExposureGlass / ExposureOther = sum / 24. A room deep inside a building ~0; standing at
-    //   a broken window wall ~0.3+.
-    //   PreviewValue: what phase 2 would set the game's outdoor value to (logged only, changes nothing yet):
-    //     1 - exp(-4 x open) + 0.45 x (1 - exp(-4 x glass)), at least the room's own baked floor level.
-    // Also, every update (indoors or out): what's above you. Straight up to the first ceiling (its material), then again
-    // from just above it, up to 4 times: FloorsAbove = surfaces above the first ceiling; RoofMat = the topmost one.
-    // Openings (0.5.0, for fix 8's 3D sound): neighbouring directions that reach outside are grouped into openings
-    // (contiguous runs around the ring, both elevations together). Each: direction (weighted), distance to where it
-    // reaches outside, weight (sum of nearness x path weight), glass share, width. The 3 strongest are kept.
-    // Every ray's result is kept for the F10 dump (rays.csv): what it hit, how far, and where it reached outside.
+    // Outdoor exposure (roadmap step 4b): how much of the outside reaches you, and through what. Drives fix 8.
+    // Design and history: docs/AMBIENCE.md. Current behaviour (0.5.8):
+    //   48 directions: 24 azimuths (15 deg apart) x elevations 0 and +15 deg. Measured continuously, indoors and outdoors:
+    //   ~288 rays per second round robin, each re-measure nudged by up to +-7.5 deg in azimuth, totals rebuilt every frame.
+    //   Per direction: one ray on the game's sound-blocking layers to the first wall (max 40 m). Points along it (1.5, 3,
+    //   5, 8, 12, 18, 25, 35 m, then 3 halvings) are checked with IsOutside(): the game's room map says outdoor AND either
+    //   open sky above, or a roof that is not your own ceiling ("covered outside", half weight). Facade glass and broken
+    //   windows are not on the blocking layers, so the ray passes them; that is why this check, not the ray, decides
+    //   "outside". A second ray on the other layers up to that point says what is in between (Classify): Open, Glass,
+    //   Bars (80% open), Broken (open), Other (half). Directions that never reach outside are Blocked.
+    //   Weight per direction: 1 / (1 + distance / 15 m) x the path weight (glass = "8c").
+    //   Value = 1 - e^(-4 x open) + 8c x (1 - e^(-4 x glass)), indoors at least the room's baked floor level.
+    //   OpenSide / OneSided: the weighted horizontal direction of the outside, and how one-sided it is.
+    //   Sectors: 6 fixed world sectors (60 deg) sum their directions' weight, direction and glass share for OpeningSounds.
+    //   Above you (4 per second): 5 rays straight up (median), the first ceiling and its material, floors above, roof.
+    //   F10 dumps every direction to rays.csv; exposure.csv gets a row 8 times a second.
     internal class OutdoorExposure : MonoBehaviour
     {
         // 0.4.1: Bars (window bars/grilles: sound passes) and Broken (a broken window: shards only at the edges) added.
         public enum Path : byte { Blocked, Open, Glass, Other, Bars, Broken }
 
-        private const float Interval = 0.125f; // 0.5.6: 8 per second (was 4)
+        private const float Interval = 0.125f; // exposure.csv rows, 8 per second
         public const int Az = 24;
         private static readonly float[] Elev = { 0f, 15f };
         public const int RayCount = Az * 2;
         private const float MaxRange = 40f;
         private static readonly float[] Samples = { 1.5f, 3f, 5f, 8f, 12f, 18f, 25f, 35f };
-        private const float NearScale = 5f;
         private const float FarScale = 15f;
-        private const float GlassPreview = 0.45f, StrengthPreview = 4f;
+        private const float Strength = 4f; // how fast the value rises with exposure: 1 - e^(-4 x exposure)
 
         private static readonly Vector3[] Dirs = BuildDirs();
 
         public static bool Valid, ListenerIndoor;
-        public static float ExposureOpen, ExposureGlass, ExposureOther, PreviewValue = float.NaN, RoomFloor = float.NaN;
-        // 0.4.2: the value fix 8 applies (= PreviewValue), the open side (world, horizontal) and how one-sided it is (0 all
-        // round .. 1 one side only).
+        public static float ExposureOpen, ExposureGlass, ExposureOther, RoomFloor = float.NaN;
+        // The value fix 8 applies, the open side (world, horizontal) and how one-sided it is (0 all round .. 1 one side only).
         public static float Value = float.NaN, OneSided;
         public static Vector3 OpenSide;
         public static int OpenN, GlassN, OtherN, BlockedN, BarsN, BrokenN;
@@ -88,11 +76,7 @@ namespace RealSoundSimulation.Acoustics
         public static readonly float[] SectorGlass = new float[SectorN];
         public static readonly Vector3[] SectorDir = new Vector3[SectorN];
 
-        public struct Opening { public Vector3 Dir; public float Dist, Weight, Glass, WidthDeg; }
-        public const int MaxOpenings = 3;
-        public static readonly Opening[] Openings = new Opening[MaxOpenings];
-        public static int OpeningN;
-        private static readonly Opening[] Clusters = new Opening[Az];
+        public static int OpenSectors; // sectors with any outside in them
 
         // what stood between you and the outside, by layer:object (summary; to learn what facade glass is)
         public static readonly Dictionary<string, int> BetweenHits = new Dictionary<string, int>();
@@ -106,7 +90,7 @@ namespace RealSoundSimulation.Acoustics
 
         public static void Reset()
         {
-            OpeningN = 0; GlassRendererCache.Clear();
+            OpenSectors = 0; GlassRendererCache.Clear();
             Valid = false; Updates = IndoorUpdates = 0; TotalMs = MaxMs = 0; TimedN = 0;
             BetweenHits.Clear();
             _otherMask = -1;
@@ -271,12 +255,11 @@ namespace RealSoundSimulation.Acoustics
             }
             ExposureOpen = eo / RayCount; ExposureGlass = eg / RayCount; ExposureOther = ex / RayCount;
             float open = ExposureOpen + 0.5f * ExposureOther;
-            float preview = (1f - Mathf.Exp(-StrengthPreview * open)) + glassW * (1f - Mathf.Exp(-StrengthPreview * ExposureGlass));
-            PreviewValue = Mathf.Clamp01(Mathf.Max(preview, float.IsNaN(RoomFloor) ? 0f : RoomFloor));
-            Value = PreviewValue;
+            float v = (1f - Mathf.Exp(-Strength * open)) + glassW * (1f - Mathf.Exp(-Strength * ExposureGlass));
+            Value = Mathf.Clamp01(Mathf.Max(v, float.IsNaN(RoomFloor) ? 0f : RoomFloor));
             OpenSide = side;
             OneSided = wSum > 1e-4f ? Mathf.Clamp01(side.magnitude / wSum) : 0f;
-            BuildOpenings();
+            BuildSectors();
             Valid = true;
         }
 
@@ -303,9 +286,9 @@ namespace RealSoundSimulation.Acoustics
             return true;
         }
 
-        // Group neighbouring exposed directions (both elevations of an azimuth together) into openings; keep the 3 strongest.
-        // Also (0.5.2) fill the fixed world sectors used by the opening sounds.
-        private static void BuildOpenings()
+        // Fill the 6 fixed world sectors used by the opening sounds. (0.5.0-0.5.7 also grouped directions into "openings";
+        // only the log used them after 0.5.2, removed in 0.5.8.)
+        private static void BuildSectors()
         {
             for (int s = 0; s < SectorN; s++) { SectorWeight[s] = 0f; SectorGlass[s] = 0f; SectorDir[s] = Vector3.zero; }
             for (int i = 0; i < RayCount; i++)
@@ -324,73 +307,14 @@ namespace RealSoundSimulation.Acoustics
                 SectorGlass[s] /= SectorWeight[s];
                 SectorDir[s] = SectorDir[s].sqrMagnitude > 1e-6f ? SectorDir[s].normalized : SectorHome(s);
             }
-            OpeningN = 0;
-            int start = -1, exposed = 0;
-            for (int a = 0; a < Az; a++)
-            {
-                if (RayWeight[a] + RayWeight[Az + a] > 0f) exposed++;
-                else if (start < 0) start = a;
-            }
-            if (exposed == 0) return;
-            int n = 0;
-            if (start < 0)
-            {
-                // open all round: three equal sectors
-                for (int s = 0; s < 3; s++) { Clusters[n] = default; for (int a = s * Az / 3; a < (s + 1) * Az / 3; a++) AddToCluster(ref Clusters[n], a); n++; }
-            }
-            else
-            {
-                bool inRun = false;
-                for (int step = 1; step <= Az; step++)
-                {
-                    int a = (start + step) % Az;
-                    bool open = RayWeight[a] + RayWeight[Az + a] > 0f;
-                    if (open)
-                    {
-                        if (!inRun) { Clusters[n] = default; inRun = true; }
-                        AddToCluster(ref Clusters[n], a);
-                    }
-                    else if (inRun) { n++; inRun = false; }
-                }
-                if (inRun) n++;
-            }
-            for (int c = 0; c < n; c++)
-            {
-                ref Opening op = ref Clusters[c];
-                if (op.Weight <= 0f) continue;
-                op.Dist /= op.Weight; op.Glass /= op.Weight;
-                op.Dir = op.Dir.sqrMagnitude > 1e-6f ? op.Dir.normalized : Vector3.forward;
-            }
-            // top 3 by weight
-            for (int k = 0; k < MaxOpenings; k++)
-            {
-                int best = -1;
-                for (int c = 0; c < n; c++) if (Clusters[c].Weight > 0f && (best < 0 || Clusters[c].Weight > Clusters[best].Weight)) best = c;
-                if (best < 0) break;
-                Openings[OpeningN++] = Clusters[best];
-                Clusters[best].Weight = 0f;
-            }
+            OpenSectors = 0;
+            for (int s = 0; s < SectorN; s++) if (SectorWeight[s] > 0f) OpenSectors++;
         }
 
         public static Vector3 SectorHome(int s)
         {
             float a = (s + 0.5f) * Mathf.PI * 2f / SectorN;
             return new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-        }
-
-        private static void AddToCluster(ref Opening op, int a)
-        {
-            for (int e = 0; e < 2; e++)
-            {
-                int i = e * Az + a;
-                float w = RayWeight[i];
-                if (w <= 0f) continue;
-                op.Dir += RayDir[i] * w;
-                op.Dist += RayOutM[i] * w;
-                if (RayPath[i] == Path.Glass) op.Glass += w;
-                op.Weight += w;
-            }
-            op.WidthDeg += 360f / Az;
         }
 
         // F10: every direction, for diagnosing a spot (rays.csv).
@@ -564,12 +488,11 @@ namespace RealSoundSimulation.Acoustics
                 OpenN.ToString(), GlassN.ToString(), OtherN.ToString(), BlockedN.ToString(), BarsN.ToString(), BrokenN.ToString(),
                 DiagLog.F(ExposureOpen), DiagLog.F(ExposureGlass), DiagLog.F(ExposureOther),
                 DiagLog.F(NearestOpenM, "0.0"), DiagLog.F(NearestOpenAz, "0"), DiagLog.F(NearestGlassM, "0.0"), DiagLog.F(NearestGlassAz, "0"),
-                DiagLog.F(CeilingM, "0.0"), CeilingMat.ToString(), FloorsAbove.ToString(), RoofMat.ToString(), DiagLog.F(PreviewValue),
-                DiagLog.F(SideAz(), "0"), DiagLog.F(OneSided), OpeningN.ToString(),
-                OpeningN > 0 ? DiagLog.F(RelAz(Openings[0].Dir), "0") : "", OpeningN > 0 ? DiagLog.F(Openings[0].Dist, "0.0") : "", OpeningN > 0 ? DiagLog.F(Openings[0].Weight) : "", OpeningN > 0 ? DiagLog.F(Openings[0].Glass) : "");
+                DiagLog.F(CeilingM, "0.0"), CeilingMat.ToString(), FloorsAbove.ToString(), RoofMat.ToString(), DiagLog.F(Value),
+                DiagLog.F(SideAz(), "0"), DiagLog.F(OneSided), OpenSectors.ToString());
         }
 
-        public const string Header = "t,listenerIndoor,roomOutdoorFloor,openRays,glassRays,otherRays,blockedRays,barsRays,brokenRays,exposureOpen,exposureGlass,exposureOther,nearestOpenM,nearestOpenAz,nearestGlassM,nearestGlassAz,ceilingM,ceilingMat,floorsAbove,roofMat,previewOutdoorValue,openSideAz,oneSided,openings,op1Az,op1DistM,op1Weight,op1Glass";
+        public const string Header = "t,listenerIndoor,roomOutdoorFloor,openRays,glassRays,otherRays,blockedRays,barsRays,brokenRays,exposureOpen,exposureGlass,exposureOther,nearestOpenM,nearestOpenAz,nearestGlassM,nearestGlassAz,ceilingM,ceilingMat,floorsAbove,roofMat,outdoorValue,openSideAz,oneSided,openSectors";
 
         public static float RelAz(Vector3 dir)
         {
@@ -596,14 +519,14 @@ namespace RealSoundSimulation.Acoustics
             string above = FloorsAbove < 0 ? "open sky" : $"ceiling {CeilingM:0.0} m {CeilingMat}, floors above {FloorsAbove}, roof {RoofMat}";
             if (!ListenerIndoor) return $"exposure: outdoors   above: {above}\n";
             return $"exposure open {ExposureOpen:0.00} ({OpenN}+{BrokenN} broken+{BarsN} bars)  glass {ExposureGlass:0.00} ({GlassN})  other {ExposureOther:0.00} ({OtherN})  blocked {BlockedN}  " +
-                   $"room floor {RoomFloor:0.00} -> value {PreviewValue:0.00}  open side {SideAz():0} deg ({OneSided:0.00} one-sided)  openings {OpeningN}\n   above: {above}\n";
+                   $"room floor {RoomFloor:0.00} -> value {Value:0.00}  open side {SideAz():0} deg ({OneSided:0.00} one-sided)  open sectors {OpenSectors}\n   above: {above}\n";
         }
 
         public static string Summary()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("OUTDOOR EXPOSURE (step 4b, measure only)");
-            sb.AppendLine($"  updates {Updates}, indoors {IndoorUpdates}   cost per update avg {(TimedN > 0 ? TotalMs / TimedN : 0):0.000} ms, max {MaxMs:0.00} ms (8 per second)");
+            sb.AppendLine("OUTDOOR EXPOSURE (drives fix 8)");
+            sb.AppendLine($"  updates {Updates}, indoors {IndoorUpdates}   cost per update avg {(TimedN > 0 ? TotalMs / TimedN : 0):0.000} ms, max {MaxMs:0.00} ms (per frame)");
             sb.AppendLine($"  other-layer mask: {_otherMaskNames}");
             var top = new List<KeyValuePair<string, int>>(BetweenHits);
             top.Sort((a, b) => b.Value.CompareTo(a.Value));

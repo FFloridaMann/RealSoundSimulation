@@ -57,7 +57,6 @@ namespace RealSoundSimulation.Fixes
         private readonly float[] _weights = new float[2];
         private float _o = -1f, _lastSnapO = -1f, _lastAmb = -1f, _lastTone = -1f;
         private float _roomLevel = 0f, _roomLevelTarget = 0f;
-        public static float GlassLeak; // 0..1, logged in ambience.csv
         private float _expValue = float.NaN; // fix 8
         private EnvironmentSoundBlendSystem _blend;
         private float _nextBlendSearch;
@@ -111,16 +110,8 @@ namespace RealSoundSimulation.Fixes
                 ApplySnapshots(MonoBehaviourSingleton<BetterAudio>.Instance, _o);
 
                 if (indoor && room?.RoomAmbientData != null) _roomLevelTarget = Mathf.Clamp01(room.RoomAmbientData.OutdoorAmbientVolume);
-                // 0.3.3: walls of glass let weather in. Raise the room's outdoor-ambience level towards full by the glass share
-                // of the surfaces around you x "3h Ambience through glass". The indoor tone filter still applies, so it
-                // stays muffled. Raid 9: glass buildings let too little rain and wind in.
-                float glass = float.IsNaN(Acoustics.EnclosureProbe.GlassShare) ? 0f : Acoustics.EnclosureProbe.GlassShare;
-                // 0.4.1: smoothed over ~2 s. Raid 11: deep in the Nakatani tower one or two probe rays hitting a window or not
-                // flipped this between 0 and 0.12 every second, so the outdoor ambience cut on and off.
-                float rawLeak = AmbienceMix.On ? 0f : Mathf.Clamp01(glass * Plugin.GlassAmbience.Value * 2f); // fix 8 replaces 3h
-                GlassLeak += (rawLeak - GlassLeak) * (1f - Mathf.Exp(-dt / 2f));
-                float target = Mathf.Lerp(_roomLevelTarget, 1f, GlassLeak);
-                _roomLevel = _roomLevel + (target - _roomLevel) * (1f - Mathf.Exp(-dt / 0.3f));
+                // 0.5.8: fix 3h (raising this level by the glass around you) removed; fix 8 replaced it in 0.4.2.
+                _roomLevel = _roomLevel + (_roomLevelTarget - _roomLevel) * (1f - Mathf.Exp(-dt / 0.3f));
                 _expValue = AmbienceMix.OutdoorValue(dt, _roomLevelTarget);
                 ApplyAmbience(_o, _roomLevel);
             }

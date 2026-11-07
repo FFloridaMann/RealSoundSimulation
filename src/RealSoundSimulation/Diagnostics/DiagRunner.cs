@@ -107,7 +107,7 @@ namespace RealSoundSimulation.Diagnostics
                 DiagLog.F(Acoustics.OutdoorExposure.ExposureOpen), DiagLog.F(Acoustics.OutdoorExposure.ExposureGlass), DiagLog.F(Acoustics.OutdoorExposure.ExposureOther),
                 Acoustics.OutdoorExposure.OpenN.ToString(), Acoustics.OutdoorExposure.GlassN.ToString(), Acoustics.OutdoorExposure.BlockedN.ToString(),
                 DiagLog.F(Acoustics.OutdoorExposure.NearestOpenM, "0.0"), DiagLog.F(Acoustics.OutdoorExposure.NearestGlassM, "0.0"),
-                DiagLog.F(Acoustics.OutdoorExposure.RoomFloor), DiagLog.F(Acoustics.OutdoorExposure.PreviewValue),
+                DiagLog.F(Acoustics.OutdoorExposure.RoomFloor), DiagLog.F(Acoustics.OutdoorExposure.Value),
                 DiagLog.F(Acoustics.OutdoorExposure.CeilingM, "0.0"), Acoustics.OutdoorExposure.CeilingMat.ToString(),
                 Acoustics.OutdoorExposure.FloorsAbove.ToString(), Acoustics.OutdoorExposure.RoofMat.ToString()));
             Acoustics.OutdoorExposure.DumpRays(_marks, Time.time - _raidStart);

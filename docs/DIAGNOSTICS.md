@@ -75,7 +75,7 @@ A *container* is the game's grouping of sounds at one spot (one per player, plus
 Snapshot switches are logged even while fix 3 skips them: they record what the game *wanted* to do.
 
 ### ambience.csv (10 per second)
-Since 0.3.3 `glassLeak` (0–1) is how far fix 3h raised the room's ambience level toward full because of glass around you. Since 0.4.2, for fix 8: `exposureApplied` (the smoothed outdoor value it set), `indoorFade` (multiplier on the indoor layers), `bedPan` (−1 left … 1 right), `bedCutoffHz` (direction-cue high-cut; 22000 = none), `roofRainFactor`. Since 0.5.0: `openingShare` (share moved to the 3D opening sounds), `openingVoices` (how many are playing), `opening1Az` / `opening1Gain` (first opening's direction relative to where you face, and its gain).
+For fix 8 (empty with it off): `exposureApplied` (the smoothed outdoor value it set), `indoorLayers` (0.5.8; level of the indoor layers, 1 enclosed … 0 open air; was `indoorFade`), `bedPan` (−1 left … 1 right), `bedCutoffHz` (direction-cue high-cut; 22000 = none), `roofRainFactor`. (`glassLeak`, fix 3h, was removed in 0.5.8.) Since 0.5.0: `openingShare` (share moved to the 3D opening sounds), `openingVoices` (how many are playing), `opening1Az` / `opening1Gain` (first opening's direction relative to where you face, and its gain).
 
 | Column | Meaning |
 |---|---|
@@ -122,12 +122,12 @@ See [AMBIENCE.md](AMBIENCE.md) for what this measures and why.
 | roomOutdoorFloor | the room's baked outdoor-ambience floor (`OutdoorAmbientVolume`); 0 = no outside heard deep in the room |
 | openRays, glassRays, otherRays, blockedRays | of 24 directions: reach the outside through open air / through glass / through something else that isn't a sound blocker / never |
 | barsRays, brokenRays | 0.4.1: through window bars or grilles (counted 80% open) / through a broken window whose leftover shard collider is bigger than a shard (counted open) |
-| exposureOpen, exposureGlass, exposureOther | the same, weighted by how near the opening is (1 / (1 + (m / 5)²)), divided by 24 |
+| exposureOpen, exposureGlass, exposureOther | the same, weighted by how near the opening is (1 / (1 + m / 15) since 0.5.4; covered outside × 0.5), divided by 48 |
 | nearestOpenM / Az, nearestGlassM / Az | distance and direction (relative to where you face) to the nearest open and glass opening |
 | ceilingM, ceilingMat | first surface straight above you and its material |
 | floorsAbove, roofMat | surfaces above that ceiling (−1 = open sky above you) and the topmost one's material (the real roof) |
-| previewOutdoorValue | the outdoor value from exposure (applied by fix 8 since 0.4.2) |
-| openings, op1Az, op1DistM, op1Weight, op1Glass | 0.5.0: how many openings were found (≤ 3) and the strongest one's direction, distance, weight and glass share |
+| outdoorValue | the outdoor value from exposure, which fix 8 applies (`previewOutdoorValue` before 0.5.8) |
+| openSectors | 0.5.8: how many of the 6 fixed world sectors (60°) have any outside in them; the opening sounds play from those. Before 0.5.8: `openings, op1Az, op1DistM, op1Weight, op1Glass` (the old grouping, only logged) |
 | openSideAz, oneSided | 0.4.2: which way the openness lies relative to where you face (0 ahead, +90 right, ±180 behind), and how one-sided it is (0 all round … 1 one side only) |
 
 ### rays.csv (each F10 press, 0.5.0)
@@ -137,7 +137,7 @@ All 48 exposure directions at that moment: `ray`, `azimuthDeg` (relative to wher
 `environment` (Indoor/Outdoor player), `intensity`, `clip`, `targetVolume`, `gameWouldSilence` (1 = the game's own code would have faded the rain out here; fix 7), `fixOn`.
 
 ### marks.csv (each press of the mark key, F10)
-Where you were and what was measured when you pressed it: position, `roomIndoor`, `doorwayTarget`, `enclosure`, `wallClosure`, `roofClosure`, `zenithClosure` (0.3.2), `room`, `sizeFactor`, `thinShare`, `meanHitM`, the time and indoor weight of your last own shot, and `surfaces` (what the probe rays hit, as material:count). From 0.4.0 also the exposure columns (exposureOpen/Glass/Other, open/glass/blocked rays, nearest open/glass opening, roomOutdoorFloor, previewOutdoorValue, ceiling, floors above, roof material). Also logged as a line in the BepInEx log.
+Where you were and what was measured when you pressed it: position, `roomIndoor`, `doorwayTarget`, `enclosure`, `wallClosure`, `roofClosure`, `zenithClosure` (0.3.2), `room`, `sizeFactor`, `thinShare`, `meanHitM`, the time and indoor weight of your last own shot, and `surfaces` (what the probe rays hit, as material:count). From 0.4.0 also the exposure columns (exposureOpen/Glass/Other, open/glass/blocked rays, nearest open/glass opening, roomOutdoorFloor, outdoorValue (`previewOutdoorValue` before 0.5.8), ceiling, floors above, roof material). Also logged as a line in the BepInEx log.
 
 ### echoes.csv (each echo played by fix 6)
 One row per echo. A sample with no echo found writes one row with kind `none`.

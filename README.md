@@ -1,6 +1,6 @@
 # Real Sound Simulation
 
-A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.5.7**: diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out) and 8 (outdoor sound indoors from openings), all off by default and switchable live in F12. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.5.8**: diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out) and 8 (outdoor sound indoors from openings), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
 
@@ -24,7 +24,7 @@ These docs are updated in the same change as the code.
 | Path | What |
 |---|---|
 | `src/RealSoundSimulation.Dsp/` | Pure C# DSP (no Unity): headset model (passive leak + electronic talk-through, compressor, limiter, hiss). The offline bench and the game run the same code |
-| `src/RealSoundSimulation/` | BepInEx plugin: `Diagnostics/` (self-check, overlay, CSV logs, timing; change no sound) and `Fixes/` (change sound; each off by default) |
+| `src/RealSoundSimulation/` | BepInEx plugin: `Diagnostics/` (self-check, overlay, CSV logs, timing; change no sound) and `Fixes/` (change sound; each switchable, on by default since 0.5.8) |
 | `tools/HeadsetBench/` | Offline bench: renders WAVs per headset preset and measures footstep gain, clamp, recovery, hiss, frequency response, CPU and allocations |
 | `01_…md`, `02_…md`, `00_WORKING_NOTES.md`, `data/` | The research: how the game's audio works, the solutions plan, working notes, extracted server audio settings |
 | `docs/` | Architecture, fixes, diagnostics, changelog |
