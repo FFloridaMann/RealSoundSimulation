@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.10")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.11")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -84,6 +84,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> IndoorWindFollowsOpenings; // 0.6.9 "8g"
         internal static ConfigEntry<float> RainThroughBuildingDb;   // 0.6.9 "9l"
         internal static ConfigEntry<BedDirection.Mode> RoofBedMode; // 0.6.10 "9m"
+        internal static ConfigEntry<float> MuzzleLobe;     // 0.6.11 "3k"
+        internal static ConfigEntry<bool> OutdoorTailOn;   // 0.6.11 "3m"
+        internal static ConfigEntry<float> OutdoorTailDb;  // 0.6.11 "3l"
 
         private void Awake()
         {
@@ -163,6 +166,9 @@ namespace RealSoundSimulation
             DistantThroughOpeningsOn = Config.Bind(fix, "9k Distant gunfire through openings", true, new ConfigDescription("Probe v2: when you're inside, distant sounds off the map (the ambient gunfire mod's battles) come through the windows and doors that face them, at the level that gets in, instead of through the walls from their true direction. Needs fix 4. Off = left to the game and fix 4.", null, new ConfigurationManagerAttributes { Order = 33 }));
             RainThroughBuildingDb = Config.Bind(fix, "9l Rain through the building dB", -32f, new ConfigDescription("Fix 9: deep inside, the outdoor sound never drops below this level, muffled to a low rumble (a building in rain is never silent: the whole structure is being hit). Fades in as you go inside. -60 = off.", new AcceptableValueRange<float>(-60f, -20f), new ConfigurationManagerAttributes { Order = 32 }));
             RoofBedMode = Config.Bind(fix, "9m Roof rain directional mode", BedDirection.Mode.UnityPanner, new ConfigDescription("Fix 9: like 9c, for the roof rain only (9c now sets the outdoor sounds: wind, rain, background). UnityPanner keeps the recording's width and steers it; MetaHrtf gives up/down placement. Up versus down only matters for the roof rain, so this is where to try HRTF. Either way the roof rain is muffled by how its paths reach you (down a stair shaft duller than overhead).", null, new ConfigurationManagerAttributes { Order = 31 }));
+            MuzzleLobe = Config.Bind(fix, "3k Muzzle lobe", 1f, new ConfigDescription("Fix 3c: the room measured at the muzzle counts the directions in front of it more (a forward lobe around where you aim, ((1 + cos) / 2)^k). Out of a window the muzzle then reads mostly outdoor even though half of its sphere looks back into the room; into a room from a doorway, more indoor. 0 = the whole sphere (before 0.6.11), 1 = default, 2 = tighter.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 69 }));
+            OutdoorTailOn = Config.Bind(fix, "3m Outdoor tail from the opening", true, new ConfigDescription("Fix 3c: when your shot is mixed mostly indoor but you fire out of a window or door, the gun's outdoor tail also plays from that opening, a beat later (it adds; nothing of the shot is taken away). Single shots and the tail at the end of a burst. Uses fix 6's voices (needs 6 on). Off = as before.", null, new ConfigurationManagerAttributes { Order = 68 }));
+            OutdoorTailDb = Config.Bind(fix, "3l Outdoor tail through opening dB", 0f, new ConfigDescription("Fix 3m: raise or lower the outdoor tail from the opening. 0 = the shot's level x how open the aim is x how indoor the shot is mixed.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 67 }));
             BlendSteepness = Config.Bind(fix, "3j Blend steepness", 1f, new ConfigDescription("Fix 3c: how quickly your gunshot leaves an even indoor/outdoor mix. 0 = straight (0.6.8; many shots near 50/50, two recordings at once can sound doubled). 1 = steep: it still crosses over at the same point, but near-even mixes are rare.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 70 }));
             EarlyEchoTrimDb = Config.Bind(fix, "6f Early echo trim dB", 0f, new ConfigDescription("Fix 6: added to echoes arriving under 25 ms after the shot (a wall within ~4 m). Those fuse with the shot as colour rather than a separate echo; if shots sound doubled, lower this. 0 = the physical level.", new AcceptableValueRange<float>(-24f, 0f), new ConfigurationManagerAttributes { Order = 52 }));
             IndoorWindFollowsOpenings = Config.Bind(fix, "8g Indoor wind follows openings", true, new ConfigDescription("Some rooms' room tone is a wind or draught recording (its clip name has 'wind' in it). With this on, that one follows how much of the outside reaches you (like the outdoor sound) instead of how enclosed you are, so it fades deep in a stairwell. Other room tones are unchanged. Every room tone played is logged to roomtone.csv.", null, new ConfigurationManagerAttributes { Order = 44 }));
@@ -175,6 +181,7 @@ namespace RealSoundSimulation
             Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony));
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("8g room tone", () => RoomTone.Apply(Harmony));
+            Safe("3m outdoor tail", () => OutdoorTail.Apply(Harmony));
             Safe("fix 2 obstruction score", () => ObstructionScoreFix.Apply(Harmony));
             Safe("fix 3 doorway blend", () => DoorwayBlend.Apply(Harmony));
             Safe("fix 3c own gunshot blend", () => GunEnvironmentBlend.Apply(Harmony));

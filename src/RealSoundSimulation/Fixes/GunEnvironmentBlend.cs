@@ -70,7 +70,7 @@ namespace RealSoundSimulation.Fixes
                 postfix: new HarmonyMethod(typeof(GunEnvironmentBlend), nameof(PickPostfix)));
         }
 
-        public static void Reset() { Blended = 0; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; }
+        public static void Reset() { Blended = 0; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
 
         private static bool IsOwn(WeaponSoundPlayer wsp)
         {
@@ -89,9 +89,13 @@ namespace RealSoundSimulation.Fixes
                 {
                     EnclosureProbe.MeasureAim(shotPosition, shotDirection, EnclosureProbe.CurrentMask(), out _lastAimEnc, out _lastAimDist);
                     _lastAimClosure = EnclosureProbe.AimClosure;
-                    if (!EnclosureProbe.MeasureRoomAt(shotPosition, EnclosureProbe.CurrentMask())) EnclosureProbe.MuzzleRoom = float.NaN;
+                    // 0.6.11: both muzzle measures weighted forward along the shot ("3k Muzzle lobe")
+                    if (!EnclosureProbe.MeasureRoomAt(shotPosition, EnclosureProbe.CurrentMask(), shotDirection)) EnclosureProbe.MuzzleRoom = float.NaN;
                     // 0.6.0: probe v2 measures the muzzle too (fix 9a)
-                    if (V2 && !AcousticProbe.MeasureAt(shotPosition)) AcousticProbe.MuzzleRoom = float.NaN;
+                    if (V2 && !AcousticProbe.MeasureAt(shotPosition, shotDirection)) AcousticProbe.MuzzleRoom = float.NaN;
+                    _lastSphere = V2 ? AcousticProbe.MuzzleRoomSphere : EnclosureProbe.MuzzleRoomSphere;
+                    _lastLobe = V2 ? AcousticProbe.MuzzleRoom : EnclosureProbe.MuzzleRoom;
+                    if (!float.IsNaN(_lastSphere) && !float.IsNaN(_lastLobe)) { LobeDiffSum += _lastSphere - _lastLobe; LobeDiffN++; }
                     _lastMuzzleDist = Vector3.Distance(shotPosition, EnclosureProbe.LastOrigin);
                     _indoorWeight = EnclosureWeight(_lastAimClosure);
                 }
@@ -181,8 +185,24 @@ namespace RealSoundSimulation.Fixes
         private static float _lastMuzzleDist = float.NaN, _lastRoomUsed = float.NaN;
         public static float LastReverbBoost;
 
+        // 0.6.11: ownshots.csv rows are written when the shot/tail call finishes, so the outdoor tail (3m), scheduled inside
+        // it, can go on the same row. One row per own pick, as before.
+        private struct Pending { public int Env; public float W, Used; public bool Applied, Tail; }
+        private static readonly Pending[] PendingRows = new Pending[4];
+        private static int _pendingN;
+        public static float LastWeightUsed = float.NaN; // 3c's weight after 3j for the latest own pick (read by 3m)
+        private static float _lastSphere = float.NaN, _lastLobe = float.NaN;
+        public static float LobeDiffSum; public static int LobeDiffN; // 3k: sphere minus lobe muzzle room, for the summary
+
         private static Exception ClearFinalizer(Exception __exception)
         {
+            try
+            {
+                for (int i = 0; i < _pendingN; i++)
+                    Log(PendingRows[i].Env, PendingRows[i].W, PendingRows[i].Applied, PendingRows[i].Used, PendingRows[i].Tail, i == _pendingN - 1);
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("fix 3c log", e); }
+            _pendingN = 0;
             _ownShot = false; _isTail = false;
             return __exception;
         }
@@ -191,7 +211,7 @@ namespace RealSoundSimulation.Fixes
         {
             if (!_ownShot || clip1 == null || clip2 != null) return; // only single-clip picks (own shots at distance 0)
             float w = Steep(_indoorWeight);
-            _usedWeight = w;
+            LastWeightUsed = w;
             bool applied = false;
             try
             {
@@ -231,7 +251,9 @@ namespace RealSoundSimulation.Fixes
             {
                 DiagRunner.ReportOnce("fix 3c own gunshot blend", e);
             }
-            Log(environment, _indoorWeight, applied); // the measured weight; weightUsed (last column) is after 3j
+            // the measured weight; weightUsed is after 3j. Written by the finalizer (0.6.11).
+            if (_pendingN < PendingRows.Length)
+                PendingRows[_pendingN++] = new Pending { Env = environment, W = _indoorWeight, Applied = applied, Used = w, Tail = _isTail };
         }
 
         // Own-gun room reverb boost: add the setting to the stereo reverb/early-reflection sends of your gun's hidden
@@ -268,7 +290,6 @@ namespace RealSoundSimulation.Fixes
         // 0.6.9 "3j": steeper around 0.5, same crossover. Raid 28: 132 of 202 samples mixed the two recordings between 0.25
         // and 0.75; two different recordings of one shot at similar levels can flam. x = 2w - 1 -> sign(x) |x|^p,
         // p = 1 / (1 + 2 x steepness): steepness 1 turns 0.6 into 0.79 and 0.4 into 0.21; 0 leaves it as it was.
-        private static float _usedWeight = float.NaN;
         private static float Steep(float w)
         {
             if (float.IsNaN(w)) return w;
@@ -282,12 +303,14 @@ namespace RealSoundSimulation.Fixes
         // One row per own shot / burst tail: what each measurement said and what was played.
         public static float LastShotTime = float.NaN, LastIndoorWeight = float.NaN; // for the mark key
 
-        private static void Log(int environment, float w, bool applied)
+        private static void Log(int environment, float w, bool applied, float used, bool isTail, bool last)
         {
             LastShotTime = Time.time; LastIndoorWeight = w;
             if (!DiagLog.IsOpen) return;
+            // 0.6.11: the outdoor tail (3m) goes on the call's last row
+            bool tail = last && OutdoorTail.PlayedThisCall;
             DiagLog.Row("ownshots.csv", string.Join(",",
-                DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), _isTail ? "tail" : "shot", Plugin.OwnShotSource.Value.ToString(),
+                DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), isTail ? "tail" : "shot", Plugin.OwnShotSource.Value.ToString(),
                 environment == Indoor ? "indoor" : "outdoor",
                 DiagLog.F(DoorwayBlend.TargetOutdoorness), DiagLog.F(EnclosureProbe.Enclosure), DiagLog.F(EnclosureProbe.Horizontal),
                 DiagLog.F(EnclosureProbe.Overhead), DiagLog.F(_lastAimEnc), DiagLog.F(_lastAimDist, "0.0"), DiagLog.F(w),
@@ -298,8 +321,10 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(EnclosureProbe.MuzzleSize), DiagLog.F(_lastMuzzleDist, "0.00"), DiagLog.F(_lastRoomUsed),
                 DiagLog.F(EnclosureProbe.HardShare), DiagLog.F(EnclosureProbe.HardRoom), DiagLog.F(EnclosureProbe.GlassShare),
                 V2 ? "v2" : "v1", DiagLog.F(AcousticProbe.Room), DiagLog.F(AcousticProbe.MuzzleRoom), DiagLog.F(AcousticProbe.Size),
-                DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00"), DiagLog.F(_usedWeight)));
-            _usedWeight = float.NaN;
+                DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00"), DiagLog.F(used),
+                DiagLog.F(EnclosureProbe.MuzzleRoomSphere), DiagLog.F(AcousticProbe.MuzzleRoomSphere),
+                tail ? "1" : "0", tail ? DiagLog.F(OutdoorTail.LastLevelDb, "0.0") : "", tail ? DiagLog.F(OutdoorTail.LastDelayMs, "0") : "",
+                tail ? DiagLog.F(OutdoorTail.LastAz, "0") : "", tail ? OutdoorTail.LastThrough : (last ? OutdoorTail.LastSkip : "")));
         }
     }
 }

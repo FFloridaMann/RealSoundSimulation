@@ -195,43 +195,62 @@ namespace RealSoundSimulation.Acoustics
         private static Vector3 _muzzleAt = new Vector3(1e9f, 0, 0);
         private static float _muzzleTime = -100f;
 
-        public static bool MeasureRoomAt(Vector3 o, int mask)
+        public static bool MeasureRoomAt(Vector3 o, int mask) => MeasureRoomAt(o, mask, Vector3.zero);
+
+        // 0.6.11: aim -> "3k Muzzle lobe" weighting (see AcousticProbe.MeasureAt); MuzzleRoomSphere = the unweighted value.
+        public static float MuzzleRoomSphere = float.NaN;
+        private static Vector3 _muzzleAim;
+
+        public static bool MeasureRoomAt(Vector3 o, int mask, Vector3 aim)
         {
             Diagnostics.Perf.Begin();
-            try { return MeasureRoomAtCore(o, mask); }
+            try { return MeasureRoomAtCore(o, mask, aim); }
             finally { Diagnostics.Perf.End(Diagnostics.Perf.Part.MuzzleRoom); }
         }
 
-        private static bool MeasureRoomAtCore(Vector3 o, int mask)
+        private static bool MeasureRoomAtCore(Vector3 o, int mask, Vector3 aim)
         {
-            if ((o - _muzzleAt).sqrMagnitude < 0.0225f && Time.time - _muzzleTime < 0.1f) return !float.IsNaN(MuzzleRoom);
-            _muzzleAt = o; _muzzleTime = Time.time;
-            float hc = 0f, hcN = 0f, oc = 0f, ocN = 0f, hitSum = 0f, closSum = 0f, hardSum = 0f; int hitN = 0;
+            if (aim.sqrMagnitude > 1e-6f) aim.Normalize();
+            if ((o - _muzzleAt).sqrMagnitude < 0.0225f && Time.time - _muzzleTime < 0.1f && Vector3.Dot(aim, _muzzleAim) > 0.995f) return !float.IsNaN(MuzzleRoom);
+            _muzzleAt = o; _muzzleTime = Time.time; _muzzleAim = aim;
+            float lk = Mathf.Clamp(Plugin.MuzzleLobe.Value, 0f, 2f);
+            float hc = 0f, hcN = 0f, oc = 0f, ocN = 0f, hitSum = 0f, hitN = 0f, closSum = 0f, hardSum = 0f;
+            float hcS = 0f, hcNS = 0f, ocS = 0f, ocNS = 0f;
             for (int i = 0; i < RayCount; i++)
             {
                 Vector3 d = UnitDirs[i];
+                float lw = AcousticProbe.LobeWeight(d, aim, lk);
                 float clos = 0f;
                 if (CountedRay.Raycast(o, d, out RaycastHit hit, MaxRange, mask, QueryTriggerInteraction.Ignore) && !IsGround(hit.normal))
                 {
                     EFT.Ballistics.MaterialType m = Surfaces.Material(hit.collider);
                     float rw = RoomWeight(hit.distance);
                     clos = rw * Surfaces.Closure(m);
-                    closSum += rw;
-                    if (Surfaces.IsHard(m)) hardSum += rw;
-                    hitSum += hit.distance; hitN++;
+                    closSum += rw * lw;
+                    if (Surfaces.IsHard(m)) hardSum += rw * lw;
+                    hitSum += hit.distance * lw; hitN += lw;
                 }
                 float elev = Mathf.Asin(Mathf.Clamp(d.y, -1f, 1f)) * Mathf.Rad2Deg;
-                if (Mathf.Abs(elev) <= 30f) { hc += clos; hcN++; }
-                if (elev > 30f) { oc += clos; ocN++; }
+                if (Mathf.Abs(elev) <= 30f) { hc += clos * lw; hcN += lw; hcS += clos; hcNS++; }
+                if (elev > 30f) { oc += clos * lw; ocN += lw; ocS += clos; ocNS++; }
             }
-            float z = 0f;
+            float z = 0f, zW = 0f, zS = 0f;
             for (int k = 0; k < ZenithDirs.Length; k++)
+            {
+                float lw = AcousticProbe.LobeWeight(ZenithDirs[k], aim, lk);
+                zW += lw;
                 if (CountedRay.Raycast(o, ZenithDirs[k], out RaycastHit zh, MaxRange, mask, QueryTriggerInteraction.Ignore))
-                    z += RoomWeight(zh.distance) * Surfaces.Closure(Surfaces.Material(zh.collider));
-            float horiz = hcN > 0 ? hc / hcN : 0f, over = ocN > 0 ? oc / ocN : 0f;
-            MuzzleRoof = Mathf.Min(over, z / ZenithDirs.Length);
+                {
+                    float c = RoomWeight(zh.distance) * Surfaces.Closure(Surfaces.Material(zh.collider));
+                    z += c * lw; zS += c;
+                }
+            }
+            float horiz = hcN > 1e-4f ? hc / hcN : 0f, over = ocN > 1e-4f ? oc / ocN : 0f;
+            MuzzleRoof = Mathf.Min(over, zW > 1e-4f ? z / zW : 0f);
             MuzzleRoom = horiz * MuzzleRoof;
-            float mean = hitN > 0 ? hitSum / hitN : float.NaN;
+            float horizS = hcNS > 0 ? hcS / hcNS : 0f, overS = ocNS > 0 ? ocS / ocNS : 0f;
+            MuzzleRoomSphere = horizS * Mathf.Min(overS, zS / ZenithDirs.Length);
+            float mean = hitN > 1e-4f ? hitSum / hitN : float.NaN;
             MuzzleHard = closSum > 0f ? hardSum / closSum : 0f;
             MuzzleSize = SizeFor(mean, Mathf.InverseLerp(HardRoomFrom, HardRoomFull, MuzzleRoom) * MuzzleHard);
             return true;

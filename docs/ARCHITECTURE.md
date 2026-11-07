@@ -55,6 +55,9 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     │                        become a volume ramp
     ├── RoomTone.cs          8g (0.6.9): "wind" room tones follow the outside's level (RoomToneController.ChangeRoomTone
     │                        postfix; BetterSource.UpdateSourceVolume prefix scales the occlusion factor, like 9k)
+    ├── OutdoorTail.cs       3m (0.6.11): the gun's outdoor tail from the opening you fire out of, on fix 6's voices
+    │                        (FireBullet / StopFiringLoop prefix + finalizer, PickClipsByDistance and Enqueue postfixes;
+    │                        AcousticProbe.ExitAlong for the opening)
     ├── AmbienceMix.cs       fix 8 (component, LateUpdate): outdoor level from exposure, indoor fade, roof rain, direction cue
 │   ├── BedDirection.cs      fix 9 (0.6.0): makes the game's own outdoor beds directional; 0.6.7 also the indoor roof rain player
     └── OpeningSounds.cs     fix 8 phase 4: 3D copies of the outdoor beds at up to 3 openings

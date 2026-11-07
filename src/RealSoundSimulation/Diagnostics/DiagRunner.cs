@@ -137,7 +137,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            GunSoundSource.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
+            GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -432,6 +432,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(AmbienceMix.Summary());
             sb.Append(DistantThroughOpenings.Summary());
             sb.Append(GunSoundSource.Summary());
+            sb.Append(OutdoorTail.Summary());
             sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}; same-clip crossfades done as a volume ramp {RainDropoutFix.VolumeOnly}");
             sb.AppendLine(MetaAcousticsCheck.Describe());
             sb.AppendLine();

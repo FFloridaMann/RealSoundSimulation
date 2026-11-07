@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.11 — 7 Nov 2026 (inside shot, outside tail: forward-lobe muzzle measure and the outdoor tail from the opening)
+**Run in game:** not yet. From a build request for raid 29 tag 1 (barrel out of a window, the whole shot sounded indoor; user: "inside shot, outside tail"). ownshots.csv at 122–130 s: muzzle 0.49 m from the head, v2 muzzle room 0.72–0.98, aim closure 0.11–0.35, indoor weight 0.61–0.66, after 3j 0.80–0.85.
+- **New `3k Muzzle lobe`** (1; 0 = the sphere as before): the muzzle's room measure (probe v2's 64 directions, and the 32-ray one when 9a is off) weights each direction by ((1 + cos to the aim) / 2)^k, room, roof and size alike. Out of a window the muzzle reads mostly outdoor although half its sphere looks back into the room; firing into a room from a doorway reads more indoor. The head measure stays a sphere. ownshots.csv adds `muzzleRoomSphere` and `v2MuzzleRoomSphere`; the summary has MUZZLE LOBE (mean sphere minus lobe).
+- **New `3m Outdoor tail from the opening`** (on) and **`3l` trim** (0 dB): when 3c mixes the shot mostly indoor (> 0.5 after 3j) and the aim cone is open, the gun's outdoor Tail recording also plays from the opening the shot goes out of: the aim cone's first ray (forward first) that leaves cover before its wall; through glass at the pane (9d loss, 1.5 kHz), bars at the grate (−1 dB, 12 kHz), else the exit point; 3 m along the aim if none is found. Delay = distance / 343 m/s; level = shot × open share × indoor weight × 3l. Additive: 3c's two body slots are unchanged. On fix 6's voices (needs 6 on), one per trigger pull, not counted in 6b.
+- **Differs from the request:** it also plays on the tail at the end of a burst, not only on "shot" samples. A gun that can fire full-auto plays every trigger pull (single shots too) as loop + tail, never as a "shot"; tag 1 was an AK-74, so a shot-only tail would never have played there. Never on the loop.
+- **ownshots.csv** rows are written when the shot call finishes (same rows as before), so they can carry `tailPlayed, tailLevelDb, tailDelayMs, tailAz, tailThrough` (or why it didn't play). Summary: OUTDOOR TAIL FROM THE OPENING (played, mean level and delay, reasons not played).
+- **Cost:** the opening search runs at most 5 times a second (up to ~90 short casts).
+
 ## 0.6.10 — 7 Nov 2026 (roof rain: its own directional mode, muffled by its paths)
 **Run in game:** not yet. User: "Yes, build it" (after the panner review: keep the panner for the beds; try HRTF only where up/down matters).
 - **New `9m Roof rain directional mode`** (UnityPanner): the roof rain's own mode; `9c` now sets only the outdoor sounds (its key is unchanged, so your value stays). Try `9m` = MetaHrtf with `9c` on the panner.

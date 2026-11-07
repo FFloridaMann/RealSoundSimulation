@@ -610,6 +610,16 @@ namespace RealSoundSimulation.Acoustics
         // 0.6.8: where an escaping leg (from o, direction d) leaves cover: the first point along it with no roof above,
         // sampled at 0, 0.75, 1.5, 3, 6, 12, 24, 48 m and refined twice. At most 10 short casts.
         private static readonly float[] ExitSteps = { 0.75f, 1.5f, 3f, 6f, 12f, 24f, 48f };
+
+        // 0.6.11 (3m): the same test for one ray from outside the probe: where a leg from o along d leaves cover, if it does
+        // within maxT (before the wall it hits). t = distance to that point.
+        public static bool ExitAlong(Vector3 o, Vector3 d, float maxT, out Vector3 pt, out float t)
+        {
+            t = 0f;
+            if (!FindExit(o, d, EnclosureProbe.CurrentMask(), out pt)) return false;
+            t = Vector3.Distance(o, pt);
+            return t <= maxT;
+        }
         private static bool FindExit(Vector3 o, Vector3 d, int block, out Vector3 pt)
         {
             if (!RoofAbove(o - Vector3.up * 0.5f, block)) { pt = o; return true; }
@@ -947,10 +957,23 @@ namespace RealSoundSimulation.Acoustics
         private static readonly Vector3[] Fib64 = BuildFib(64);
         private static readonly PathState[] Sync = new PathState[64];
 
-        public static bool MeasureAt(Vector3 o)
+        // 0.6.11 "3k Muzzle lobe": each muzzle direction is weighted by a forward lobe around the aim, ((1 + cos) / 2)^k.
+        // Raid 29 tag 1: firing out of a window with the muzzle 0.5 m from the head, half the sphere looked back into the
+        // room and the muzzle read "room" (0.72-0.83) although the blast went outside. k = 0 is the sphere (as before).
+        // MuzzleRoomSphere keeps the sphere's value for the log.
+        public static float MuzzleRoomSphere = float.NaN;
+        private static Vector3 _muzzleAim;
+        private static readonly float[] LobeW = new float[64];
+        public static float LobeWeight(Vector3 d, Vector3 aim, float k) =>
+            k <= 0f || aim.sqrMagnitude < 1e-6f ? 1f : Mathf.Pow(Mathf.Clamp01((1f + Vector3.Dot(d, aim)) * 0.5f), k);
+
+        public static bool MeasureAt(Vector3 o) => MeasureAt(o, Vector3.zero);
+
+        public static bool MeasureAt(Vector3 o, Vector3 aim)
         {
             if (!Valid || !_cmds.IsCreated) return false;
-            if ((o - _muzzleAt).sqrMagnitude < 0.0225f && Time.time - _muzzleTime < 0.1f) return !float.IsNaN(MuzzleRoom);
+            if (aim.sqrMagnitude > 1e-6f) aim.Normalize();
+            if ((o - _muzzleAt).sqrMagnitude < 0.0225f && Time.time - _muzzleTime < 0.1f && Vector3.Dot(aim, _muzzleAim) > 0.995f) return !float.IsNaN(MuzzleRoom);
             Perf.Begin();
             try
             {
@@ -958,9 +981,15 @@ namespace RealSoundSimulation.Acoustics
                 int mask = V2Mask(block);
                 var qp = new QueryParameters(mask, false, QueryTriggerInteraction.Ignore, true);
                 Quaternion rot = UnityEngine.Random.rotationUniform;
-                for (int i = 0; i < 64; i++) { Sync[i] = default; Sync[i].Active = true; Sync[i].O = o; Sync[i].D = rot * Fib64[i]; Sync[i].First = Sync[i].D; Sync[i].E = Sync[i].G = Sync[i].W = 1f; Sync[i].Cut = 22000f; }
+                float lk = Mathf.Clamp(Plugin.MuzzleLobe.Value, 0f, 2f), lSum = 0f;
+                for (int i = 0; i < 64; i++)
+                {
+                    Sync[i] = default; Sync[i].Active = true; Sync[i].O = o; Sync[i].D = rot * Fib64[i]; Sync[i].First = Sync[i].D; Sync[i].E = Sync[i].G = 1f; Sync[i].Cut = 22000f;
+                    LobeW[i] = LobeWeight(Sync[i].D, aim, lk); lSum += LobeW[i];
+                    Sync[i].W = LobeW[i]; // the size/absorption statistics are lobe-weighted too
+                }
                 Stats s = default;
-                float geo = 0f; int up = 0, upHit = 0;
+                float geo = 0f, geoS = 0f, up = 0f, upHit = 0f;
                 for (int leg = 0; leg < 3; leg++)
                 {
                     int n = 0;
@@ -973,16 +1002,18 @@ namespace RealSoundSimulation.Acoustics
                         int i = Idx[k];
                         _syncFate = Fate.None;
                         Advance(ref Sync[i], i, _hits[k], block, false, ref s);
-                        if (!Sync[i].Active && (_syncFate == Fate.Sky || _syncFate == Fate.SkyAfterBounces) && Sync[i].GeoBounces <= 1) geo += Sync[i].G;
-                        if (leg == 0 && Sync[i].First.y > 0.6f) { up++; if (Sync[i].FirstHit && Sync[i].FirstHitM < 40f) upHit++; }
+                        if (!Sync[i].Active && (_syncFate == Fate.Sky || _syncFate == Fate.SkyAfterBounces) && Sync[i].GeoBounces <= 1) { geo += Sync[i].G * LobeW[i]; geoS += Sync[i].G; }
+                        if (leg == 0 && Sync[i].First.y > 0.6f) { up += LobeW[i]; if (Sync[i].FirstHit && Sync[i].FirstHitM < 40f) upHit += LobeW[i]; }
                     }
                 }
-                MuzzleRoom = Mathf.Clamp01(1f - geo / 64f);
+                MuzzleRoom = Mathf.Clamp01(1f - geo / Mathf.Max(lSum, 1e-3f));
+                MuzzleRoomSphere = Mathf.Clamp01(1f - geoS / 64f);
+                _muzzleAim = aim;
                 float mfp = s.LenN > 0 ? (float)(s.Len / s.LenN) : float.NaN;
                 float a = s.Hits > 0 ? (float)(s.Alpha / s.Hits) : 0.05f;
                 MuzzleHardRoom = Mathf.InverseLerp(0.5f, 0.85f, MuzzleRoom) * Mathf.InverseLerp(0.15f, 0.04f, a);
                 MuzzleSize = Mathf.Lerp(SizeFrom(mfp), 1f, MuzzleHardRoom);
-                MuzzleCoverage = up > 0 ? (float)upHit / up : 0f;
+                MuzzleCoverage = up > 1e-4f ? upHit / up : 0f;
                 _muzzleAt = o; _muzzleTime = Time.time;
                 return true;
             }

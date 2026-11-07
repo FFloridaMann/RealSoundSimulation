@@ -118,6 +118,9 @@ namespace RealSoundSimulation.Diagnostics
             new Target("7", "Audio.AmbientSubsystem.PrecipitationAmbientBlender", "UpdateGlobalsVolumeMult", "M"),
             new Target("7", "Audio.AmbientSubsystem.PrecipitationAmbientBlender", "_globalsVolumeMult", "F"),
             new Target("8", "Audio.AmbientSubsystem.AmbientSoundBlender", "_indoorMixerParams", "F"),
+            // 0.6.11
+            new Target("3m", "EFT.SoundBank", "PickSingleClip", "M"),
+            new Target("3m", "WeaponSoundPlayer", "IsSilenced", "P"),
             new Target("6", "SuperBetterAudioQueue", "Enqueue", "M"),
             new Target("6", "WeaponSoundPlayer", "StopFiringLoop", "M"),
             new Target("6", "BetterAudio", "GunshotMixerGroup", "F"),

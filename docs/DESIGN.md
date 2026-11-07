@@ -142,8 +142,9 @@ Every gun has indoor and outdoor recordings. The game plays one, picked by trigg
 1. **Room** (2.4), mapped 0.15 → open, 0.65 → fully indoor.
 2. **Aim:** the aim cone's closure, blended in by `3e` (0.4) × roof, so firing into a room leans indoor and firing out leans outdoor.
 3. **Size:** small furnished spaces get less of the indoor recording (its long room tail suits halls, not closets): `3i` Soft keeps at least 85%. Hard rooms (bare stairwells) are exempt.
-4. **Head and muzzle:** each value is head × 0.3 + muzzle × 0.7 (`3g`). The muzzle's side of a threshold decides most.
+4. **Head and muzzle:** each value is head × 0.3 + muzzle × 0.7 (`3g`). The muzzle's side of a threshold decides most. Since 0.6.11 the muzzle measure is weighted forward along the aim (`3k`), so out of a window it reads the outside the blast goes into, not the room half its sphere looks back at.
 Applies to single shots, full-auto (picked at the start of a burst) and the burst tail (picked fresh).
+5. **Outdoor tail from the opening (`3m`, 0.6.11):** when the mix is mostly indoor but the aim cone is open, the gun's outdoor tail also plays from the window or door the shot goes out of (at the pane through glass or bars), a beat later (distance / 343 m/s), at shot × open share × indoor weight × `3l`. Nothing of the mix above is removed: inside shot, outside tail. Single shots and burst tails, not the loop; on fix 6's voices.
 
 ### 5.1b With probe v2 (fix 9a on; test)
 Room, roof and size in steps 1–4 come from probe v2 (head and muzzle) instead of the enclosure probe; the hard-room value for 5a and 6e too. The aim cone and the echoes' reflection search still use the enclosure probe.
@@ -210,6 +211,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9k` | distant gunfire through openings (§3.2b; needs fix 4). 0.6.9: every escaping path counts (side openings by how they face the battle, openings to the sky above at 0.35, facing away 0.05) | on |
 | `9l` | rain through the building: muffled floor for the outdoor sound deep inside (0.6.9) | −32 dB |
 | `9m` | roof rain directional mode (0.6.10; `9c` is the outdoor sounds only). Roof rain is also low-passed by its paths | UnityPanner |
+| `3k` | muzzle lobe: the muzzle's room measure weighted forward along the aim (0.6.11; §5.1) | 1 |
+| `3m`, `3l` | outdoor tail from the opening when firing out of a room, and its trim (0.6.11; §5.1) | on, 0 dB |
 | `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9) | 1 |
 | `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
