@@ -342,6 +342,23 @@ Logs: `ambience.csv` (exposureApplied, indoorLayers, bedPan, bedCutoffHz, roofRa
 
 ---
 
+## Fix 9 and 9a: probe v2 (0.6.0, test switches)
+
+How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [AMBIENCE.md](AMBIENCE.md) §12–13.
+
+**Problem.** Raid 21: the exposure probe counted only straight lines to points the room map calls outdoor, with a "your own ceiling" rule. A garage whose walls and roof are one collider read as deep underground (3 of 48 directions outside), and nothing modelled sound building up in a hard room. The opening sounds played up to 24 copies of the same loops, so quiet rain flammed.
+
+**What changes.**
+- `Acoustic probe v2` (diagnostics, on) measures by bouncing rays to the open sky (§2.6).
+- **Fix 9** (`9 Ambience from probe v2`, off): the outdoor beds' volume and muffling are set directly from it; the game's own beds become directional (no copies); indoor layers and roof rain follow it.
+- **Fix 9a** (`9a Gunshots from probe v2`, off): the gunshot indoor/outdoor mix and the hard-room boosts use its room measure.
+
+**Settings.** `9`, `9a` (off), `9b Game sounds directional` 1, `9c Directional mode` UnityPanner / MetaHrtf, `9d Glass loss dB` 22, `9e Sound build-up in rooms` 1. `Probe ray view key` F11.
+
+**Check.** Run the test route ([TESTING.md](../TESTING.md)) with 9 on (and 9a on, or one at a time). Logs: `probe2.csv` (8/s), `paths.csv` (every path at each F10), marks.csv v2 columns, ownshots.csv `probe` and v2 columns, the overlay's "probe v2" line, the summary's ACOUSTIC PROBE V2 section and "directional beds: N movable, N fixed".
+
+---
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

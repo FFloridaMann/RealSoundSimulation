@@ -25,6 +25,8 @@ Agreed 6 Nov 2026 (consolidation step 4). Every build is judged on the same stop
 | 11 | Hole in a roof | a building with part of its roof missing ? F10 under the hole, then 5 m away under intact roof | Rain from above under the hole; quieter and dull under the intact roof | v2: sky found above at the hole |
 | 12 | Your start building | the long glass windows inside the concrete building you spawn in ? | Weather through the glass wall, muffled, from the windows' side | glass directions |
 
+**Testing probe v2 (0.6.0):** F12 → `9 Ambience from probe v2` and/or `9a Gunshots from probe v2` on (one at a time is fine). Run the route as usual. At any stop, F11 shows the probe's rays: green reached the sky, cyan after bouncing, yellow through glass, red trapped. If something sounds wrong, say what the rays showed ("red everywhere in the garage" or "green through the wall"). To compare, flip 9 or 9a off and on at a stop.
+
 **Between stops, listen for:** sounds cutting in and out, clicks, rain coming from overhead or from inside a building, anything doubled.
 
 **Dry raid now and then:** the same route without rain checks wind and the day/night background.

@@ -1,6 +1,6 @@
 # Current design: how indoor and outdoor sound works
 
-**State: 0.5.8** (6 Nov 2026), with the default settings (which are the tested setup). This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
+**State: 0.6.0** (6 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
 
 ---
 
@@ -68,6 +68,16 @@ Every 0.25 s, 5 rays straight up (median, so one beam doesn't flip it): the firs
 ### 2.5 Surfaces
 `Acoustics/Surfaces.cs`: the game's bullet material tags (concrete, metal, wood, glass, soil, fabric…), cached per collider. Used for closure (2.4) and for echo loss and brightness (5.3).
 
+### 2.6 Acoustic probe v2 — sound that bounces (0.6.0; drives fixes 9 and 9a when they're on)
+`Acoustics/AcousticProbe.cs`. One ray-tracer for both the ambience and your gunshots. Setting `Acoustic probe v2` (on).
+- **128 directions** evenly over the whole sphere, randomly rotated every cycle; about 512 paths start per second (each direction ~4 times a second). All the legs of a frame are cast in one batch on worker threads.
+- **Each path bounces like sound.** At a hit: glass passes at `9d` (−22 dB, muffled to 1.5 kHz) or reflects; thin planks, cardboard and fabric pass at −10 dB; bars and fences pass at 0.9; shattered glass and empty frames pass; solid objects on low-detail layers (cars, doors) block with a small leak. Everything else reflects, losing energy by its material (concrete 2%, wood 10–15%, fabric 50%, grass 45%…), mirror-like or scattered by roughness, and duller by its brightness. Up to 3 reflections (6 casts).
+- **Outside = open sky:** a leg that hits nothing for 60 m has escaped, unless it's level/downward and there's a roof over its end (a long interior). No room map, no ceiling rule.
+- **Room build-up:** energy still bouncing after 3 reflections is completed with Sabine's rule: escape rate per bounce p, absorption a → share escaping = p / (p + (1 − p) a), × `9e`. A bare concrete garage open on one side (p ≈ 0.1, a ≈ 0.03) comes out about 80% of outside; a furnished room much less.
+- **Ambience outputs:** level (direct + bounced + build-up, 0–1), brightness (Hz), arrival direction and focus, sky open, enclosed, roof coverage (upward cone covered within 40 m) and roof material.
+- **Gunshot outputs:** room = 1 − the share escaping within one wall/roof bounce (floors don't count; thin surfaces by `3f`), mean free path → size, absorption → hard room, a reverb-time estimate. Also measured at the muzzle when you fire (64 directions, 3 casts).
+- **Ray view:** `Probe ray view key` (F11) draws every path: green sky, cyan sky after bounces, yellow through glass, red trapped, magenta long interior.
+
 ---
 
 ## 3. Ambience: what you hear when nobody is shooting
@@ -92,6 +102,12 @@ All of these follow **one measure** (the outdoor value, 2.2) with **one smoothin
 **Example — walking from the street into a glass-fronted hallway in rain:**
 outside, the outdoor value ≈ 1: beds as the game plays them, no indoor layers. Through the doorway the value drops smoothly as fewer directions reach outside; the beds get quieter and duller; "enclosed" rises, so part of the rain moves to 3D sources in the directions of the doorway and windows; roof rain and room tone fade in. Deep inside, under several floors, roof rain is off and the outside is heard only through the openings, from their direction.
 
+### 3.2b With probe v2 (fix 9 on; test)
+- **Volume and muffling are set directly** from probe v2: volume = 10·log10(level) dB, low-pass = the probe's brightness, high-pass at its minimum, reverb/delay sends capped at the volume. The game's outdoor-value curve is bypassed.
+- **The game's own beds become directional** (`Fixes/BedDirection.cs`): one source each, no copies. Their 2D/3D blend = enclosed × `9b`; placed 3 m away in the arrival direction; width from the focus (Unity panner: spread 180° → 20°, duller from behind; or Meta HRTF with volumetric radius 3 → 0.3 m, `9c`). A bed is only moved if its object has no children and holds only bed sources; otherwise it stays flat (logged).
+- **Indoor layers** follow probe v2's enclosed; **roof rain** is also × roof coverage (holes let less rain hit "your" roof).
+- The 0.5.x opening-sound copies and the pan/filter direction cue are off while fix 9 is on.
+
 ### 3.3 The mix snapshot at doorways (fix 3)
 Separately, the game switches the whole mix (mostly reverb) between its Indoor and Outdoor snapshots at trigger volumes. Fix 3 replaces the switch with a blend by **outdoorness at the nearest doorway**: 0 at 1.5 m inside, 0.5 on the doorway plane, 1 at 1.0 m outside (`3a`, `3b`); the same doorway is kept through a crossing. With fix 8 off, fix 3 also drives the ambience by that doorway value (the older, simpler behaviour).
 
@@ -114,6 +130,9 @@ Every gun has indoor and outdoor recordings. The game plays one, picked by trigg
 3. **Size:** small furnished spaces get less of the indoor recording (its long room tail suits halls, not closets): `3i` Soft keeps at least 85%. Hard rooms (bare stairwells) are exempt.
 4. **Head and muzzle:** each value is head × 0.3 + muzzle × 0.7 (`3g`). The muzzle's side of a threshold decides most.
 Applies to single shots, full-auto (picked at the start of a burst) and the burst tail (picked fresh).
+
+### 5.1b With probe v2 (fix 9a on; test)
+Room, roof and size in steps 1–4 come from probe v2 (head and muzzle) instead of the enclosure probe; the hard-room value for 5a and 6e too. The aim cone and the echoes' reflection search still use the enclosure probe.
 
 ### 5.2 Room reverb (fix 5)
 The game plays a hidden reverb-only copy of your shot through Meta XR's room acoustics. Its reverb sends get `5` (0 dB) + `5a` (+6 dB) × hard room, so stairwells and corridors ring more.
@@ -141,6 +160,8 @@ Things this design does not do yet. Each has a place in [ROADMAP.md](ROADMAP.md)
 ---
 
 ## 7. Cost
+Probe v2 (0.6.0) adds about 2,000 batched rays a second; its cost is the COST line "acoustic probe v2". Not yet measured in a raid.
+
 Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 ms per second of game time in total (~1.6% of one core). Biggest regular parts: exposure probe (continuous, ~290 rays/s), enclosure probe (10/s), per-shot echo search. The diagnostics' source scan costs ~51 ms once every 15 s (kept by choice, logging only). One-off at raid start: window registry ~60 ms, ambience setup ~140 ms.
 
 ---
@@ -158,4 +179,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6`, `6a`–`6e` | your gunshot echoes (§5.3) | on, 0 dB, 4, 10 dB, far on, +4 dB |
 | `7` | rain not cutting out (§3.2) | on |
 | `8`, `8a`–`8f` | ambience from the exposure probe (§3.2) | on, 0.6, 0.3, 0.45, 0.6, 0.7, HRTF on |
-| Diagnostics: `Enclosure probe`, `Outdoor exposure probe` | the measurements (§2); fixes 3c and 8 need them | on |
+| `9`, `9b`–`9e` | ambience from probe v2 (§3.2b): directional game sounds, mode, glass loss, room build-up | **off** (test), 1, UnityPanner, 22 dB, 1 |
+| `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |
+| Diagnostics: `Enclosure probe`, `Outdoor exposure probe`, `Acoustic probe v2` | the measurements (§2); fixes 3c, 8, 9 and 9a need them | on |
+| Diagnostics: `Probe ray view key` | draws probe v2's rays (§2.6) | F11 |

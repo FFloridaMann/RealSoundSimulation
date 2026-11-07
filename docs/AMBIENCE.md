@@ -211,6 +211,15 @@ Output: a short write-up with options, discussed before any code (as for step 4b
 **Decisions (user, 6 Nov: "lets go").**
 1. **Glass and walls are physical by default:** a closed window about −20 to −25 dB and muffled. `8c` stays as a trim.
 2. **v2 sets the outdoor beds' volume and muffling directly** (dB and filter), instead of feeding one 0–1 value through the game's steep curves.
-3. **Ambience first, behind a switch**, with the current probe kept for A/B. Gunshots move onto v2 in a later step.
+3. **Both at once, each behind its own switch** (user, 6 Nov: "build both probes at once, then give me a toggle for each"): one switch puts the ambience on v2, another puts the gunshots on v2, so either can be tested alone in one raid. The current probes stay for A/B.
 4. **The doubled rain:** make the game's own bed sources directional (no copies; user: "the most realistic option"). The review checks it works with the game's 3D audio; one 3D copy per bed is only the fallback. Plus an in-game ray view (a key that draws the probe's paths).
+
+## 13. Review: how the game's ambience and 3D audio can be driven (6 Nov, before probe v2)
+
+From the decompiled game code (`Audio.AmbientSubsystem`, `Audio.SpatialSystem`, Meta XR Audio):
+- **The outdoor beds** (wind, outdoor rain, day/night background) are plain AudioSources set up in the scene. At runtime the game only writes their **volume** (`AudioSourceCrossfader`) and **clip**. It never moves them and never changes `spatialBlend`, `spatialize` or `spread`. So they can be made directional directly, with no copies (decision 4).
+- **Outdoor level and muffling:** `AmbientSoundBlender.SetOutdoorMixerParams(value)` turns one 0–1 value into five mixer parameters through curves: volume (`_volumeCurve`), low-pass (from `_occlusionCurve`, 500 Hz–22 kHz), **high-pass 30 → 700 Hz as you go "indoor"**, reverb send (≤ −2 dB) and delay send (≤ −5.4 dB). The high-pass is unphysical (walls and glass pass the lows and stop the highs), and the curves are steep. The parameter names are reachable through named members (`_outdoorMixerParams.TryGetParameters`, the blender's mixer), so probe v2 writes dB and Hz directly (decision 2), high-pass left at its minimum.
+- **Meta XR** is the spatializer plugin (`MetaXRAudioUnity`). Per source it takes: gain, near/far, **volumetric radius** (index 4: a sound from an area, not a point), HRTF intensity (9), early reflections and reverb sends, direct sound on/off, occlusion intensity. The code can't show whether Meta honours a *partial* `spatialBlend` (needed for a smooth flat-to-3D blend). So fix 9 has a mode switch (`9c`): Unity's own panner (smooth, left/right with width) by default, Meta HRTF to try.
+- **Batched raycasts:** Unity 2022.3 has `RaycastCommand` with `QueryParameters`, run on worker threads. Probe v2 casts one leg per path per frame in one batch.
+- **Layers:** the sound-blocking mask (from the game's occlusion settings) plus only `Default`, `LowPolyCollider` (cars, the Nakatani window shells), `TransparentCollider` (facade glass), `Interactive` and `DoorLowPolyCollider`. Not `LevelBorder` (invisible map edges), culling volumes, rain drops or shells. Raid 20–21 summaries showed what the rays meet there: facade glass, window bars, parked cars (`Gelik`, `Tiger`, no material tag), elevator doors.
 

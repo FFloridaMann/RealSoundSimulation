@@ -109,8 +109,12 @@ namespace RealSoundSimulation.Diagnostics
                 DiagLog.F(Acoustics.OutdoorExposure.NearestOpenM, "0.0"), DiagLog.F(Acoustics.OutdoorExposure.NearestGlassM, "0.0"),
                 DiagLog.F(Acoustics.OutdoorExposure.RoomFloor), DiagLog.F(Acoustics.OutdoorExposure.Value),
                 DiagLog.F(Acoustics.OutdoorExposure.CeilingM, "0.0"), Acoustics.OutdoorExposure.CeilingMat.ToString(),
-                Acoustics.OutdoorExposure.FloorsAbove.ToString(), Acoustics.OutdoorExposure.RoofMat.ToString()));
+                Acoustics.OutdoorExposure.FloorsAbove.ToString(), Acoustics.OutdoorExposure.RoofMat.ToString(),
+                DiagLog.F(Acoustics.AcousticProbe.Level), DiagLog.F(Acoustics.AcousticProbe.CutoffHz, "0"), DiagLog.F(Acoustics.AcousticProbe.Focus),
+                DiagLog.F(Acoustics.AcousticProbe.SkyOpen), DiagLog.F(Acoustics.AcousticProbe.Coverage), DiagLog.F(Acoustics.AcousticProbe.Room),
+                DiagLog.F(Acoustics.AcousticProbe.Rt60, "0.00")));
             Acoustics.OutdoorExposure.DumpRays(_marks, Time.time - _raidStart);
+            Acoustics.AcousticProbe.DumpPaths(_marks, Time.time - _raidStart);
             Plugin.Log.LogInfo($"Mark {_marks} at {p} (room {Acoustics.EnclosureProbe.Room:0.00}, surfaces {surfaces})");
         }
 
@@ -133,7 +137,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
+            GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -361,6 +365,7 @@ namespace RealSoundSimulation.Diagnostics
             _sb.Append($"shots {ShotProbe.Shots}  LOS+occluded mixer {ShotProbe.ShotsWithLosOccluded}/{ShotProbe.ShotsWithLos}  >250m LOS occluded {ShotProbe.ShotsBeyond250WithLosOccluded}/{ShotProbe.ShotsBeyond250WithLos}  mixer flips {ShotProbe.MixerFlips}\n");
             _sb.Append(Perf.OverlayLine(Time.realtimeSinceStartup));
             _sb.Append(Acoustics.OutdoorExposure.OverlayLine());
+            _sb.Append(Acoustics.AcousticProbe.OverlayLine());
             _sb.Append("  dist   prio   prop  obst  occl  stages  T    D    R    room\n");
             foreach (Row r in _rows.OrderBy(x => x.Dist).Take(Plugin.OverlayRows.Value))
             {
@@ -423,6 +428,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(Acoustics.OwnEchoes.Summary());
             sb.Append(Perf.Summary(Time.realtimeSinceStartup));
             sb.Append(Acoustics.OutdoorExposure.Summary());
+            sb.Append(Acoustics.AcousticProbe.Summary());
             sb.Append(AmbienceMix.Summary());
             sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}");
             sb.AppendLine(MetaAcousticsCheck.Describe());

@@ -74,6 +74,14 @@ A *container* is the game's grouping of sounds at one spot (one per player, plus
 
 Snapshot switches are logged even while fix 3 skips them: they record what the game *wanted* to do.
 
+### probe2.csv (0.6.0, 8 per second)
+Probe v2 (DESIGN.md §2.6): `level` (0–1) and `levelDb`; its parts `direct`, `traced` (after bounces) and `tail` (room build-up), `remaining` (still bouncing after 3 reflections); `escapeRate` (p) and `absorption` (a) used for the build-up; `meanFreePathM`, `rt60S` (estimate); `skyOpen`, `enclosed`, `coverage` (upward cone covered) and `roofMat`; `cutoffHz` (brightness); `arrivalAz` (relative to where you face, 0 ahead, +90 right) and `arrivalEl`; `focus` (0 all round … 1 one direction), `diffuseShare`; gunshot `room`, `size`, `hardRoom`; `raysPerS`.
+
+### paths.csv (0.6.0, at each F10)
+One row per direction of probe v2: `azimuthDeg`/`elevationDeg` of its first leg (relative to where you face), `fate` (Sky, SkyAfterBounces, Trapped, LongInterior), `casts`, the energy that escaped `direct`/`reflected` or is `remaining`, `geo` (gunshot room measure), `cutoffHz`, `viaGlass`, and `hits` (object:material@distance for each hit, in order).
+
+Also from 0.6.0: `marks.csv` ends with `v2Level, v2CutoffHz, v2Focus, v2SkyOpen, v2Coverage, v2Room, v2Rt60`; `ownshots.csv` ends with `probe` (v1/v2: which one decided the shot), `v2Room, v2MuzzleRoom, v2Size, v2HardRoom, v2Rt60`. The F9 overlay has a "probe v2" line. The summary has an ACOUSTIC PROBE V2 section, and AMBIENCE MIX says how many beds could be made directional.
+
 ### ambience.csv (10 per second)
 For fix 8 (empty with it off): `exposureApplied` (the smoothed outdoor value it set), `indoorLayers` (0.5.8; level of the indoor layers, 1 enclosed … 0 open air; was `indoorFade`), `bedPan` (−1 left … 1 right), `bedCutoffHz` (direction-cue high-cut; 22000 = none), `roofRainFactor`. (`glassLeak`, fix 3h, was removed in 0.5.8.) Since 0.5.0: `openingShare` (share moved to the 3D opening sounds), `openingVoices` (how many are playing), `opening1Az` / `opening1Gain` (first opening's direction relative to where you face, and its gain).
 

@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.0 — 6 Nov 2026 (probe v2)
+**Run in game:** not yet (installed 21:40, game closed). The new switches 9 and 9a are **off**: with them off, everything sounds as in 0.5.8.
+- **New: acoustic probe v2** (diagnostics, on). 128 rays over the whole sphere that bounce like sound until they reach open sky, losing energy by material and passing glass, thin planks and bars at a loss; the rest of a room's ringing is completed with Sabine's rule. Batched on worker threads. Design: AMBIENCE.md §12–13, DESIGN.md §2.6. Raid 21 asked for it: the garage read as underground and quiet rain flammed.
+- **New fix 9, "Ambience from probe v2"** (off, test): the outdoor beds' volume (dB) and muffling (Hz) are written directly, bypassing the game's curve (which also cut the lows indoors); the game's own rain and wind sources become directional (no copies, so no flamming); indoor layers and roof rain follow the probe. Settings 9b–9e.
+- **New fix 9a, "Gunshots from probe v2"** (off, test): the gunshot indoor/outdoor mix and the 5a/6e hard-room boosts use probe v2's room measure (head and muzzle).
+- **New: probe ray view** (F11) draws every probe v2 path in the world.
+- **Logs:** new `probe2.csv` and `paths.csv`; extra columns at the end of `marks.csv` and `ownshots.csv`; an overlay line; ACOUSTIC PROBE V2 in the summary.
+- User decisions (6 Nov): physical glass (−22 dB, `9d`); set volume and muffling directly; build both probe uses at once with a switch each; make the game's own sounds directional rather than copying them.
+
 ## 0.5.8 — 6 Nov 2026 (clean-up)
 **Run in game:** raid 21 (21:10, medium rain): "interior transitions sound better". Still: quiet rain deep inside sounds doubled, and the garage reads as deep underground (see DIAGNOSTICS raid 21, ROADMAP probe v2). With the settings you already had, nothing should sound different. Part of the consolidation (ROADMAP.md).
 - **Defaults are now the tested setup.** Every raid since raid 10 ran with: every fix on, `2 Obstruction score` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` HRTF on. The code defaults were "everything off", so a reset or a fresh install would have given an untested setup. Your config file keeps its own values; the section name is unchanged, so nothing was reset. Every fix is still switchable, and all off is still the game's own audio.

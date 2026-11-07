@@ -355,7 +355,8 @@ namespace RealSoundSimulation.Acoustics
             // 4. merge near-identical arrivals, keep the loudest N
             SortCandsByEnergy();
             // 0.3.3: hard closed rooms (stairwells, bare concrete) get up to 2 extra reflections.
-            float hardRoom = float.IsNaN(EnclosureProbe.HardRoom) ? 0f : EnclosureProbe.HardRoom;
+            float hr = Fixes.GunEnvironmentBlend.HardRoomNow(); // 0.6.0: probe v2 with fix 9a on
+            float hardRoom = float.IsNaN(hr) ? 0f : hr;
             // 0.4.1: up to 3 extra, and all echoes + "6e Hard room echo boost dB" x hardRoom (raid 11: stairwell shots
             // quieter than a stairwell should be; a hard closed room is loud because the sound builds up).
             int max = Mathf.Clamp(Plugin.EchoMaxTaps.Value + Mathf.RoundToInt(3f * hardRoom), 1, Taps.Length);

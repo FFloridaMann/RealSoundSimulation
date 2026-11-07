@@ -58,6 +58,7 @@ namespace RealSoundSimulation.Fixes
         private float _o = -1f, _lastSnapO = -1f, _lastAmb = -1f, _lastTone = -1f;
         private float _roomLevel = 0f, _roomLevelTarget = 0f;
         private float _expValue = float.NaN; // fix 8
+        private float _lastV2Db = 999f, _lastV2Cut = 22000f; // fix 9
         private EnvironmentSoundBlendSystem _blend;
         private float _nextBlendSearch;
 
@@ -246,6 +247,26 @@ namespace RealSoundSimulation.Fixes
                 // them too, fading out as you reach open air. 8d sets how far they fade where the outside is open around you.
                 tone = AmbienceMix.IndoorLayers();
             }
+            // 0.6.0, fix 9: probe v2 sets the outdoor volume (dB) and muffling (Hz) directly, and the indoor layers.
+            if (AmbienceMix.V2Active && !float.IsNaN(AmbienceMix.V2Level))
+            {
+                float volDb = Mathf.Clamp(10f * Mathf.Log10(Mathf.Max(AmbienceMix.V2Level, 1e-8f)), -80f, 0f);
+                float cut = AmbienceMix.V2Cutoff, t2 = AmbienceMix.V2Indoor;
+                bool setV = Mathf.Abs(volDb - _lastV2Db) > 0.05f || Mathf.Abs(Mathf.Log(cut / Mathf.Max(_lastV2Cut, 1f))) > 0.01f;
+                bool setT = Mathf.Abs(t2 - _lastTone) > 0.003f;
+                for (int i = 0; i < blenders.Length; i++)
+                {
+                    AmbientSoundBlender b = blenders[i];
+                    if (b == null) continue;
+                    if (setV) AmbienceMix.ApplyOutdoorDirect(b, BlenderMixerRef(b), volDb, cut);
+                    if (setT) b.SetIndoorMixerParams(t2, 0f, true);
+                }
+                if (setV) { _lastV2Db = volDb; _lastV2Cut = cut; }
+                if (setT) _lastTone = t2;
+                _lastAmb = -1f; // so the v1 path re-applies if v2 is switched off
+                return;
+            }
+            _lastV2Db = 999f;
             bool setAmb = Mathf.Abs(amb - _lastAmb) > 0.003f, setTone = Mathf.Abs(tone - _lastTone) > 0.003f;
             if (!setAmb && !setTone) return;
             for (int i = 0; i < blenders.Length; i++)

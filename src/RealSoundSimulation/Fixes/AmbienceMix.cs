@@ -51,11 +51,57 @@ namespace RealSoundSimulation.Fixes
         public static void Reset()
         {
             RestoreBeds();
+            BedDirection.Restore();
             OpeningSounds.Destroy();
+            Took.Clear(); V2Active = false; V2Level = float.NaN;
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
+        }
+
+        // ---------------- probe v2 (fix 9, 0.6.0) ----------------
+        // With "9 Ambience from probe v2" on: the outdoor beds' volume and muffling come straight from the acoustic probe
+        // (dB and Hz, smoothed like everything else), written to the game's outdoor mixer parameters directly instead of
+        // through its outdoor-value curve (which also raised a high-pass up to 700 Hz indoors - unphysical: walls and glass
+        // let the lows through). Indoor layers follow probe v2's Enclosed. The beds become directional (BedDirection); the
+        // 0.5.x opening-sound copies and direction cue are off.
+        public static bool V2Active;
+        public static float V2Level = float.NaN, V2Cutoff = 22000f, V2Indoor = 1f;
+        private static float _coverSm = 1f;
+        private static readonly HashSet<AmbientSoundBlender> Took = new HashSet<AmbientSoundBlender>();
+
+        private static void V2Smooth(float dt)
+        {
+            float lv = Mathf.Max(AcousticProbe.Level, 1e-4f), cut = Mathf.Max(AcousticProbe.CutoffHz, 100f);
+            if (float.IsNaN(V2Level)) { V2Level = lv; V2Cutoff = cut; V2Indoor = AcousticProbe.Enclosed; _coverSm = AcousticProbe.Coverage; return; }
+            float a = 1f - Mathf.Exp(-dt / Smooth);
+            float db = 10f * Mathf.Log10(V2Level), tdb = 10f * Mathf.Log10(lv);
+            V2Level = Mathf.Pow(10f, (db + (tdb - db) * a) / 10f);
+            float lc = Mathf.Log(V2Cutoff), tc = Mathf.Log(cut);
+            V2Cutoff = Mathf.Exp(lc + (tc - lc) * a);
+            V2Indoor += (AcousticProbe.Enclosed - V2Indoor) * a;
+            _coverSm += (AcousticProbe.Coverage - _coverSm) * a;
+        }
+
+        // Write the outdoor level (dB) and muffling (Hz) to a blender's outdoor mixer parameters, the same parameters the
+        // game's SetOutdoorMixerParams writes, without its curve. The first time, the game's own setter runs once so any
+        // fade it had running is stopped.
+        public static void ApplyOutdoorDirect(AmbientSoundBlender b, UnityEngine.Audio.AudioMixer mixer, float volDb, float cutoff)
+        {
+            if (b == null || mixer == null || b._outdoorMixerParams == null) return;
+            if (Took.Add(b)) b.SetOutdoorMixerParams(1f, 0f, true);
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.Volume, volDb);
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.LowPassFreq, Mathf.Clamp(cutoff, b._minLowpassFreq, b._maxLowpassFreq));
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.HighPassFreq, b._minHighPassFreq);
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.ReverbSend, Mathf.Min(volDb, b._maxOutdoorReverbSendDb));
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.DelaySend, Mathf.Min(volDb, b._maxOutdoorDelaySendDb));
+        }
+
+        private static void SetP(AmbientSoundBlender b, UnityEngine.Audio.AudioMixer mixer, Audio.AmbientSubsystem.Data.EMixerParameterType type, float v)
+        {
+            if (!b._outdoorMixerParams.TryGetParameters(type, out Audio.Data.AudioMixerParamsContainer c) || c == null) return;
+            for (int i = 0; i < c.Count; i++) mixer.SetFloat(c[i], v);
         }
 
         // Called by DoorwayBlend each frame while fix 3 drives the ambience: the outdoor value to use, or NaN = leave fix 3's.
@@ -132,20 +178,39 @@ namespace RealSoundSimulation.Fixes
                     // off: hand the beds back once, then touch nothing
                     if (_found && (BedPan != 0f || BedCutoff < 22000f)) { RestoreBeds(); BedPan = 0f; BedCutoff = 22000f; }
                     OpeningSounds.Restore();
+                    BedDirection.Restore();
                     RestoreRain();
                     RoofRainFactor = 1f;
+                    V2Active = false; Took.Clear(); V2Level = float.NaN;
                     return;
                 }
                 if (!_found && Time.time >= _nextFind) Find();
                 float dt = Mathf.Max(Time.unscaledDeltaTime, 0.0001f);
+                bool v2 = Plugin.AmbienceV2On.Value && Plugin.AcousticProbeOn.Value && AcousticProbe.Valid;
+                if (v2) V2Smooth(dt);
+                else if (V2Active) { Took.Clear(); V2Level = float.NaN; }
+                V2Active = v2;
+                Transform lt2 = MonoBehaviourSingleton<Audio.SpatialSystem.SpatialAudioSystem>.Instantiated ? MonoBehaviourSingleton<Audio.SpatialSystem.SpatialAudioSystem>.Instance.ListenerTransform : null;
 
                 // roof rain: full with only the roof above, 8b with one floor above, none with two or more. A new level must
                 // hold 0.5 s (no flicker under beams), then it's applied smoothly and directly to the rain player's volume.
                 int fl = OutdoorExposure.FloorsAbove;
                 float want = fl <= 0 ? 1f : fl == 1 ? Mathf.Clamp01(Plugin.RoofRainUnderFloors.Value) : 0f;
+                if (v2) want *= Mathf.Clamp01(_coverSm); // 0.6.0: a hole in the roof above you lets less rain hit "your" roof
                 if (Mathf.Abs(want - _roofCandidate) > 0.01f) { _roofCandidate = want; _roofCandidateSince = Time.time; }
                 if (Time.time - _roofCandidateSince >= 0.5f) RoofRainFactor = _roofCandidate;
                 RoofRain(dt);
+
+                if (v2)
+                {
+                    // probe v2: the beds themselves become directional; no copies, no pan/filter cue
+                    OpeningSounds.Restore();
+                    if (BedPan != 0f) foreach (Bed b in Beds) if (b.Src != null) b.Src.panStereo = 0f;
+                    BedPan = 0f; BedCutoff = 22000f;
+                    BedDirection.Tick(dt, lt2, true);
+                    return;
+                }
+                BedDirection.Tick(dt, lt2, false);
 
                 // direction cue on the outdoor beds
                 float pan = 0f, cutoff = 22000f;
@@ -168,7 +233,6 @@ namespace RealSoundSimulation.Fixes
                 BedPan += (pan - BedPan) * a;
                 BedCutoff += (cutoff - BedCutoff) * a;
                 // phase 4: 3D sound at the openings (indoors only)
-                Transform lt2 = MonoBehaviourSingleton<Audio.SpatialSystem.SpatialAudioSystem>.Instantiated ? MonoBehaviourSingleton<Audio.SpatialSystem.SpatialAudioSystem>.Instance.ListenerTransform : null;
                 OpeningSounds.Tick(dt, OutdoorExposure.Valid, lt2, Enclosed());
 
                 foreach (Bed b in Beds)
@@ -209,6 +273,9 @@ namespace RealSoundSimulation.Fixes
             var srcs = new List<AudioSource>();
             foreach (Bed b in Beds) srcs.Add(b.Src);
             if (srcs.Count > 0) OpeningSounds.Init(srcs);
+            var lps = new List<AudioLowPassFilter>(); var own = new List<bool>();
+            foreach (Bed b in Beds) { lps.Add(b.Lp); own.Add(b.OwnFilter); }
+            BedDirection.Init(srcs, lps, own);
         }
 
         public static int BedsFound, IndoorRainFound;
@@ -232,6 +299,7 @@ namespace RealSoundSimulation.Fixes
         }
 
         public static string Summary() =>
-            $"AMBIENCE MIX (fix 8): outdoor beds found {BedsFound} sources, indoor rain players {IndoorRainFound}, opening sound voices max {OpeningSounds.MaxVoices}\n";
+            $"AMBIENCE MIX (fix 8): outdoor beds found {BedsFound} sources, indoor rain players {IndoorRainFound}, opening sound voices max {OpeningSounds.MaxVoices}\n" +
+            BedDirection.Summary();
     }
 }

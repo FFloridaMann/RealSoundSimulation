@@ -90,6 +90,8 @@ namespace RealSoundSimulation.Fixes
                     EnclosureProbe.MeasureAim(shotPosition, shotDirection, EnclosureProbe.CurrentMask(), out _lastAimEnc, out _lastAimDist);
                     _lastAimClosure = EnclosureProbe.AimClosure;
                     if (!EnclosureProbe.MeasureRoomAt(shotPosition, EnclosureProbe.CurrentMask())) EnclosureProbe.MuzzleRoom = float.NaN;
+                    // 0.6.0: probe v2 measures the muzzle too (fix 9a)
+                    if (V2 && !AcousticProbe.MeasureAt(shotPosition)) AcousticProbe.MuzzleRoom = float.NaN;
                     _lastMuzzleDist = Vector3.Distance(shotPosition, EnclosureProbe.LastOrigin);
                     _indoorWeight = EnclosureWeight(_lastAimClosure);
                 }
@@ -139,18 +141,19 @@ namespace RealSoundSimulation.Fixes
         public static float EnclosureWeight(float aimClosure)
         {
             float mw = Mathf.Clamp01(Plugin.MuzzleWeight.Value);
-            float room = Mix(EnclosureProbe.Room, EnclosureProbe.MuzzleRoom, mw);
+            bool v2 = V2; // 0.6.0, fix 9a: room, roof and size from probe v2
+            float room = v2 ? Mix(AcousticProbe.Room, AcousticProbe.MuzzleRoom, mw) : Mix(EnclosureProbe.Room, EnclosureProbe.MuzzleRoom, mw);
             if (float.IsNaN(room)) return float.NaN;
             float a = Mathf.InverseLerp(RoomOpen, RoomClosed, room);
             float w = a;
             if (!float.IsNaN(aimClosure))
             {
                 float f = Mathf.InverseLerp(OpenBelow, ClosedAbove, aimClosure);
-                float over = Mix(EnclosureProbe.RoofClosure, EnclosureProbe.MuzzleRoof, mw);
+                float over = v2 ? Mix(AcousticProbe.Coverage, AcousticProbe.MuzzleCoverage, mw) : Mix(EnclosureProbe.RoofClosure, EnclosureProbe.MuzzleRoof, mw);
                 if (float.IsNaN(over)) over = 0f;
                 w = Mathf.Lerp(a, f, Mathf.Clamp01(Plugin.OwnShotAimWeight.Value) * over);
             }
-            float size = Mix(EnclosureProbe.SizeFactor, EnclosureProbe.MuzzleSize, mw);
+            float size = v2 ? Mix(AcousticProbe.Size, AcousticProbe.MuzzleSize, mw) : Mix(EnclosureProbe.SizeFactor, EnclosureProbe.MuzzleSize, mw);
             if (float.IsNaN(size)) size = 1f;
             switch (Plugin.SmallSpace.Value)
             {
@@ -160,6 +163,12 @@ namespace RealSoundSimulation.Fixes
             _lastRoomUsed = room;
             return Mathf.Clamp01(w * size);
         }
+
+        // 0.6.0: fix 9a - gunshots use probe v2 (when it's running)
+        public static bool V2 => Plugin.GunV2On.Value && Plugin.AcousticProbeOn.Value && AcousticProbe.Valid;
+
+        // how hard and closed the room is, for 5a (reverb) and 6e (echoes): from probe v2 with fix 9a on
+        public static float HardRoomNow() => V2 ? AcousticProbe.HardRoom : EnclosureProbe.HardRoom;
 
         // head/muzzle mix; falls back to whichever exists
         private static float Mix(float head, float muzzle, float muzzleWeight)
@@ -231,7 +240,8 @@ namespace RealSoundSimulation.Fixes
             SuperBetterAudioQueue q = QueueRef(wsp);
             if (q?.AudioSources == null) return;
             // 0.3.3: plus "5a Hard room reverb boost dB" scaled by how much this is a hard closed room (stairwell).
-            float hardRoom = float.IsNaN(EnclosureProbe.HardRoom) ? 0f : EnclosureProbe.HardRoom;
+            float hr = HardRoomNow();
+            float hardRoom = float.IsNaN(hr) ? 0f : hr;
             float boost = Plugin.OwnReverbBoostDb.Value + Plugin.HardRoomReverbDb.Value * hardRoom;
             LastReverbBoost = boost;
             foreach (BetterSource bs in q.AudioSources)
@@ -271,7 +281,9 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(EnclosureProbe.SizeFactor), DiagLog.F(EnclosureProbe.ThinShare), DiagLog.F(_lastAimClosure),
                 DiagLog.F(EnclosureProbe.ZenithClosure), DiagLog.F(EnclosureProbe.MuzzleRoom), DiagLog.F(EnclosureProbe.MuzzleRoof),
                 DiagLog.F(EnclosureProbe.MuzzleSize), DiagLog.F(_lastMuzzleDist, "0.00"), DiagLog.F(_lastRoomUsed),
-                DiagLog.F(EnclosureProbe.HardShare), DiagLog.F(EnclosureProbe.HardRoom), DiagLog.F(EnclosureProbe.GlassShare)));
+                DiagLog.F(EnclosureProbe.HardShare), DiagLog.F(EnclosureProbe.HardRoom), DiagLog.F(EnclosureProbe.GlassShare),
+                V2 ? "v2" : "v1", DiagLog.F(AcousticProbe.Room), DiagLog.F(AcousticProbe.MuzzleRoom), DiagLog.F(AcousticProbe.Size),
+                DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00")));
         }
     }
 }

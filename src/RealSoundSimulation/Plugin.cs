@@ -11,8 +11,8 @@ using UnityEngine;
 namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
-    // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is off by default and switchable live in F12.
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.5.8")]
+    // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.0")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -30,6 +30,14 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ProbeOn;
         internal static ConfigEntry<KeyboardShortcut> MarkKey;
         internal static ConfigEntry<bool> ExposureProbeOn;
+        internal static ConfigEntry<bool> AcousticProbeOn;
+        internal static ConfigEntry<KeyboardShortcut> RayViewKey;
+        internal static ConfigEntry<bool> AmbienceV2On;
+        internal static ConfigEntry<bool> GunV2On;
+        internal static ConfigEntry<float> BedDirectional;
+        internal static ConfigEntry<BedDirection.Mode> BedMode;
+        internal static ConfigEntry<float> GlassLossDb;
+        internal static ConfigEntry<float> RoomBuildUp;
 
         internal static ConfigEntry<bool> GunMixerOn;
         internal static ConfigEntry<float> GunMuffleAbove;
@@ -88,6 +96,8 @@ namespace RealSoundSimulation
             ProbeOn = Config.Bind(diag, "Enclosure probe", true, "Measure how enclosed the space around you is with 32 short rays every 0.1 s. Logged to probe.csv; used by fix 3c in Enclosure mode. Changes no sound by itself.");
             ExposureProbeOn = Config.Bind(diag, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what (open, glass, bars, other): 48 directions all round (level and 15 deg up), re-measured continuously at about 290 rays per second, plus what is above you (floors, roof). Runs indoors and outdoors. Fix 8 needs it on. Logged to exposure.csv and shown on the overlay.");
             MarkKey = Config.Bind(diag, "Mark key", new KeyboardShortcut(KeyCode.F10), "Press in raid to mark this spot in marks.csv (position, what the probe measured, the last own shot and the surfaces around you). Use it where something sounds wrong.");
+            AcousticProbeOn = Config.Bind(diag, "Acoustic probe v2", true, "Probe v2 (0.6.0): 128 rays over the whole sphere that bounce off surfaces like sound does (losing energy by material, passing glass and thin planks at a loss) until they reach open sky. Measures how much outdoor sound reaches you, from where and how muffled, and the room for your gunshots. Feeds fixes 9 and 9a; logged to probe2.csv and paths.csv (F10).");
+            RayViewKey = Config.Bind(diag, "Probe ray view key", new KeyboardShortcut(KeyCode.F11), "In raid: show or hide the probe v2 rays in the world. Green reached the sky, cyan after bouncing, yellow through glass, red trapped, magenta a long interior.");
 
             const string fix = "2. Fixes (all off means vanilla audio)";
             GunMixerOn = Config.Bind(fix, "1 Gun mixer hysteresis", true, new ConfigDescription("Stop distant gunfire flip-flopping between the muffled and normal sound.", null, new ConfigurationManagerAttributes { Order = 100 }));
@@ -121,6 +131,12 @@ namespace RealSoundSimulation
             HardRoomReverbDb = Config.Bind(fix, "5a Hard room reverb boost dB", 6f, new ConfigDescription("Added to setting 5 in hard, closed rooms (bare concrete stairwells, corridors), scaled by how hard and closed the room is. Raises the game's room reverb on your own shots there. 0 = off.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 59 }));
             EchoHardRoomDb = Config.Bind(fix, "6e Hard room echo boost dB", 4f, new ConfigDescription("Fix 6: in hard, closed rooms (bare concrete stairwells, corridors) all echoes are raised by this much, scaled by how hard and closed the room is, and up to 3 more are played. A real stairwell is loud because the sound keeps bouncing.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 53 }));
             OffMapOn = Config.Bind(fix, "4 Off-map sounds as outdoor", true, new ConfigDescription("Sounds placed outside the baked sound map (e.g. SPTBattleAmbience's distant battles) are treated as outdoors instead of fully blocked.", null, new ConfigurationManagerAttributes { Order = 70 }));
+            AmbienceV2On = Config.Bind(fix, "9 Ambience from probe v2", false, new ConfigDescription("Test: the outdoor ambience (rain, wind, background) is set from the acoustic probe v2 instead of the exposure probe. Volume and muffling are set directly from the physics (no game curve), and the game's own rain and wind sources become directional indoors (no copies). Needs fixes 3 and 8 on.", null, new ConfigurationManagerAttributes { Order = 44 }));
+            GunV2On = Config.Bind(fix, "9a Gunshots from probe v2", false, new ConfigDescription("Test: your own gunshots' indoor/outdoor mix (3c Enclosure mode), the hard-room reverb boost (5a) and the hard-room echo boost (6e) use the acoustic probe v2's room measure instead of the 32-ray enclosure probe.", null, new ConfigurationManagerAttributes { Order = 43 }));
+            BedDirectional = Config.Bind(fix, "9b Game sounds directional", 1f, new ConfigDescription("Fix 9: how far the game's own outdoor sounds become positioned sound coming from the open directions as you go inside. 0 = they stay flat stereo.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 42 }));
+            BedMode = Config.Bind(fix, "9c Directional mode", BedDirection.Mode.UnityPanner, new ConfigDescription("Fix 9: UnityPanner = left/right placement with width, duller from behind (smooth for sure). MetaHrtf = the game's 3D audio plugin (front/back/up/down), if it handles the gradual blend.", null, new ConfigurationManagerAttributes { Order = 41 }));
+            GlassLossDb = Config.Bind(fix, "9d Glass loss dB", 22f, new ConfigDescription("Fix 9: how much quieter outdoor sound is through closed glass (a real window: about 20 to 25 dB, and muffled). Broken glass and empty frames let it through.", new AcceptableValueRange<float>(0f, 40f), new ConfigurationManagerAttributes { Order = 40 }));
+            RoomBuildUp = Config.Bind(fix, "9e Sound build-up in rooms", 1f, new ConfigDescription("Fix 9: how much sound coming in builds up inside a room by bouncing (a bare concrete garage gets loud, a furnished room not). 1 = the physical estimate, 0 = only direct and up to 3 bounces.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 39 }));
 
             Harmony = new Harmony(Guid);
             Safe("self-check", PatchSelfCheck.Run);
@@ -140,6 +156,7 @@ namespace RealSoundSimulation
             gameObject.AddComponent<EnclosureProbe>();
             gameObject.AddComponent<EchoVoices>();
             gameObject.AddComponent<OutdoorExposure>();
+            gameObject.AddComponent<AcousticProbe>();
             gameObject.AddComponent<AmbienceMix>();
             Log.LogInfo("Real Sound Simulation loaded");
         }
@@ -151,7 +168,8 @@ namespace RealSoundSimulation
             $"fix3c own gunshot blend {(GunEnvBlendOn.Value ? $"ON ({OwnShotSource.Value}, aim {OwnShotAimWeight.Value:0.00}, thin {ThinSurfaceCount.Value:0.00}, muzzle {MuzzleWeight.Value:0.00}, small space {SmallSpace.Value})" : "off")} | " +
             $"5 own reverb boost {OwnReverbBoostDb.Value:+0.0;-0.0;0} dB (+{HardRoomReverbDb.Value:0} in hard rooms) | probe {(ProbeOn.Value ? "on" : "off")} | " +
             $"fix4 off-map {(OffMapOn.Value ? "ON" : "off")} | fix7 rain dropout {(RainFixOn.Value ? "ON" : "off")} | fix8 openings {(ExposureMixOn.Value ? $"ON (cue {DirectionCueStrength.Value:0.00}, roof rain {RoofRainUnderFloors.Value:0.00}, glass {ThroughGlass.Value:0.00}, indoor fade {IndoorFadeNearOpenings.Value:0.00}, openings {OpeningShare.Value:0.00}{(OpeningHrtf.Value ? " HRTF" : "")})" : "off")} | exposure probe {(ExposureProbeOn.Value ? "on" : "off")} | " +
-            $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB)" : "off")}";
+            $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB)" : "off")} | " +
+            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00})" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
 
         internal static void Safe(string what, Action a)
         {

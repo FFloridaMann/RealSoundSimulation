@@ -26,6 +26,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   ├── CountedRay.cs        Physics.Raycast / room lookup wrappers that count themselves (COST)
 │   ├── Loudness.cs          diagnostics: loudness of each gun's indoor vs outdoor recordings (summary)
 │   ├── OutdoorExposure.cs   component (step 4b): indoors, which directions reach the outside and through what; floors
+│   ├── AcousticProbe.cs     probe v2 (0.6.0): bouncing rays to open sky, batched; ambience + gunshot outputs
 │   │                        above and roof material. Measure only in 0.4.0
 │   └── OwnEchoes.cs         fix 6: finds reflecting surfaces when you fire and schedules echoes;
 │                            EchoVoices component: the pool of 24 echo AudioSources
@@ -37,6 +38,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   ├── EnvProbe.cs          indoor/outdoor switches + ambience level -> transitions.csv, ambience.csv
 │   ├── DiagRunner.cs        component: raid start/end, occlusion samples, source scans, F9 overlay, summary
 │   ├── Perf.cs              cost per part (calls, ms, raycasts, room lookups) for the summary's COST section
+│   ├── RayView.cs           0.6.0: draws probe v2's rays in the world (F11)
 │   ├── MetaAcousticsCheck.cs counts Meta XR acoustic map/geometry components for the summary
 │   └── DiagLog.cs           one folder per raid, buffered CSV writing, errors.txt
 │
@@ -49,6 +51,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── OffMapFix.cs         fix 4: sounds outside the baked map are treated as outdoors
     ├── RainDropoutFix.cs    fix 7: the game's indoor rain fading to silence between rooms
     ├── AmbienceMix.cs       fix 8 (component, LateUpdate): outdoor level from exposure, indoor fade, roof rain, direction cue
+│   ├── BedDirection.cs      fix 9 (0.6.0): makes the game's own outdoor beds directional
     └── OpeningSounds.cs     fix 8 phase 4: 3D copies of the outdoor beds at up to 3 openings
 ```
 

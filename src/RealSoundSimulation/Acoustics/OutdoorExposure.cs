@@ -451,6 +451,12 @@ namespace RealSoundSimulation.Acoustics
             BetweenHits.TryGetValue(key, out int n); BetweenHits[key] = n + 1;
         }
 
+        internal static int OtherMask(int blockMask)
+        {
+            if (_otherMask == -1) BuildOtherMask(blockMask);
+            return _otherMask;
+        }
+
         // Every layer except the sound-blocking ones (already tested), Ignore Raycast, and player/loot/trigger-type layers.
         private static void BuildOtherMask(int blockMask)
         {
