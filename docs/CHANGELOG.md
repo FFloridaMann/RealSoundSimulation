@@ -3,7 +3,7 @@
 Newest first. Each version: what changed, and whether it has been run in game.
 
 ## 0.6.7 — 7 Nov 2026 (direction from where the sound arrives; roof rain traced from the roof)
-**Run in game:** not yet (installed 11:21). Fix 9 only.
+**Run in game:** raid 27 (11:25, rain). Meta HRTF leaks rain where the level is 0 (its own reverb send); car dealer roof rain on/off by tag with our factor steady; stairwell faint rain from the build-up. Fix 9 only.
 - **Raid 26 (0.6.6):** "overall an improvement", garage good, deep rooms much quieter. Still: rain a little "through the walls" deep inside (wind too), "maybe it was better when sounds from openings slid to 100%"; car dealer roof rain stopping or getting quieter suddenly; overlay "focus near" jumping 0–0.5.
 - **Build-up direction from where the sound arrives:** the first leg of every escaping path (deep ones ×2), energy-weighted over ~3 s, instead of where it left the building (0.6.5: mostly floor spots 40–75° below you, from 3–8 escapes, so it wandered).
 - **New `9h Direction strength`** (1 = as measured, up to 3): how pointed the outdoor sound and roof rain are indoors.
