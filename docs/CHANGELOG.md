@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.18 — 7 Nov 2026 (diagnostics: alive bots and spawn waves)
+**Run in game:** not yet. Purpose: line FrameDiag's slow frames up with spawn waves. Raid 33: the two biggest frames (869 ms at 134.6 s, 940 ms at 190.7 s) had no gunfire within 5 s but grew the heap 75–100 MB, and several 100–150 ms frames sat in windows with 6–9 new sound containers.
+- **timing.csv** ends with `aliveBots` (everyone alive in GameWorld.AllAlivePlayersList except you).
+- **New spawns.csv:** a row whenever that count changes: `t` (raid seconds), `clock` (wall clock HH:mm:ss.fff, the same clock as FrameDiag's frames.log), `aliveBots`, `delta` (+ spawned / − died). Checked every frame.
+- **Summary:** alive bots max and how many spawned during the raid.
+
 ## 0.6.17 — 7 Nov 2026 (allocation counter that works under Unity's Mono)
 **Run in game:** not yet. Raid 32 (raid_20261107_160950, 0.6.16): plugin 12.1 ms/s, the exposure sweep skipped every frame, probe v2 8.7 ms/s, echo voices stolen 0, the headroom cap never engaged; FrameDiag blames Real Sound Simulation only inside the raid's loading freeze (first 2 s).
 - **COST's `alloc KB/s` read 0.0 everywhere:** under Unity's Mono `GC.GetAllocatedBytesForCurrentThread` returns 0 without failing. Now at startup each counter is tried with a deliberate 64 KB allocation, and the first that sees it is used: the per-thread counter, else `GC.GetTotalMemory(false)` deltas, else `Profiler.GetMonoUsedSizeLong` deltas. The two heap counters are whole-heap and approximate (other threads count; a part during which a collection ran is dropped). The COST total line names the counter and what the test read; the BepInEx log too.

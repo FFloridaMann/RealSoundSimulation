@@ -14,7 +14,7 @@ namespace RealSoundSimulation.Diagnostics
         {
             ["containers.csv"] = "t,id,dist,maxDist,priority,room,roomOutdoor,sameRoomAsListener,prop,obst,occl,gunOccludedMixer,ranT,ranD,ranR,T,D,R,sources,occluder",
             ["shots.csv"] = "t,shooterId,dist,rolloff,silenced,mixer,occl,prop,obst,shooterRoom,listenerRoom,los,beyond250",
-            ["timing.csv"] = "t,frames,spatialUpdateAvgMs,spatialUpdateMaxMs,spatialLateAvgMs,spatialLateMaxMs,betterAudioAvgMs,betterAudioMaxMs,activeProcessors,containers",
+            ["timing.csv"] = "t,frames,spatialUpdateAvgMs,spatialUpdateMaxMs,spatialLateAvgMs,spatialLateMaxMs,betterAudioAvgMs,betterAudioMaxMs,activeProcessors,containers,aliveBots",
             ["sources.csv"] = "t,betterSources,playing,realVoices,virtualVoices",
             ["probe.csv"] = "t,x,y,z,roomIndoor,doorwayTarget,enclosure,horizontal,overhead,meanHitM,wallClosure,roofClosure,room,sizeFactor,thinShare,zenithClosure",
             ["ownshots.csv"] = "t,kind,source,gameEnvironment,doorwayTarget,enclosure,horizontal,overhead,aimEnclosure,aimNearestM,indoorWeight,applied,reverbBoostDb,wallClosure,roofClosure,room,sizeFactor,thinShare,aimClosure,zenithClosure,muzzleRoom,muzzleRoof,muzzleSize,muzzleFromHeadM,roomUsed,hardShare,hardRoom,glassShare,probe,v2Room,v2MuzzleRoom,v2Size,v2HardRoom,v2Rt60,weightUsed,muzzleRoomSphere,v2MuzzleRoomSphere,tailPlayed,tailLevelDb,tailDelayMs,tailAz,tailThrough",
@@ -28,6 +28,7 @@ namespace RealSoundSimulation.Diagnostics
             ["rain2.csv"] = Fixes.AmbienceMix.RainHeader,
             ["distant.csv"] = Fixes.DistantThroughOpenings.Header,
             ["roomtone.csv"] = Fixes.RoomTone.Header,
+            ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
             ["transitions.csv"] = "t,system,now,x,y,z,fadeS,room",
             ["ambience.csv"] = "t,x,y,z,snapshotIndoor,roomIndoor,outdoorAmbience,doorwayTarget,doorwayApplied,doorwayPortals,portalId,throughPlaneM,sidewaysM,exposureApplied,indoorLayers,bedPan,bedCutoffHz,roofRainFactor,openingShare,openingVoices,opening1Az,opening1Gain",

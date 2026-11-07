@@ -160,6 +160,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.15: `Write logs` works live (off in raid: no more rows; settings.txt and summary.txt still written). The 15 s source scan (sources.csv, rolloff_dump.txt) is off by default (`Source scan interval s` = 0; it caused ~56 ms hitches); the summary says so. containers.csv drops to every 1 s above 50 containers. COST gains `alloc KB/s` per part and a total (main-thread bytes allocated during each part; "n/a" if the runtime has no per-thread counter).
 
+0.6.18: timing.csv ends with `aliveBots` (everyone alive but you). New spawns.csv: one row per change in that count, `t, clock, aliveBots, delta`; `clock` is wall-clock time (HH:mm:ss.fff) to match FrameDiag's frames.log, so slow frames can be lined up with spawn waves. Summary: alive bots max and spawned count.
+
 ### distant.csv (0.6.8, every 0.25 s per sound, `9k`; 0.6.9 columns at the end)
 0.6.9 adds `heardEl`, `outVolume` (the AudioSource's volume as it plays), `occlFactor`, `mixer`, `spatialBlend`, `spatialize`, `reverbZoneMix`, `playing`: if a sound is heard while `outVolume` is tiny, something other than its volume carries it (a reverb send, another source).
 Each off-map sound moved through the openings: `source` (id), `distanceM`, `trueAz` (where it really is, relative to where you face), `heardAz` (where it's placed), `transmission` (0–1, how much gets in from its direction), `gain` (√ of that, blended by enclosed), `enclosed`, `clip`. The summary has a DISTANT GUNFIRE THROUGH OPENINGS line; ACOUSTIC PROBE V2 counts exit points found and not found. paths.csv gains `exitPointAz`, `exitPointM`.

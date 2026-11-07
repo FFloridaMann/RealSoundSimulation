@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Audio.SpatialSystem;
+using Comfort.Common;
 using Audio.SpatialSystem.SpatialAudioCalculator.CombinedOcclusionCalculator;
 using EFT;
 using HarmonyLib;
@@ -29,6 +30,19 @@ namespace RealSoundSimulation.Diagnostics
 
         private bool _inRaid;
         private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
+        private int _lastBots = -1, _maxBots, _spawned; // 0.6.18
+
+        // Everyone alive except you; -1 if the game world isn't there.
+        private static int AliveBots()
+        {
+            if (!Singleton<GameWorld>.Instantiated) return -1;
+            GameWorld gw = Singleton<GameWorld>.Instance;
+            if (gw?.AllAlivePlayersList == null) return -1;
+            int n = gw.AllAlivePlayersList.Count;
+            Player me = GamePlayerOwner.MyPlayer;
+            if (me != null && gw.AllAlivePlayersList.Contains(me)) n--;
+            return n;
+        }
         private int _framesInWindow, _maxActive, _maxContainers, _maxPlaying, _maxBetterSources, _maxContainerPlaying;
         public static int LastPlayingInContainers; // 0.6.16: game sources playing in sound containers at the last sample (0.5 s)
         private long _activeSum, _activeSamples;
@@ -132,6 +146,7 @@ namespace RealSoundSimulation.Diagnostics
             RaidStartTime = _raidStart;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
             _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0; LastPlayingInContainers = 0;
+            _lastBots = -1; _maxBots = 0; _spawned = 0;
             _activeSum = _activeSamples = 0;
             _containerRows = _rowsTierLow = _rowsTierMed = _rowsTierHigh = _rowsPropagated = _rowsGunOccluded = 0;
             _dumpedSourceKeys.Clear();
@@ -209,6 +224,20 @@ namespace RealSoundSimulation.Diagnostics
                 finally { Perf.End(Perf.Part.SourceScan); }
             }
 
+            // 0.6.18: alive bots (everyone alive but you), checked every frame; spawns.csv gets a row whenever it changes.
+            // Raid 33: the two biggest frames (869 and 940 ms) had no gunfire nearby but grew the heap 75-100 MB - this lines
+            // FrameDiag's slow frames (clock time) up with spawn waves.
+            int bots = AliveBots();
+            if (bots >= 0 && bots != _lastBots)
+            {
+                if (_lastBots >= 0 && DiagLog.IsOpen)
+                    DiagLog.Row("spawns.csv", string.Join(",", DiagLog.F(now - _raidStart, "0.00"), DateTime.Now.ToString("HH:mm:ss.fff"),
+                        bots.ToString(), (bots - _lastBots).ToString("+0;-0;0")));
+                if (_lastBots >= 0 && bots > _lastBots) _spawned += bots - _lastBots;
+                _lastBots = bots;
+                if (bots > _maxBots) _maxBots = bots;
+            }
+
             if (now >= _nextTiming)
             {
                 _nextTiming = now + 5f;
@@ -219,7 +248,7 @@ namespace RealSoundSimulation.Diagnostics
                         DiagLog.F(u.WindowAvgMs, "0.000"), DiagLog.F(u.WindowMaxMs, "0.000"),
                         DiagLog.F(l.WindowAvgMs, "0.000"), DiagLog.F(l.WindowMaxMs, "0.000"),
                         DiagLog.F(b.WindowAvgMs, "0.000"), DiagLog.F(b.WindowMaxMs, "0.000"),
-                        activeCount.ToString(), _rows.Count.ToString()));
+                        activeCount.ToString(), _rows.Count.ToString(), bots >= 0 ? bots.ToString() : ""));
                 }
                 TimingPatches.SpatialUpdate.ResetWindow(); TimingPatches.SpatialLate.ResetWindow(); TimingPatches.BetterAudioUpdate.ResetWindow();
                 _framesInWindow = 0;
@@ -424,6 +453,7 @@ namespace RealSoundSimulation.Diagnostics
                 ? $"  playing sources (all, FindObjectsOfType every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})"
                 : $"  playing sources (all): source scan off (Source scan interval s = 0); realVoices {cfg.numRealVoices}");
             sb.AppendLine($"  playing sources in sound containers (counted at every container sample, every {Plugin.ContainerLogInterval.Value:0.0} s): max {_maxContainerPlaying}; our echo voices max busy {Acoustics.OwnEchoes.MaxBusy} of {Acoustics.EchoVoices.PoolSize}");
+            sb.AppendLine($"  alive bots: max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
             sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");
             sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");
