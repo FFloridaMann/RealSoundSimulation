@@ -2,8 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.5 — 7 Nov 2026 (probe v2: leak through floors fixed, direction by what you hear)
+**Run in game:** not yet. Built 7 Nov; not installed yet (the game was running). Affects fix 9 (ambience) and, slightly, 9a.
+- **Raid 25 (0.6.4):** the measured build-up was 3–5× lower than the old formula (−18 dB at mark 1, was −14). But deep in the Capital the rain came from both sides and from behind. No path really got out there: the only "escapes" fell through a hole in the ground floor to the map's catch plane 48 m below and came back up through the building (raycasts don't hit the back of one-sided floors). With focus ≈ 1, one or two of them set the direction alone.
+- **Leak fix:** every cast hits back faces too, and a back face reflects like a front face. The far side of a pane or object a path has just passed through is skipped (no second loss). Every escape gets the roof test, not only level and downward legs.
+- **Direction by what you hear:** the direct/bounced part counts by its share of the level and only firmly when several paths agree; the build-up gets its own direction, towards where escaping paths left the building over ~3 s, never fully focused. Deep inside: wide, leaning towards the openings.
+- Logs: probe2.csv `focusEarly, focusExit, exitAz, exitEl, exitCount`; paths.csv `exitAz, exitEl`; summary counts back faces hit, far sides skipped, upward escapes rejected. Overlay: focus near / exits.
+- Expect: deep rooms quieter than 0.6.4 (part of their build-up came from the fake escapes), the rain direction steadier and wider.
+
 ## 0.6.4 — 7 Nov 2026 (probe v2: measured build-up, guided rays, smoothing by confidence)
-**Run in game:** not yet (installed 09:30). Affects fix 9 (ambience) and, slightly, 9a (gunshot room readings).
+**Run in game:** raid 25 (09:42, rain, AI on). Build-up 3–5× lower; direction wrong deep inside (fake escapes through the floor) → 0.6.5. Affects fix 9 (ambience) and, slightly, 9a (gunshot room readings).
 - **Raid 24 (0.6.2):** sound from inside "improved"; outdoor ambience still too loud far into the building. At mark 1 (Capital) the room build-up was 88% of the level. Lowering `9e` helped, but what was left came from 2–5 paths and jumped in and out.
 - **Build-up measured, not assumed.** Half the paths keep bouncing after their 3rd reflection, up to 8, to measure where the remaining energy goes in this building (in energy: an escape through closed glass now counts at −22 dB, not like an open door). Only the energy still bouncing after 8 uses the room formula. Smoothed over ~3 s. 0.6.3's value is logged as `tailOld` for comparison.
 - **Guided rays (`9f`, on):** 64 of every 192 paths aim at the openings already found (windows, doors), each counted as p_uniform / p_mixture so totals stay right. Openings are remembered (fade over ~2 s unless found again) and re-checked every sweep. The user's "weighted rays" idea, and "fixed rays" done as rays fixed on real openings.
