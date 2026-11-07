@@ -1,6 +1,6 @@
 # The fixes
 
-Each fix: the problem in the game, the evidence from our raid logs, exactly what the fix changes, its settings, and how to check it works. All are in F12 → Real Sound Simulation → **"2. Fixes (all off means vanilla audio)"**, switch live in raid. Since 0.5.8 their defaults are the tested setup (every fix on, `2` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` on); with every fix off you get the game's own audio.
+How everything works together now: [DESIGN.md](DESIGN.md). Each fix: the problem in the game, the evidence from our raid logs, exactly what the fix changes, its settings, and how to check it works. All are in F12 → Real Sound Simulation → **"2. Fixes (all off means vanilla audio)"**, switch live in raid. Since 0.5.8 their defaults are the tested setup (every fix on, `2` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` on); with every fix off you get the game's own audio.
 
 Status key: **Built** = in the plugin, not yet heard in game. **Heard** = heard in game, logs show it acting, but not fully confirmed. **Verified** = heard in game and confirmed in logs.
 
@@ -300,7 +300,7 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 ## Fix 8: Outdoor sound indoors from openings (step 4b phase 2, 0.4.2)
 
-Background and design: [AMBIENCE.md](AMBIENCE.md). **Needs fix 3 on**, because fix 3 is what takes the ambience over from the game.
+**How it works now: [DESIGN.md](DESIGN.md) §2.2 and §3.2.** The list below is how it was built up, version by version; where it disagrees with DESIGN.md, DESIGN.md is current. Background: [AMBIENCE.md](AMBIENCE.md). **Needs fix 3 on**, because fix 3 is what takes the ambience over from the game.
 
 **Problem.** Indoors, the game sets the outdoor ambience from a fixed per-room value set by hand, plus one opening. Fix 3 replaced that with a doorway fade. Raids 10–12 showed what went wrong:
 - glass buildings with broken windows were silent (room value 0);
@@ -329,14 +329,14 @@ Background and design: [AMBIENCE.md](AMBIENCE.md). **Needs fix 3 on**, because f
 - **Indoor layers (0.5.7):** with fix 8 on, the indoor channel follows enclosure (1 when enclosed, 0 in open air; 8d sets how early openings fade it), not the room map. Covered outdoor spots get roof rain.
 - **One speed (0.5.6):** exposure is measured indoors and outdoors (8/s). The outdoor level, the opening sounds' share (× how enclosed you are), the direction cue, the indoor fade and the roof rain all follow it with the same ~0.35 s smoothing.
 
-**Settings.** `8 Outdoor sound indoors from openings` (on/off), `8a Direction cue strength` 0.6, `8b Roof rain under floors` 0.3 (one floor above), `8c Through glass` 0.45, `8d Indoor sound fade near openings` 0.6, `8e Sound from openings` 0.7, `8f HRTF on opening sounds` off.
+**Settings.** `8 Outdoor sound indoors from openings` (on/off), `8a Direction cue strength` 0.6, `8b Roof rain under floors` 0.3 (one floor above), `8c Through glass` 0.45, `8d Indoor sound fade near openings` 0.6, `8e Sound from openings` 0.7, `8f HRTF on opening sounds` on (0.5.8 default).
 
 **Check.**
 - Glass building with broken windows: outdoor sound in, louder near the windows.
 - Wide entrances: no swings when stepping sideways.
 - Facing away from an open side: duller, panned toward it.
 - Deep interior: unchanged.
-- Lower floors of a tall building in rain: quieter roof rain (with fix 7).
+- Lower floors of a tall building in rain: no roof rain under two or more floors.
 
 Logs: `ambience.csv` (exposureApplied, indoorLayers, bedPan, bedCutoffHz, roofRainFactor), `exposure.csv` (openSideAz, oneSided), and the summary's AMBIENCE MIX section.
 

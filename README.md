@@ -6,6 +6,7 @@ A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How
 
 | Doc | Read it for |
 |---|---|
+| [docs/DESIGN.md](docs/DESIGN.md) | **Start here.** How indoor/outdoor sound works now: what is measured, what it drives, what you hear, every setting |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the plugin works: parts, startup, every game hook, how fixes switch |
 | [docs/FIXES.md](docs/FIXES.md) | Each fix: the problem, the evidence, what it changes, settings, how to check it |
 | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) | Every log file and column, the F9 overlay, raid history |
