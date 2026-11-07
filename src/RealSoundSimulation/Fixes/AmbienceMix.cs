@@ -51,7 +51,7 @@ namespace RealSoundSimulation.Fixes
         public static void Reset()
         {
             RestoreBeds();
-            BedDirection.Restore();
+            BedDirection.RestoreAll();
             OpeningSounds.Destroy();
             Took.Clear(); V2Active = false; V2Level = float.NaN;
             Beds.Clear(); IndoorRain.Clear();
@@ -179,7 +179,7 @@ namespace RealSoundSimulation.Fixes
                     // off: hand the beds back once, then touch nothing
                     if (_found && (BedPan != 0f || BedCutoff < 22000f)) { RestoreBeds(); BedPan = 0f; BedCutoff = 22000f; }
                     OpeningSounds.Restore();
-                    BedDirection.Restore();
+                    BedDirection.RestoreAll();
                     RestoreRain();
                     RoofRainFactor = 1f;
                     V2Active = false; Took.Clear(); V2Level = float.NaN;
@@ -195,11 +195,22 @@ namespace RealSoundSimulation.Fixes
 
                 // roof rain: full with only the roof above, 8b with one floor above, none with two or more. A new level must
                 // hold 0.5 s (no flicker under beams), then it's applied smoothly and directly to the rain player's volume.
-                int fl = OutdoorExposure.FloorsAbove;
-                float want = fl <= 0 ? 1f : fl == 1 ? Mathf.Clamp01(Plugin.RoofRainUnderFloors.Value) : 0f;
-                if (v2) want *= Mathf.Clamp01(_coverSm); // 0.6.0: a hole in the roof above you lets less rain hit "your" roof
-                if (Mathf.Abs(want - _roofCandidate) > 0.01f) { _roofCandidate = want; _roofCandidateSince = Time.time; }
-                if (Time.time - _roofCandidateSince >= 0.5f) RoofRainFactor = _roofCandidate;
+                bool roofV2 = v2 && Plugin.RoofRainFromProbe.Value;
+                if (roofV2)
+                {
+                    // 0.6.7 ("9i"): traced from the roof (AcousticProbe.RoofLevel, energy, already smooth) -> volume (amplitude).
+                    // Raid 26: the one-ray floor count flipped 0-1-0 at the car dealer's mezzanine edge (roof rain 30-100-30%).
+                    RoofRainFactor = Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
+                    _roofCandidate = RoofRainFactor; _roofCandidateSince = Time.time;
+                }
+                else
+                {
+                    int fl = OutdoorExposure.FloorsAbove;
+                    float want = fl <= 0 ? 1f : fl == 1 ? Mathf.Clamp01(Plugin.RoofRainUnderFloors.Value) : 0f;
+                    if (v2) want *= Mathf.Clamp01(_coverSm); // 0.6.0: a hole in the roof above you lets less rain hit "your" roof
+                    if (Mathf.Abs(want - _roofCandidate) > 0.01f) { _roofCandidate = want; _roofCandidateSince = Time.time; }
+                    if (Time.time - _roofCandidateSince >= 0.5f) RoofRainFactor = _roofCandidate;
+                }
                 RoofRain(dt);
 
                 if (v2)
@@ -208,10 +219,12 @@ namespace RealSoundSimulation.Fixes
                     OpeningSounds.Restore();
                     if (BedPan != 0f) foreach (Bed b in Beds) if (b.Src != null) b.Src.panStereo = 0f;
                     BedPan = 0f; BedCutoff = 22000f;
-                    BedDirection.Tick(dt, lt2, true);
+                    BedDirection.Outdoor.Tick(dt, lt2, true, AcousticProbe.Arrival, AcousticProbe.Focus, AcousticProbe.Enclosed);
+                    BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed);
                     return;
                 }
-                BedDirection.Tick(dt, lt2, false);
+                BedDirection.Outdoor.Tick(dt, lt2, false, Vector3.zero, 0f, 0f);
+                BedDirection.Roof.Tick(dt, lt2, false, Vector3.zero, 0f, 0f);
 
                 // direction cue on the outdoor beds
                 float pan = 0f, cutoff = 22000f;
@@ -276,7 +289,8 @@ namespace RealSoundSimulation.Fixes
             if (srcs.Count > 0) OpeningSounds.Init(srcs);
             var lps = new List<AudioLowPassFilter>(); var own = new List<bool>();
             foreach (Bed b in Beds) { lps.Add(b.Lp); own.Add(b.OwnFilter); }
-            BedDirection.Init(srcs, lps, own);
+            BedDirection.Outdoor.Init(srcs, lps, own);
+            BedDirection.Roof.Init(new List<AudioSource>(RainSrc), null, null);
         }
 
         public static int BedsFound, IndoorRainFound;
@@ -301,6 +315,6 @@ namespace RealSoundSimulation.Fixes
 
         public static string Summary() =>
             $"AMBIENCE MIX (fix 8): outdoor beds found {BedsFound} sources, indoor rain players {IndoorRainFound}, opening sound voices max {OpeningSounds.MaxVoices}\n" +
-            BedDirection.Summary();
+            BedDirection.Outdoor.Summary() + BedDirection.Roof.Summary();
     }
 }

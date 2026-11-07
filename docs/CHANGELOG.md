@@ -2,8 +2,17 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.7 — 7 Nov 2026 (direction from where the sound arrives; roof rain traced from the roof)
+**Run in game:** not yet (installed 11:21). Fix 9 only.
+- **Raid 26 (0.6.6):** "overall an improvement", garage good, deep rooms much quieter. Still: rain a little "through the walls" deep inside (wind too), "maybe it was better when sounds from openings slid to 100%"; car dealer roof rain stopping or getting quieter suddenly; overlay "focus near" jumping 0–0.5.
+- **Build-up direction from where the sound arrives:** the first leg of every escaping path (deep ones ×2), energy-weighted over ~3 s, instead of where it left the building (0.6.5: mostly floor spots 40–75° below you, from 3–8 escapes, so it wandered).
+- **New `9h Direction strength`** (1 = as measured, up to 3): how pointed the outdoor sound and roof rain are indoors.
+- **Roof rain traced from the roof (`9i`, on):** the top roof's underside is a sound source; paths that reach it give the level (full right under it, partly under a mezzanine, down the stairwell from the floor below) and the direction. The game's indoor rain player is made directional like the outdoor beds. User: "if there is roof rain on the floor above you would hear that coming down the staircase". Replaces the one-ray floor count that flipped 30% → 100% → 30% at the car dealer's mezzanine edge.
+- Overlay: the focus actually applied (was the raw near-part value, which jumped) and the roof rain level. Logs: probe2.csv `focusExit/exitAz/exitEl/exitCount` renamed `focusBuildUp/buildUpAz/buildUpEl/buildUpCount`, new `roofLevel, roofAz, roofEl, roofFocus, roofCount`.
+- `9c` stays UnityPanner (user, raid 26: MetaHrtf sounds worse in the Nakatani hallway).
+
 ## 0.6.6 — 7 Nov 2026 (probe v2 ray quality setting)
-**Run in game:** not yet (installed 10:46, together with 0.6.5). At the default (Medium) it is exactly 0.6.5.
+**Run in game:** raid 26 (10:52, rain, `9g` High). "Overall an improvement" → 0.6.7. At the default (Medium) it is exactly 0.6.5.
 - **New `9g Ray quality`** (user idea): Low / Medium / High / Ultra = 320 / 640 / 1280 / 2560 paths a second, averaged over 1 / 2 / 4 / 8 sweeps, so the window stays ~0.6 s and more paths really mean less noise (Ultra: half the noise of Medium at ~4× the cost, about 0.6 ms per frame at 107 fps). Changes live. DESIGN.md §7.
 - Room for up to 1024 paths in flight (was 256) and a per-frame start cap that grows with the rate, so Ultra isn't throttled at 60 fps.
 - Summary and settings line show the quality; COST line renamed "acoustic probe v2 (batched, guided, rays by 9g)".

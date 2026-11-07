@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.6")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.7")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -43,6 +43,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> RoomBuildUp;
         internal static ConfigEntry<bool> GuidedRays;
         internal static ConfigEntry<AcousticProbe.RayQuality> RayQualityCfg;
+        internal static ConfigEntry<float> DirectionStrength;
+        internal static ConfigEntry<bool> RoofRainFromProbe;
 
         internal static ConfigEntry<bool> GunMixerOn;
         internal static ConfigEntry<float> GunMuffleAbove;
@@ -148,6 +150,8 @@ namespace RealSoundSimulation
             RoomBuildUp = Config.Bind(fix, "9e Sound build-up in rooms", 1f, new ConfigDescription("Fix 9: how much sound coming in builds up inside by bouncing (a bare concrete garage gets loud, a furnished room or the back of a building not). Since 0.6.4 measured by tracing paths up to 8 reflections. 1 = the measured value, 0 = only direct and up to 3 bounces.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 39 }));
             GuidedRays = Config.Bind(fix, "9f Guided rays", true, new ConfigDescription("Probe v2: aim a third of the paths at the openings already found (windows, doors), counted so the totals stay right. Steadier sound deep inside, where few paths get out. Off = every path goes in an even or random direction. Also changes gunshot room readings slightly.", null, new ConfigurationManagerAttributes { Order = 38 }));
             RayQualityCfg = Config.Bind(fix, "9g Ray quality", AcousticProbe.RayQuality.Medium, new ConfigDescription("Probe v2: how many paths it traces. More = steadier sound deep inside (noise halves at 4x the paths) and more CPU. Low 320 a second, about half the cost of Medium. Medium 640 (raid 25: about 0.15 ms per frame at 107 fps). High 1280, about 2x. Ultra 2560, about 4x (around 0.6 ms per frame at 107 fps). Changes live.", null, new ConfigurationManagerAttributes { Order = 37 }));
+            DirectionStrength = Config.Bind(fix, "9h Direction strength", 1f, new ConfigDescription("Fix 9: how pointed the outdoor sound and roof rain are indoors. 1 = as measured (deep inside mostly all round, leaning towards the openings). Higher = they come more clearly from the openings or the stairwell. 0 = always all round.", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 36 }));
+            RoofRainFromProbe = Config.Bind(fix, "9i Roof rain from probe", true, new ConfigDescription("Fix 9: rain on the roof is traced from the roof itself: full right under it, partly under a mezzanine, down the stairwell from the floor below, from the direction it reaches you. Off = the floors-above count (8b).", null, new ConfigurationManagerAttributes { Order = 35 }));
 
             Harmony = new Harmony(Guid);
             Safe("self-check", PatchSelfCheck.Run);
@@ -182,7 +186,7 @@ namespace RealSoundSimulation
             $"5 own reverb boost {OwnReverbBoostDb.Value:+0.0;-0.0;0} dB (+{HardRoomReverbDb.Value:0} in hard rooms) | probe {(ProbeOn.Value ? "on" : "off")} | " +
             $"fix4 off-map {(OffMapOn.Value ? "ON" : "off")} | fix7 rain dropout {(RainFixOn.Value ? "ON" : "off")} | fix8 openings {(ExposureMixOn.Value ? $"ON (cue {DirectionCueStrength.Value:0.00}, roof rain {RoofRainUnderFloors.Value:0.00}, glass {ThroughGlass.Value:0.00}, indoor fade {IndoorFadeNearOpenings.Value:0.00}, openings {OpeningShare.Value:0.00}{(OpeningHrtf.Value ? " HRTF" : "")})" : "off")} | exposure probe {(ExposureProbeOn.Value ? "on" : "off")} | " +
             $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB)" : "off")} | " +
-            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value})" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
+            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")})" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
 
         internal static void Safe(string what, Action a)
         {
