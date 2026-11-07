@@ -41,6 +41,10 @@ dotnet run -c Release --project tools/HeadsetBench -- bench_out   # writes bench
 
 Paths to the game are in `Directory.Build.props` (`SptDir`).
 
+## Version control
+
+The project is a git repository (branch `main`, first commit 6 Nov 2026 at 0.5.7). Each build that goes into a raid gets a commit, so any earlier version can be rebuilt and compared. Logs, build output (`bin/`, `obj/`) and the bench WAVs (`bench_out/`) are not tracked (`.gitignore`). Line endings are kept as LF (`.gitattributes`). Nothing is pushed to GitHub yet.
+
 ## Rules this codebase follows
 
 - **Nothing allocates on the audio thread.** The bench fails if `HeadsetProcessor.Process` allocates.

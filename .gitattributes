@@ -1,0 +1,4 @@
+# Keep files exactly as written (LF). The edit scripts match text exactly, so Windows-style
+# line-ending conversion on checkout would break them.
+* text=auto eol=lf
+*.sln text eol=crlf
