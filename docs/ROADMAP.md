@@ -32,7 +32,11 @@ The agreed order of work (6 Nov 2026), and why. How things work right now: [DESI
    - **Decided, kept:** the 15 s source scan (51.5 ms every 15 s; user, 6 Nov: keep it).
 3. **Current-state design doc — done:** [DESIGN.md](DESIGN.md). Roadmap table brought up to date; the raid-check sections below are marked as history.
 4. **Fixed test route — done:** [TESTING.md](../TESTING.md), 12 stops on Ground Zero with what you should hear and what the logs should show.
-4a. **Probe v2 — built in 0.6.0, not raided yet** (raid 21, user: "we really need better probes"). Decisions and review: [AMBIENCE.md](AMBIENCE.md) §12–13. Switches 9 (ambience) and 9a (gunshots), off by default, so the current probes stay for A/B. Raid 22: "really good"; 0.6.1 steadies it. **Next idea (user: "what if we weighted the rays?"):** aim more rays where the outside was found (importance sampling, with the weights corrected so the level stays right), so a far window gets dozens of rays instead of a handful.
+4a. **Probe v2 — built in 0.6.0, not raided yet** (raid 21, user: "we really need better probes"). Decisions and review: [AMBIENCE.md](AMBIENCE.md) §12–13. Switches 9 (ambience) and 9a (gunshots), off by default, so the current probes stay for A/B. Raid 22: "really good"; 0.6.1 steadies it. **Next, after a raid on 0.6.2 (raid 23):**
+   - **Guided rays** (user: "what if we weighted the rays?"): aim about half the rays where outside was found last time (importance sampling, each weighted down so the totals stay right), so a far window gets dozens of paths instead of a handful. This is the main fix for the in and out deep inside, where noise grows as fewer paths escape.
+   - **Smoothing by confidence:** the fewer paths escape, the longer the level is averaged (thresholds stay quick, deep interiors steady).
+   - **Where the outside comes in:** locate each escaping path's exit point (where it leaves the building, by halving the last leg and testing for sky), so the direction points at the window or door, not at the wall a reflection came off.
+   - **Distant sounds through openings** (step 6, user, raid 23): SPTBattleAmbience gunfire comes through the walls from its true direction; indoors it should come from the openings, using the same exit points.
 5. **Then one change per build**, from: roof holes, phase 3 (roof material), step 6, weather research, material research, the Tarkov/3D-audio review, step 5, step 7.
 
 ## History and evidence

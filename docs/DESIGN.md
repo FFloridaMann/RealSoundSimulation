@@ -1,6 +1,6 @@
 # Current design: how indoor and outdoor sound works
 
-**State: 0.6.1** (6 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
+**State: 0.6.2** (6 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
 
 ---
 
@@ -71,7 +71,7 @@ Every 0.25 s, 5 rays straight up (median, so one beam doesn't flip it): the firs
 ### 2.6 Acoustic probe v2 — sound that bounces (0.6.0; drives fixes 9 and 9a when they're on)
 `Acoustics/AcousticProbe.cs`. One ray-tracer for both the ambience and your gunshots. Setting `Acoustic probe v2` (on).
 - **128 directions** evenly over the whole sphere, randomly rotated every cycle; about 512 paths start per second (each direction ~4 times a second). All the legs of a frame are cast in one batch on worker threads.
-- **Each path bounces like sound.** At a hit: glass passes at `9d` (−22 dB, muffled to 1.5 kHz) or reflects; thin planks, cardboard and fabric pass at −10 dB; bars and fences pass at 0.9; shattered glass and empty frames pass; solid objects on low-detail layers (cars, doors) block with a small leak. Everything else reflects, losing energy by its material (concrete 2%, wood 10–15%, fabric 50%, grass 45%…), mirror-like or scattered by roughness, and duller by its brightness. Up to 3 reflections (6 casts).
+- **Each path bounces like sound.** At a hit: glass passes at `9d` (−22 dB, muffled to 1.5 kHz) or reflects; thin planks, cardboard and fabric pass at −10 dB; bars and fences pass at 0.9; shattered glass and empty frames pass; solid objects on low-detail layers (cars, doors, building shells) block (0.6.2; sound through walls is step 6). Everything else reflects, losing energy by its material (concrete 2%, wood 10–15%, fabric 50%, grass 45%…), mirror-like or scattered by roughness, and duller by its brightness. Up to 3 reflections (6 casts).
 - **Outside = open sky:** a leg that hits nothing for 60 m has escaped, unless it's level/downward and there's a roof over its end (a long interior). No room map, no ceiling rule.
 - **Room build-up:** energy still bouncing after 3 reflections is completed with Sabine's rule: escape rate per bounce p, absorption a → share escaping = p / (p + (1 − p) a), × `9e`. A bare concrete garage open on one side (p ≈ 0.1, a ≈ 0.03) comes out about 80% of outside; a furnished room much less.
 - **Averaging (0.6.1):** the last two sweeps (256 paths, ~640 a second) are aggregated together.

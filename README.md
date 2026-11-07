@@ -1,6 +1,6 @@
 # Real Sound Simulation
 
-A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.1**: diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.2**: diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
 

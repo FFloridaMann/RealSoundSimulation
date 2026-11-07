@@ -25,7 +25,7 @@ namespace RealSoundSimulation.Acoustics
     //     thin planks, cardboard, fabric   pass at -10 dB (2.5 kHz), else reflect
     //     bars, fences, grates             pass at 0.9
     //     shattered glass, empty window frames   pass
-    //     other non-blocking props         pass half
+    //     solid objects on low-detail layers (cars, doors, building shells) reflect (0.6.2: no leak)
     //     anything else reflects: energy x (1 - absorption of its material), mirror or scattered by its roughness, and
     //     duller by its brightness. The ground/floor under the first leg absorbs nothing (it is part of the rain field).
     //   Up to 3 reflections (6 casts). Energy still in flight then is "remaining".
@@ -334,7 +334,10 @@ namespace RealSoundSimulation.Acoustics
                 case Cat.Bars: t = tg = 0.9f; cut = 12000f; return;
                 case Cat.Glass: t = GlassT(); tg = thinGun; cut = 1500f; glass = true; return;
                 case Cat.Thin: t = 0.1f; tg = thinGun; cut = 2500f; return;
-                case Cat.Solid: t = tg = 0.05f; cut = 1200f; return;
+                // 0.6.2: blocks completely. Raid 23: the Capital's whole-floor low-detail collider sits in front of its real
+                // walls; a 5% chance of passing at full strength put nearly all of mark 1's "outside" behind the back wall
+                // (and one path down through the floor) and made the level jump. Sound through walls is step 6's job.
+                case Cat.Solid: t = tg = 0f; cut = 22000f; return;
                 default: t = tg = 0f; cut = 22000f; return;
             }
         }
@@ -359,7 +362,7 @@ namespace RealSoundSimulation.Acoustics
                     case OutdoorExposure.Path.Broken: case OutdoorExposure.Path.Open: t = tg = 1f; return;
                     default:
                         if (Surfaces.IsThin(m)) break;
-                        // a solid object on a low-detail layer (parked cars, doors, elevator doors): blocks, small leak
+                        // a solid object on a low-detail layer (parked cars, doors, building shells): blocks (see Kind)
                         t = tg = 0.05f; cut = 1200f; return;
                 }
             }

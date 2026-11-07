@@ -2,8 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.2 — 6 Nov 2026 (bug fix: rays leaked through solid low-detail shapes)
+**Run in game:** not yet (installed 22:16).
+- **Solid objects on low-detail layers now block completely.** 0.6.0 gave them a small leak, done by chance: 5% of rays passed **at full strength**. The Capital has a whole-floor low-detail collider (`Capital_Indoor_1F_COLLIDER`, no material tag) in front of its real walls. In raid 23 at mark 1, 10 of the 11 paths that "reached outside" had gone through it, through the back and side walls and once down through the floor to the ground 48 m below. That put the rain behind you and made the level jump whenever a lucky path got through. Sound through walls belongs to step 6 (by material and thickness), not to this probe.
+
 ## 0.6.1 — 6 Nov 2026 (probe v2: steadier, direction from the earliest sound)
-**Run in game:** not yet (installed 22:04).
+**Run in game:** raid 23 (22:08, rain). "Sounds better." Still: at mark 1 (Capital) the rain came from the back wall; distant gunfire (SPTBattleAmbience) through the building walls; in and out in the hallway as fewer paths reach outside. Cause of the first: the bug fixed in 0.6.2.
 Raid 22 (0.6.0, 9 and 9a on): "really good", garage "big improvement". Still: in the back of the Capital building rain came through the concrete back and side walls, some ambient sounds were placed oddly, and the audio changed in and out a little. Logs: at the Capital mark only 6 of 128 paths reached outside; 85% of the level was room build-up, spread all round (focus 0.07). The direction jumped a median 36° per 0.125 s (often 140°) and the level 0.2–2 dB. Focus was under 0.3 for 94% of the raid. v2 cost 21.8 ms/s.
 - **Direction from the earliest sound** (the precedence effect: you place a sound where its first arrival comes from). Escaping paths weigh by e^(−path length / 20 m) for direction and focus. The build-up no longer widens the sound, so it stays on the openings' side instead of coming through the back walls.
 - **Direction turns over ~1 s**; the level still follows in 0.35 s.
