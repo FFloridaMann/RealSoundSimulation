@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.1 — 6 Nov 2026 (probe v2: steadier, direction from the earliest sound)
+**Run in game:** not yet (built 22:0x; the game was running, so not installed yet).
+Raid 22 (0.6.0, 9 and 9a on): "really good", garage "big improvement". Still: in the back of the Capital building rain came through the concrete back and side walls, some ambient sounds were placed oddly, and the audio changed in and out a little. Logs: at the Capital mark only 6 of 128 paths reached outside; 85% of the level was room build-up, spread all round (focus 0.07). The direction jumped a median 36° per 0.125 s (often 140°) and the level 0.2–2 dB. Focus was under 0.3 for 94% of the raid. v2 cost 21.8 ms/s.
+- **Direction from the earliest sound** (the precedence effect: you place a sound where its first arrival comes from). Escaping paths weigh by e^(−path length / 20 m) for direction and focus. The build-up no longer widens the sound, so it stays on the openings' side instead of coming through the back walls.
+- **Direction turns over ~1 s**; the level still follows in 0.35 s.
+- **Less noise:** the last two sweeps (256 paths) are aggregated, and 640 paths/s instead of 512.
+- **Build-up leak rate from late bounces** (legs after 2+ reflections): the energy still bouncing is deep in the space, so back rooms come out quieter; a single hard room (the garage) the same.
+- **Cost:** each collider's kind is worked out once; hit labels are only built for F10 dumps (they allocated on every hit).
+
 ## 0.6.0 — 6 Nov 2026 (probe v2)
 **Run in game:** not yet (installed 21:40, game closed). The new switches 9 and 9a are **off**: with them off, everything sounds as in 0.5.8.
 - **New: acoustic probe v2** (diagnostics, on). 128 rays over the whole sphere that bounce like sound until they reach open sky, losing energy by material and passing glass, thin planks and bars at a loss; the rest of a room's ringing is completed with Sabine's rule. Batched on worker threads. Design: AMBIENCE.md §12–13, DESIGN.md §2.6. Raid 21 asked for it: the garage read as underground and quiet rain flammed.

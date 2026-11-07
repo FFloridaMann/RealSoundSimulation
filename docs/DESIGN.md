@@ -1,6 +1,6 @@
 # Current design: how indoor and outdoor sound works
 
-**State: 0.6.0** (6 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
+**State: 0.6.1** (6 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
 
 ---
 
@@ -74,6 +74,8 @@ Every 0.25 s, 5 rays straight up (median, so one beam doesn't flip it): the firs
 - **Each path bounces like sound.** At a hit: glass passes at `9d` (−22 dB, muffled to 1.5 kHz) or reflects; thin planks, cardboard and fabric pass at −10 dB; bars and fences pass at 0.9; shattered glass and empty frames pass; solid objects on low-detail layers (cars, doors) block with a small leak. Everything else reflects, losing energy by its material (concrete 2%, wood 10–15%, fabric 50%, grass 45%…), mirror-like or scattered by roughness, and duller by its brightness. Up to 3 reflections (6 casts).
 - **Outside = open sky:** a leg that hits nothing for 60 m has escaped, unless it's level/downward and there's a roof over its end (a long interior). No room map, no ceiling rule.
 - **Room build-up:** energy still bouncing after 3 reflections is completed with Sabine's rule: escape rate per bounce p, absorption a → share escaping = p / (p + (1 − p) a), × `9e`. A bare concrete garage open on one side (p ≈ 0.1, a ≈ 0.03) comes out about 80% of outside; a furnished room much less.
+- **Averaging (0.6.1):** the last two sweeps (256 paths, ~640 a second) are aggregated together.
+- **Direction from the earliest sound (0.6.1):** for direction and focus each escaping path weighs by e^(−path length / 20 m), the precedence effect: you place a sound where its first arrival comes from, even when most of the energy is reverberant. The build-up adds level, not width. The leak rate for the build-up comes from late bounces (2+ reflections).
 - **Ambience outputs:** level (direct + bounced + build-up, 0–1), brightness (Hz), arrival direction and focus, sky open, enclosed, roof coverage (upward cone covered within 40 m) and roof material.
 - **Gunshot outputs:** room = 1 − the share escaping within one wall/roof bounce (floors don't count; thin surfaces by `3f`), mean free path → size, absorption → hard room, a reverb-time estimate. Also measured at the muzzle when you fire (64 directions, 3 casts).
 - **Ray view:** `Probe ray view key` (F11) draws every path: green sky, cyan sky after bounces, yellow through glass, red trapped, magenta long interior.
@@ -104,7 +106,7 @@ outside, the outdoor value ≈ 1: beds as the game plays them, no indoor layers.
 
 ### 3.2b With probe v2 (fix 9 on; test)
 - **Volume and muffling are set directly** from probe v2: volume = 10·log10(level) dB, low-pass = the probe's brightness, high-pass at its minimum, reverb/delay sends capped at the volume. The game's outdoor-value curve is bypassed.
-- **The game's own beds become directional** (`Fixes/BedDirection.cs`): one source each, no copies. Their 2D/3D blend = enclosed × `9b`; placed 3 m away in the arrival direction; width from the focus (Unity panner: spread 180° → 20°, duller from behind; or Meta HRTF with volumetric radius 3 → 0.3 m, `9c`). A bed is only moved if its object has no children and holds only bed sources; otherwise it stays flat (logged).
+- **The game's own beds become directional** (`Fixes/BedDirection.cs`): one source each, no copies. Their 2D/3D blend = enclosed × `9b`; placed 3 m away in the arrival direction (turning over ~1 s); width from the focus (Unity panner: spread 180° → 20°, duller from behind; or Meta HRTF with volumetric radius 3 → 0.3 m, `9c`). A bed is only moved if its object has no children and holds only bed sources; otherwise it stays flat (logged).
 - **Indoor layers** follow probe v2's enclosed; **roof rain** is also × roof coverage (holes let less rain hit "your" roof).
 - The 0.5.x opening-sound copies and the pan/filter direction cue are off while fix 9 is on.
 

@@ -39,7 +39,7 @@ namespace RealSoundSimulation.Diagnostics
             {
                 LineRenderer lr = _lines[i];
                 int n = Acoustics.AcousticProbe.PtN[i];
-                ref Acoustics.AcousticProbe.Result r = ref Acoustics.AcousticProbe.Results[i];
+                ref Acoustics.AcousticProbe.Result r = ref Acoustics.AcousticProbe.Latest[i];
                 if (n < 2 || r.Fate == Acoustics.AcousticProbe.Fate.None) { lr.positionCount = 0; continue; }
                 lr.positionCount = n;
                 for (int k = 0; k < n; k++) lr.SetPosition(k, Acoustics.AcousticProbe.Pts[i * Acoustics.AcousticProbe.MaxPts + k]);

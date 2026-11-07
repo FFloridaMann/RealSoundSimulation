@@ -41,11 +41,20 @@ namespace RealSoundSimulation.Acoustics
     //   Coverage   share of the upward cone (within 53 deg of straight up) covered within 40 m; RoofMat
     //   For gunshots: Room = 1 - share escaping within one wall/roof bounce (floors don't count, thin surfaces by "3f"),
     //   MeanFreePath, Absorption, Size (0.5 small .. 1), HardRoom, Rt60 (estimate)
+    // 0.6.1 (raid 22, Capital): the build-up (85% of the level there) was spread all round and its leak rate came from
+    // every bounce, including the early ones near the windows; only 6 of 128 paths escaped, so the direction jumped a
+    // median 36 deg per 0.125 s and rain seemed to come through the back walls.
+    //   - direction from the EARLIEST sound (precedence effect): escaping paths weigh by exp(-path length / 20 m); the
+    //     build-up no longer widens the sound
+    //   - two sweeps averaged (2 x 128 results) and 640 paths/s: less noise
+    //   - leak rate p from late bounces only (legs after 2+ reflections): back rooms quieter, a single hard room the same
+    //   - each collider's kind is cached; hit labels are only built for F10 dumps (cost)
     internal class AcousticProbe : MonoBehaviour
     {
         public const int N = 128;
         public const int MaxCasts = 6, MaxBounces = 3, MaxPts = MaxCasts + 1;
-        private const float MaxLeg = 60f, Skin = 0.02f, PathsPerSecond = 512f;
+        private const float MaxLeg = 60f, Skin = 0.02f, PathsPerSecond = 640f, PrecedenceM = 20f;
+        public const int Sweeps = 2;
         private const int MaxActive = 256;
 
         public enum Fate : byte { None, Sky, SkyAfterBounces, Trapped, LongInterior }
@@ -59,6 +68,7 @@ namespace RealSoundSimulation.Acoustics
             public MaterialType FirstMat;
             public Fate Fate;
             public int Casts;
+            public float PathLen;
         }
 
         private struct PathState
@@ -72,17 +82,26 @@ namespace RealSoundSimulation.Acoustics
             public float FirstHitM;
             public MaterialType FirstMat;
             public int Pn;
+            public int Layer;
+            public float Len;
         }
 
-        // latest completed path per direction, and its points (ray view, paths.csv)
-        public static readonly Result[] Results = new Result[N];
+        // the last two sweeps' results (aggregated together), and the latest path per direction with its points and hits
+        // (ray view, paths.csv)
+        public static readonly Result[] Results = new Result[Sweeps * N];
+        public static readonly Result[] Latest = new Result[N];
         public static readonly Vector3[] Pts = new Vector3[N * MaxPts];
         public static readonly int[] PtN = new int[N];
-        public static readonly string[] Hits = new string[N];
+        public static readonly Collider[] HitCol = new Collider[N * MaxPts];
+        public static readonly float[] HitM = new float[N * MaxPts];
+        public static readonly int[] HitN = new int[N];
+        private static int _layer;
 
         private static readonly PathState[] Paths = new PathState[MaxActive];
         private static readonly Vector3[] Scratch = new Vector3[MaxActive * MaxPts];
-        private static readonly StringBuilder[] ScratchHits = new StringBuilder[MaxActive];
+        private static readonly Collider[] ScratchCol = new Collider[MaxActive * MaxPts];
+        private static readonly float[] ScratchM = new float[MaxActive * MaxPts];
+        private static readonly int[] ScratchHitN = new int[MaxActive];
         private static readonly int[] Idx = new int[MaxActive];
         private static readonly Vector3[] Fib = BuildFib(N);
         private static Quaternion _rot = Quaternion.identity;
@@ -92,7 +111,7 @@ namespace RealSoundSimulation.Acoustics
         private static NativeArray<RaycastHit> _hits;
 
         // running statistics (exponential, ~2 s): escape rate per reflected leg, absorption, free path, brightness
-        private static double _escAcc, _legAcc, _alphaAcc, _hitAcc, _lenAcc, _lenN, _cutLogAcc;
+        private static double _escAcc, _legAcc, _lateEscAcc, _lateLegAcc, _alphaAcc, _hitAcc, _lenAcc, _lenN, _cutLogAcc;
 
         public static bool Valid;
         public static float Level = float.NaN, Direct, Traced, Tail, Remaining, EscapeRate, Absorption, MeanFreePath = float.NaN,
@@ -111,9 +130,12 @@ namespace RealSoundSimulation.Acoustics
         {
             Valid = false; Level = Room = Size = HardRoom = Rt60 = MeanFreePath = float.NaN;
             MuzzleRoom = MuzzleSize = MuzzleCoverage = MuzzleHardRoom = float.NaN; _muzzleTime = -10f;
-            for (int i = 0; i < N; i++) { Results[i] = default; PtN[i] = 0; Hits[i] = null; }
+            for (int i = 0; i < Results.Length; i++) Results[i] = default;
+            for (int i = 0; i < N; i++) { Latest[i] = default; PtN[i] = 0; HitN[i] = 0; }
+            for (int i = 0; i < HitCol.Length; i++) HitCol[i] = null;
+            KindCache.Clear(); _layer = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
-            _escAcc = _legAcc = _alphaAcc = _hitAcc = _lenAcc = _lenN = _cutLogAcc = 0;
+            _escAcc = _legAcc = _lateEscAcc = _lateLegAcc = _alphaAcc = _hitAcc = _lenAcc = _lenN = _cutLogAcc = 0;
             RaysCast = PathsDone = 0; _budget = 0f; _nextRow = 0f; _maskBlock = -1;
         }
 
@@ -152,7 +174,7 @@ namespace RealSoundSimulation.Acoustics
                 _budget -= 1f;
                 Start(ref Paths[i], i, _cursor, lt.position, _rot * Fib[_cursor]);
                 _cursor++;
-                if (_cursor >= N) { _cursor = 0; _rot = UnityEngine.Random.rotationUniform; }
+                if (_cursor >= N) { _cursor = 0; _rot = UnityEngine.Random.rotationUniform; _layer = (_layer + 1) % Sweeps; }
             }
 
             // one leg for every path in flight, in one batch
@@ -170,6 +192,7 @@ namespace RealSoundSimulation.Acoustics
                 h.Complete();
                 RaysCast += n; CountedRay.Rays += n;
                 double esc = 0, legs = 0, alpha = 0, hits = 0, len = 0, lenN = 0, cutLog = 0;
+                _lateEsc = _lateLegs = 0;
                 for (int k = 0; k < n; k++)
                 {
                     int i = Idx[k];
@@ -177,6 +200,7 @@ namespace RealSoundSimulation.Acoustics
                 }
                 double decay = Math.Exp(-dt / 2.0);
                 _escAcc = _escAcc * decay + esc; _legAcc = _legAcc * decay + legs;
+                _lateEscAcc = _lateEscAcc * decay + _lateEsc; _lateLegAcc = _lateLegAcc * decay + _lateLegs;
                 _alphaAcc = _alphaAcc * decay + alpha; _hitAcc = _hitAcc * decay + hits; _cutLogAcc = _cutLogAcc * decay + cutLog;
                 _lenAcc = _lenAcc * decay + len; _lenN = _lenN * decay + lenN;
             }
@@ -192,39 +216,40 @@ namespace RealSoundSimulation.Acoustics
         {
             p = default;
             p.Active = true; p.Dir = dir; p.O = o; p.D = d; p.First = d; p.E = 1f; p.G = 1f; p.Cut = 22000f;
-            p.Pn = 0;
+            p.Pn = 0; p.Layer = _layer;
             Scratch[slot * MaxPts + p.Pn++] = o;
-            if (ScratchHits[slot] == null) ScratchHits[slot] = new StringBuilder(128); else ScratchHits[slot].Clear();
+            ScratchHitN[slot] = 0;
         }
 
         // One leg's result. Shared by the continuous probe (record = true) and the muzzle measure.
         private static void Advance(ref PathState p, int slot, RaycastHit hit, int block, bool record,
             ref double esc, ref double legs, ref double alpha, ref double hits, ref double len, ref double lenN, ref double cutLog)
         {
-            bool fromReflection = p.Bounces >= 1;
+            bool fromReflection = p.Bounces >= 1, late = p.Bounces >= 2;
             p.Casts++;
             if (fromReflection) legs++;
+            if (late) _lateLegs++;
             Collider c = hit.collider;
             if (c == null)
             {
                 Vector3 end = p.O + p.D * MaxLeg;
                 if (record) AddPt(ref p, slot, end);
                 bool sky = p.D.y > 0.5f || !CountedRay.Raycast(end + Vector3.up * 0.5f, Vector3.up, out RaycastHit _, 60f, block, QueryTriggerInteraction.Ignore);
-                if (sky) { if (fromReflection) esc++; Finish(ref p, slot, p.Bounces == 0 ? Fate.Sky : Fate.SkyAfterBounces, record); }
+                p.Len += MaxLeg;
+                if (sky) { if (fromReflection) esc++; if (late) _lateEsc++; Finish(ref p, slot, p.Bounces == 0 ? Fate.Sky : Fate.SkyAfterBounces, record); }
                 else Finish(ref p, slot, Fate.LongInterior, record);
                 return;
             }
             if (record) AddPt(ref p, slot, hit.point);
             MaterialType m = Surfaces.Material(c);
             if (p.Casts == 1) { p.FirstHit = true; p.FirstHitM = hit.distance; p.FirstMat = m; }
-            len += hit.distance; lenN++;
+            len += hit.distance; lenN++; p.Len += hit.distance;
 
             // what kind of surface: pass-through (glass, thin, bars, open frames, props) or reflect
             bool blocking = (block & (1 << c.gameObject.layer)) != 0;
             float t, tg, passCut; bool glass = false;
             Kind(c, m, blocking, out t, out tg, out passCut, ref glass);
-            if (record && ScratchHits[slot].Length < 400)
-                ScratchHits[slot].Append(c.name).Append(':').Append(m).Append('@').Append(hit.distance.ToString("0.0")).Append(' ');
+            if (record && ScratchHitN[slot] < MaxPts) { int h = slot * MaxPts + ScratchHitN[slot]++; ScratchCol[h] = c; ScratchM[h] = hit.distance; }
             if (t > 0f)
             {
                 float pp = glass ? 0.5f : Mathf.Clamp01(Mathf.Max(t, tg));
@@ -268,24 +293,55 @@ namespace RealSoundSimulation.Acoustics
             if (escaped) { if (p.Bounces == 0) r.Direct = p.E; else r.Reflected = p.E; }
             else r.Remaining = p.E;
             r.Geo = escaped && p.GeoBounces <= 1 ? p.G : 0f;
-            Results[p.Dir] = r;
+            r.PathLen = p.Len;
+            Results[p.Layer * N + p.Dir] = r;
+            Latest[p.Dir] = r;
             int o = slot * MaxPts, d = p.Dir * MaxPts;
             for (int k = 0; k < p.Pn; k++) Pts[d + k] = Scratch[o + k];
             PtN[p.Dir] = p.Pn;
-            Hits[p.Dir] = ScratchHits[slot]?.ToString();
+            int hn = ScratchHitN[slot];
+            for (int k = 0; k < hn; k++) { HitCol[d + k] = ScratchCol[o + k]; HitM[d + k] = ScratchM[o + k]; }
+            HitN[p.Dir] = hn;
             PathsDone++;
         }
 
         private static Fate _syncFate;
+        private static double _lateEsc, _lateLegs;
 
         private static void AddPt(ref PathState p, int slot, Vector3 v)
         {
             if (p.Pn < MaxPts) Scratch[slot * MaxPts + p.Pn++] = v;
         }
 
-        // Pass-through share for sound (t) and for the gunshot room measure (tg), and how dull the passed sound gets.
+        // What a collider is for sound, worked out once per collider (0.6.1: names and parents were read on every hit).
+        private enum Cat : byte { Reflect, Shattered, Bars, Glass, Open, Thin, Solid }
+        private static readonly Dictionary<int, Cat> KindCache = new Dictionary<int, Cat>();
+
         private static void Kind(Collider c, MaterialType m, bool blocking, out float t, out float tg, out float cut, ref bool glass)
         {
+            int id = c.GetInstanceID();
+            if (!KindCache.TryGetValue(id, out Cat cat))
+            {
+                KindRaw(c, m, blocking, out float t0, out float tg0, out float cut0, out bool g0);
+                cat = g0 ? Cat.Glass : t0 >= 1f ? (m == MaterialType.GlassShattered ? Cat.Shattered : Cat.Open) : Mathf.Approximately(t0, 0.9f) ? Cat.Bars
+                    : Mathf.Approximately(t0, 0.1f) ? Cat.Thin : Mathf.Approximately(t0, 0.05f) ? Cat.Solid : Cat.Reflect;
+                KindCache[id] = cat;
+            }
+            float thinGun = 1f - Mathf.Clamp01(Plugin.ThinSurfaceCount.Value);
+            switch (cat)
+            {
+                case Cat.Shattered: case Cat.Open: t = tg = 1f; cut = 22000f; return;
+                case Cat.Bars: t = tg = 0.9f; cut = 12000f; return;
+                case Cat.Glass: t = GlassT(); tg = thinGun; cut = 1500f; glass = true; return;
+                case Cat.Thin: t = 0.1f; tg = thinGun; cut = 2500f; return;
+                case Cat.Solid: t = tg = 0.05f; cut = 1200f; return;
+                default: t = tg = 0f; cut = 22000f; return;
+            }
+        }
+
+        private static void KindRaw(Collider c, MaterialType m, bool blocking, out float t, out float tg, out float cut, out bool glass)
+        {
+            glass = false;
             float thinGun = 1f - Mathf.Clamp01(Plugin.ThinSurfaceCount.Value);
             t = 0f; tg = 0f; cut = 22000f;
             if (m == MaterialType.GlassShattered) { t = tg = 1f; return; }
@@ -370,17 +426,23 @@ namespace RealSoundSimulation.Acoustics
 
         private static void Aggregate()
         {
-            float direct = 0f, refl = 0f, rem = 0f, geo = 0f, eW = 0f; double cutLog = 0; Vector3 arr = Vector3.zero;
+            float direct = 0f, refl = 0f, rem = 0f, geo = 0f, eW = 0f, pW = 0f; double cutLog = 0; Vector3 arr = Vector3.zero;
             int n = 0, up = 0, upHit = 0;
             Array.Clear(RoofCount, 0, RoofCount.Length);
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < Results.Length; i++)
             {
                 ref Result r = ref Results[i];
                 if (r.Fate == Fate.None) continue;
                 n++;
                 direct += r.Direct; refl += r.Reflected; rem += r.Remaining; geo += r.Geo;
                 float e = r.Direct + r.Reflected;
-                if (e > 0f) { arr += r.First * e; eW += e; cutLog += e * Math.Log(Mathf.Max(r.Cut, 100f)); }
+                if (e > 0f)
+                {
+                    eW += e; cutLog += e * Math.Log(Mathf.Max(r.Cut, 100f));
+                    // precedence: you place a sound where its EARLIEST arrival comes from, so short paths decide the direction
+                    float w = e * Mathf.Exp(-r.PathLen / PrecedenceM);
+                    arr += r.First * w; pW += w;
+                }
                 if (r.First.y > 0.6f)
                 {
                     up++;
@@ -389,7 +451,8 @@ namespace RealSoundSimulation.Acoustics
             }
             if (n < N / 2) { Valid = false; return; }
             Direct = direct / n; Traced = refl / n; Remaining = rem / n;
-            EscapeRate = _legAcc > 1 ? (float)(_escAcc / _legAcc) : 0f;
+            // leak rate of the energy still bouncing: from late bounces (2+ reflections) when there are enough of them
+            EscapeRate = _lateLegAcc > 20 ? (float)(_lateEscAcc / _lateLegAcc) : _legAcc > 1 ? (float)(_escAcc / _legAcc) : 0f;
             Absorption = _hitAcc > 1 ? (float)(_alphaAcc / _hitAcc) : 0.05f;
             MeanFreePath = _lenN > 1 ? (float)(_lenAcc / _lenN) : float.NaN;
             float p = EscapeRate, a = Absorption;
@@ -400,10 +463,9 @@ namespace RealSoundSimulation.Acoustics
             float roomCut = _hitAcc > 1 ? (float)Math.Exp(_cutLogAcc / _hitAcc) * 0.8f : 12000f;
             double wSum = eW + Tail;
             CutoffHz = wSum > 1e-6 ? (float)Math.Exp((cutLog + Tail * Math.Log(Mathf.Max(roomCut, 100f))) / wSum) : 22000f;
-            Arrival = arr.sqrMagnitude > 1e-8f ? arr.normalized : Vector3.forward;
-            float focus = eW > 1e-6f ? arr.magnitude / eW : 0f;
+            Arrival = arr.sqrMagnitude > 1e-10f ? arr.normalized : Vector3.forward;
             DiffuseShare = Level > 1e-6f ? Mathf.Clamp01(Tail / Level) : 0f;
-            Focus = Mathf.Clamp01(focus * (1f - DiffuseShare));
+            Focus = pW > 1e-8f ? Mathf.Clamp01(arr.magnitude / pW) : 0f; // 0.6.1: the build-up no longer widens it
             SkyOpen = Mathf.Clamp01(Direct / 0.5f);
             Enclosed = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 0.85f, SkyOpen));
             Coverage = up > 0 ? (float)upHit / up : 0f;
@@ -521,14 +583,22 @@ namespace RealSoundSimulation.Acoustics
         {
             if (!DiagLog.IsOpen || !Valid) return;
             Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+            var sb = new StringBuilder(256);
             for (int i = 0; i < N; i++)
             {
-                ref Result r = ref Results[i];
+                ref Result r = ref Latest[i];
                 if (r.Fate == Fate.None) continue;
+                sb.Clear();
+                for (int k = 0; k < HitN[i]; k++)
+                {
+                    Collider c = HitCol[i * MaxPts + k];
+                    if (c == null) { sb.Append("(gone) "); continue; }
+                    sb.Append(c.name).Append(':').Append(Surfaces.Material(c)).Append('@').Append(HitM[i * MaxPts + k].ToString("0.0")).Append(' ');
+                }
                 DiagLog.Row("paths.csv", string.Join(",", DiagLog.F(t, "0.00"), mark.ToString(), i.ToString(), DiagLog.F(RelAz(lt, r.First), "0"),
                     DiagLog.F(Mathf.Asin(Mathf.Clamp(r.First.y, -1f, 1f)) * Mathf.Rad2Deg, "0"), r.Fate.ToString(), r.Casts.ToString(),
                     DiagLog.F(r.Direct), DiagLog.F(r.Reflected), DiagLog.F(r.Remaining), DiagLog.F(r.Geo), DiagLog.F(r.Cut, "0"), r.ViaGlass ? "1" : "0",
-                    (Hits[i] ?? "").Replace(',', ';').Trim()));
+                    sb.ToString().Replace(',', ';').Trim()));
             }
         }
 
