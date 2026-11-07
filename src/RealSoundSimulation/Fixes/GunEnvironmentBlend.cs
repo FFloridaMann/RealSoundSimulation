@@ -190,7 +190,8 @@ namespace RealSoundSimulation.Fixes
         private static void PickPostfix(SoundBank __instance, ref AudioClip clip1, ref AudioClip clip2, ref float proportions, int environment)
         {
             if (!_ownShot || clip1 == null || clip2 != null) return; // only single-clip picks (own shots at distance 0)
-            float w = _indoorWeight;
+            float w = Steep(_indoorWeight);
+            _usedWeight = w;
             bool applied = false;
             try
             {
@@ -230,7 +231,7 @@ namespace RealSoundSimulation.Fixes
             {
                 DiagRunner.ReportOnce("fix 3c own gunshot blend", e);
             }
-            Log(environment, w, applied);
+            Log(environment, _indoorWeight, applied); // the measured weight; weightUsed (last column) is after 3j
         }
 
         // Own-gun room reverb boost: add the setting to the stereo reverb/early-reflection sends of your gun's hidden
@@ -264,6 +265,20 @@ namespace RealSoundSimulation.Fixes
             sp.UpdateParameters();
         }
 
+        // 0.6.9 "3j": steeper around 0.5, same crossover. Raid 28: 132 of 202 samples mixed the two recordings between 0.25
+        // and 0.75; two different recordings of one shot at similar levels can flam. x = 2w - 1 -> sign(x) |x|^p,
+        // p = 1 / (1 + 2 x steepness): steepness 1 turns 0.6 into 0.79 and 0.4 into 0.21; 0 leaves it as it was.
+        private static float _usedWeight = float.NaN;
+        private static float Steep(float w)
+        {
+            if (float.IsNaN(w)) return w;
+            float k = Mathf.Clamp01(Plugin.BlendSteepness.Value);
+            if (k <= 0f) return w;
+            float x = 2f * Mathf.Clamp01(w) - 1f;
+            float y = Mathf.Sign(x) * Mathf.Pow(Mathf.Abs(x), 1f / (1f + 2f * k));
+            return 0.5f + 0.5f * y;
+        }
+
         // One row per own shot / burst tail: what each measurement said and what was played.
         public static float LastShotTime = float.NaN, LastIndoorWeight = float.NaN; // for the mark key
 
@@ -283,7 +298,8 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(EnclosureProbe.MuzzleSize), DiagLog.F(_lastMuzzleDist, "0.00"), DiagLog.F(_lastRoomUsed),
                 DiagLog.F(EnclosureProbe.HardShare), DiagLog.F(EnclosureProbe.HardRoom), DiagLog.F(EnclosureProbe.GlassShare),
                 V2 ? "v2" : "v1", DiagLog.F(AcousticProbe.Room), DiagLog.F(AcousticProbe.MuzzleRoom), DiagLog.F(AcousticProbe.Size),
-                DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00")));
+                DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00"), DiagLog.F(_usedWeight)));
+            _usedWeight = float.NaN;
         }
     }
 }

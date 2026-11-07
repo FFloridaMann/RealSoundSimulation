@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.8")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.9")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -79,6 +79,10 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> EchoDirectivityDb;
         internal static ConfigEntry<bool> EchoFar;
         internal static ConfigEntry<float> EchoHardRoomDb;
+        internal static ConfigEntry<float> BlendSteepness;     // 0.6.9 "3j"
+        internal static ConfigEntry<float> EarlyEchoTrimDb;    // 0.6.9 "6f"
+        internal static ConfigEntry<bool> IndoorWindFollowsOpenings; // 0.6.9 "8g"
+        internal static ConfigEntry<float> RainThroughBuildingDb;   // 0.6.9 "9l"
 
         private void Awake()
         {
@@ -156,6 +160,10 @@ namespace RealSoundSimulation
             RoofRainFromProbe = Config.Bind(fix, "9i Roof rain from probe", true, new ConfigDescription("Fix 9: rain on the roof is traced from the roof itself: full right under it, partly under a mezzanine, down the stairwell from the floor below, from the direction it reaches you. Off = the floors-above count (8b).", null, new ConfigurationManagerAttributes { Order = 35 }));
             RainFromOpenings = Config.Bind(fix, "9j Rain from openings", true, new ConfigDescription("Fix 9: indoors, the outdoor sound (rain, wind) comes from the window or door it gets in by (where the probe's paths leave the building). Off = from the direction the sound reaches you (often a doorway towards the open part of the building).", null, new ConfigurationManagerAttributes { Order = 34 }));
             DistantThroughOpeningsOn = Config.Bind(fix, "9k Distant gunfire through openings", true, new ConfigDescription("Probe v2: when you're inside, distant sounds off the map (the ambient gunfire mod's battles) come through the windows and doors that face them, at the level that gets in, instead of through the walls from their true direction. Needs fix 4. Off = left to the game and fix 4.", null, new ConfigurationManagerAttributes { Order = 33 }));
+            RainThroughBuildingDb = Config.Bind(fix, "9l Rain through the building dB", -32f, new ConfigDescription("Fix 9: deep inside, the outdoor sound never drops below this level, muffled to a low rumble (a building in rain is never silent: the whole structure is being hit). Fades in as you go inside. -60 = off.", new AcceptableValueRange<float>(-60f, -20f), new ConfigurationManagerAttributes { Order = 32 }));
+            BlendSteepness = Config.Bind(fix, "3j Blend steepness", 1f, new ConfigDescription("Fix 3c: how quickly your gunshot leaves an even indoor/outdoor mix. 0 = straight (0.6.8; many shots near 50/50, two recordings at once can sound doubled). 1 = steep: it still crosses over at the same point, but near-even mixes are rare.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 70 }));
+            EarlyEchoTrimDb = Config.Bind(fix, "6f Early echo trim dB", 0f, new ConfigDescription("Fix 6: added to echoes arriving under 25 ms after the shot (a wall within ~4 m). Those fuse with the shot as colour rather than a separate echo; if shots sound doubled, lower this. 0 = the physical level.", new AcceptableValueRange<float>(-24f, 0f), new ConfigurationManagerAttributes { Order = 52 }));
+            IndoorWindFollowsOpenings = Config.Bind(fix, "8g Indoor wind follows openings", true, new ConfigDescription("Some rooms' room tone is a wind or draught recording (its clip name has 'wind' in it). With this on, that one follows how much of the outside reaches you (like the outdoor sound) instead of how enclosed you are, so it fades deep in a stairwell. Other room tones are unchanged. Every room tone played is logged to roomtone.csv.", null, new ConfigurationManagerAttributes { Order = 44 }));
 
             Harmony = new Harmony(Guid);
             Safe("self-check", PatchSelfCheck.Run);
@@ -164,6 +172,7 @@ namespace RealSoundSimulation
             Safe("env probe", () => EnvProbe.Apply(Harmony));
             Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony));
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
+            Safe("8g room tone", () => RoomTone.Apply(Harmony));
             Safe("fix 2 obstruction score", () => ObstructionScoreFix.Apply(Harmony));
             Safe("fix 3 doorway blend", () => DoorwayBlend.Apply(Harmony));
             Safe("fix 3c own gunshot blend", () => GunEnvironmentBlend.Apply(Harmony));

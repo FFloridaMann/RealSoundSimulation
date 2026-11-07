@@ -34,6 +34,7 @@ namespace RealSoundSimulation.Fixes
         private static readonly List<PrecipitationAmbientBlender> IndoorRain = new List<PrecipitationAmbientBlender>();
         private static bool _found;
         private static float _nextFind, _roofCandidate = 1f, _roofCandidateSince;
+        private static bool _under2, _under2Candidate; private static float _under2Since; // 0.6.9: two floors above (held 0.5 s)
 
         public static bool On => Plugin.ExposureMixOn.Value && Plugin.DoorwayOn.Value;
 
@@ -46,7 +47,7 @@ namespace RealSoundSimulation.Fixes
         private static readonly List<AudioSource> RainSrc = new List<AudioSource>();
         private static float[] _rainGame = new float[0], _rainWritten = new float[0];
         private static bool _rainTracking;
-        public static float RoofRainApplied = 1f;
+        public static float RoofRainApplied = 1f, RoofRainComp = 1f;
 
         public static void Reset()
         {
@@ -57,6 +58,8 @@ namespace RealSoundSimulation.Fixes
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
+            _under2 = _under2Candidate = false; _under2Since = 0f; DoorwayBlend.ResetIndoorParams();
+            RoomTone.Reset();
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
         }
 
@@ -83,6 +86,22 @@ namespace RealSoundSimulation.Fixes
             V2Cutoff = Mathf.Exp(lc + (tc - lc) * a);
             V2Indoor += (AcousticProbe.Enclosed - V2Indoor) * a;
             _coverSm += (AcousticProbe.Coverage - _coverSm) * a;
+        }
+
+        // 0.6.9 "9l": deep inside, the outdoor sound never drops below a muffled floor - the building itself being hit by the
+        // rain and wind, a diffuse low rumble (raid 28 tags 1 and 4: -40 dB and below, "not enough of the interior").
+        // Added as energy, faded in by how enclosed you are; the muffling is the energy-weighted mix of the two.
+        // Geometry-free: retune after the materials overhaul (walls of different materials pass different amounts).
+        public const float FloorCutoffHz = 350f;
+        public static void ApplyFloor(ref float level, ref float cutoff)
+        {
+            float db = Plugin.RainThroughBuildingDb.Value;
+            if (db <= -59.5f) return;
+            float fl = Mathf.Pow(10f, db / 10f) * Mathf.Clamp01(V2Indoor);
+            if (fl <= 0f) return;
+            float tot = level + fl;
+            cutoff = Mathf.Exp((level * Mathf.Log(Mathf.Max(cutoff, 100f)) + fl * Mathf.Log(FloorCutoffHz)) / tot);
+            level = tot;
         }
 
         // Write the outdoor level (dB) and muffling (Hz) to a blender's outdoor mixer parameters, the same parameters the
@@ -141,12 +160,15 @@ namespace RealSoundSimulation.Fixes
             if (_rainGame.Length != RainSrc.Count) { _rainGame = new float[RainSrc.Count]; _rainWritten = new float[RainSrc.Count]; _rainTracking = false; }
             RoofRainApplied += (RoofRainFactor - RoofRainApplied) * (1f - Mathf.Exp(-dt / Smooth));
             if (!_rainTracking) { for (int i = 0; i < RainSrc.Count; i++) { _rainGame[i] = RainSrc[i] != null ? RainSrc[i].volume : 0f; _rainWritten[i] = -1f; } _rainTracking = true; }
+            // 0.6.9: if the indoor-layer fade (openings around you) also turns the rain player's mixer down, undo it here:
+            // roof rain follows the roof only (raid 28 tags 2-3: 0.65 from the probe x 0.53-0.68 from the fade)
+            RoofRainComp = DoorwayBlend.IndoorParamsIncludeRain ? 1f / Mathf.Max(DoorwayBlend.IndoorApplied, 0.1f) : 1f;
             for (int i = 0; i < RainSrc.Count; i++)
             {
                 AudioSource s = RainSrc[i];
                 if (s == null) continue;
                 if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume; // the game changed it (crossfade)
-                _rainWritten[i] = _rainGame[i] * RoofRainApplied;
+                _rainWritten[i] = Mathf.Min(1f, _rainGame[i] * RoofRainApplied * RoofRainComp);
                 s.volume = _rainWritten[i];
             }
         }
@@ -154,7 +176,7 @@ namespace RealSoundSimulation.Fixes
         // 0.6.8: the game's indoor rain player, every 0.25 s (raid 27: roof rain went silent at car dealer spots while our
         // factor held at 0.55). rain2.csv.
         private static float _nextRainRow;
-        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer";
+        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp";
         private static void LogRain()
         {
             if (!DiagLog.IsOpen || Time.time < _nextRainRow) return;
@@ -167,8 +189,17 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.Row("rain2.csv", string.Join(",", DiagLog.F(t, "0.00"), i.ToString(), s.clip != null ? s.clip.name : "", s.clip != null ? s.clip.channels.ToString() : "",
                     s.isPlaying ? "1" : "0", s.isVirtual ? "1" : "0", s.mute ? "1" : "0", i < _rainGame.Length ? DiagLog.F(_rainGame[i]) : "", DiagLog.F(RoofRainApplied),
                     DiagLog.F(s.volume), DiagLog.F(s.spatialBlend), DiagLog.F(s.spread, "0"), s.spatialize ? "1" : "0",
-                    s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : ""));
+                    s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : "", DiagLog.F(RoofRainComp)));
             }
+        }
+
+        // 0.6.9: the game's own volume for an indoor rain source (before our roof factor), for fix 7's volume ramps
+        public static float RainGameVolume(AudioSource s)
+        {
+            if (_rainTracking)
+                for (int i = 0; i < RainSrc.Count && i < _rainGame.Length; i++)
+                    if (RainSrc[i] == s) return Mathf.Abs(s.volume - _rainWritten[i]) < 1e-4f ? _rainGame[i] : s.volume;
+            return s.volume;
         }
 
         private static void RestoreRain()
@@ -201,6 +232,7 @@ namespace RealSoundSimulation.Fixes
                     OpeningSounds.Restore();
                     BedDirection.RestoreAll();
                     RestoreRain();
+                    RoomTone.Off();
                     RoofRainFactor = 1f;
                     V2Active = false; Took.Clear(); V2Level = float.NaN;
                     return;
@@ -220,7 +252,13 @@ namespace RealSoundSimulation.Fixes
                 {
                     // 0.6.7 ("9i"): traced from the roof (AcousticProbe.RoofLevel, energy, already smooth) -> volume (amplitude).
                     // Raid 26: the one-ray floor count flipped 0-1-0 at the car dealer's mezzanine edge (roof rain 30-100-30%).
-                    RoofRainFactor = Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
+                    // 0.6.9: with two or more floors above (the exposure probe's 5 up-rays, held 0.5 s) there is no roof rain,
+                    // whatever the probe's roof test says (raid 28 tag 4: 0.68 under two floors). One floor above stays the
+                    // probe's call (the mezzanine edge flipped 0-1-0 in raid 26).
+                    bool u2 = OutdoorExposure.Valid && OutdoorExposure.FloorsAbove >= 2;
+                    if (u2 != _under2Candidate) { _under2Candidate = u2; _under2Since = Time.time; }
+                    if (Time.time - _under2Since >= 0.5f) _under2 = _under2Candidate;
+                    RoofRainFactor = _under2 ? 0f : Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
                     _roofCandidate = RoofRainFactor; _roofCandidateSince = Time.time;
                 }
                 else
@@ -233,6 +271,7 @@ namespace RealSoundSimulation.Fixes
                 }
                 RoofRain(dt);
                 LogRain();
+                RoomTone.Tick(dt);
 
                 if (v2)
                 {
@@ -336,6 +375,8 @@ namespace RealSoundSimulation.Fixes
 
         public static string Summary() =>
             $"AMBIENCE MIX (fix 8): outdoor beds found {BedsFound} sources, indoor rain players {IndoorRainFound}, opening sound voices max {OpeningSounds.MaxVoices}\n" +
+            $"  indoor-layer mixer volumes: {(DoorwayBlend.IndoorParamNames.Length > 0 ? DoorwayBlend.IndoorParamNames : "not read")}; rain among them {(DoorwayBlend.IndoorParamsIncludeRain ? "yes (roof rain compensated)" : "no")}\n" +
+            RoomTone.Summary() +
             BedDirection.Outdoor.Summary() + BedDirection.Roof.Summary();
     }
 }

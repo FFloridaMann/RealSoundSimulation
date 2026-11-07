@@ -59,6 +59,12 @@ namespace RealSoundSimulation.Fixes
         private float _roomLevel = 0f, _roomLevelTarget = 0f;
         private float _expValue = float.NaN; // fix 8
         private float _lastV2Db = 999f, _lastV2Cut = 22000f; // fix 9
+        // 0.6.9: the indoor-layer level last written (1 = the game's), and whether that mixer fade also reaches the rain
+        // player (decided from the blenders' own indoor parameter names, read once per raid)
+        public static float IndoorApplied = 1f;
+        public static bool IndoorParamsIncludeRain;
+        public static string IndoorParamNames = "";
+        private static bool _paramsRead;
         private EnvironmentSoundBlendSystem _blend;
         private float _nextBlendSearch;
 
@@ -234,6 +240,7 @@ namespace RealSoundSimulation.Fixes
             // setting them throws (raid 4). Wait until every blender is ready.
             for (int i = 0; i < blenders.Length; i++)
                 if (blenders[i] != null && BlenderMixerRef(blenders[i]) == null) return;
+            if (!_paramsRead) ReadIndoorParams(blenders);
 
             float amb = Mathf.Lerp(roomLevel, 1f, Smooth01(2f * o));   // full by the time you reach the doorway
             float tone = Smooth01(2f * (1f - o));                       // room tone gone once you are outside the blend width
@@ -250,8 +257,9 @@ namespace RealSoundSimulation.Fixes
             // 0.6.0, fix 9: probe v2 sets the outdoor volume (dB) and muffling (Hz) directly, and the indoor layers.
             if (AmbienceMix.V2Active && !float.IsNaN(AmbienceMix.V2Level))
             {
-                float volDb = Mathf.Clamp(10f * Mathf.Log10(Mathf.Max(AmbienceMix.V2Level, 1e-8f)), -80f, 0f);
-                float cut = AmbienceMix.V2Cutoff, t2 = AmbienceMix.V2Indoor;
+                float lvF = AmbienceMix.V2Level, cut = AmbienceMix.V2Cutoff, t2 = AmbienceMix.V2Indoor;
+                AmbienceMix.ApplyFloor(ref lvF, ref cut); // 0.6.9 "9l"
+                float volDb = Mathf.Clamp(10f * Mathf.Log10(Mathf.Max(lvF, 1e-8f)), -80f, 0f);
                 bool setV = Mathf.Abs(volDb - _lastV2Db) > 0.05f || Mathf.Abs(Mathf.Log(cut / Mathf.Max(_lastV2Cut, 1f))) > 0.01f;
                 bool setT = Mathf.Abs(t2 - _lastTone) > 0.003f;
                 for (int i = 0; i < blenders.Length; i++)
@@ -262,7 +270,7 @@ namespace RealSoundSimulation.Fixes
                     if (setT) b.SetIndoorMixerParams(t2, 0f, true);
                 }
                 if (setV) { _lastV2Db = volDb; _lastV2Cut = cut; }
-                if (setT) _lastTone = t2;
+                if (setT) { _lastTone = t2; IndoorApplied = t2; }
                 _lastAmb = -1f; // so the v1 path re-applies if v2 is switched off
                 return;
             }
@@ -277,8 +285,32 @@ namespace RealSoundSimulation.Fixes
                 if (setTone) b.SetIndoorMixerParams(tone, 0f, true);
             }
             if (setAmb) _lastAmb = amb;
-            if (setTone) _lastTone = tone;
+            if (setTone) { _lastTone = tone; IndoorApplied = tone; }
         }
+
+        // 0.6.9: which mixer volumes the game's indoor-layer fade (SetIndoorMixerParams) moves. If one is the rain's, roof
+        // rain is compensated for it (AmbienceMix.RoofRain), so openings around you don't turn the roof down.
+        private static void ReadIndoorParams(AmbientSoundBlender[] blenders)
+        {
+            _paramsRead = true;
+            var names = new System.Collections.Generic.SortedSet<string>();
+            foreach (AmbientSoundBlender b in blenders)
+            {
+                if (b == null || b._indoorMixerParams == null) continue;
+                if (!b._indoorMixerParams.TryGetParameters(Audio.AmbientSubsystem.Data.EMixerParameterType.Volume, out Audio.Data.AudioMixerParamsContainer c) || c == null) continue;
+                for (int i = 0; i < c.Count; i++) names.Add(c[i]);
+            }
+            IndoorParamNames = string.Join(" ", names);
+            IndoorParamsIncludeRain = false;
+            foreach (string n in names)
+            {
+                string l = n.ToLowerInvariant();
+                if (l.Contains("precip") || l.Contains("rain")) IndoorParamsIncludeRain = true;
+            }
+            Plugin.Log.LogInfo($"Indoor-layer mixer volumes: {IndoorParamNames} (rain among them: {IndoorParamsIncludeRain})");
+        }
+
+        public static void ResetIndoorParams() { _paramsRead = false; IndoorApplied = 1f; IndoorParamsIncludeRain = false; IndoorParamNames = ""; }
 
         private static float Smooth01(float x)
         {

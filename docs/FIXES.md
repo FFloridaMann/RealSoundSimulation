@@ -154,6 +154,8 @@ It applies to the shot (`FireBullet`) and to the burst tail (`StopFiringLoop`). 
 
 **Settings.** `3c Blend own gunshots at doorways` (on/off), `3d Own gunshot blend source` (Doorway / Enclosure), `3e Aim weight` 0.4, `3g Muzzle weight` 0.7, `3i Small space rule` Current / Soft (≥ 85%) / Off (0.5.4), `3f Thin and glass surfaces count` 0.5 (Enclosure mode: how much glass, thin wood planks, cardboard and fabric count as walls; chain fences and grates always count as nearly open). Doorway mode uses fix 3's doorway value, so it works with fix 3 on or off. It sounds best with fix 3 on, though, because then the reverb blends too.
 
+**0.6.9: `3j Blend steepness`** (1). Raid 28: 132 of 202 samples mixed the two recordings between 0.25 and 0.75, and two different recordings of one shot at similar levels can flam. The weight is reshaped around 0.5 (x = 2w − 1 → sign(x)·|x|^(1/(1 + 2·3j))): at 1, 0.6 → 0.79 and 0.4 → 0.21; same crossover, near-even mixes rare. 0 = as before. ownshots.csv: `indoorWeight` as measured, `weightUsed` after 3j.
+
 **Check.** Doorway mode: fire while standing in a doorway and while stepping through one; there should be no sudden swap. Enclosure mode: open air against a spot covered on three sides, and firing into a room against firing out of it. Logs: "fix 3c blended N" in `summary.txt`; `ownshots.csv` has one row per own shot or tail, with every measurement and the weight that was used.
 
 **Limits.**
@@ -210,6 +212,8 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 ---
 
 ## Fix 6: Own gun echoes (roadmap step 4)
+
+**0.6.9 (raid 28, "doubled gun reverb or sound").** The voice pool is 48 (was 24), and when it's full the voice that ends soonest is reused, not the one that started first. In raid 28 every sample was a full-auto loop plus a tail with ~6 echoes each; the pool was full and 274 echoes were stopped mid-sound (256 by tail echoes), which reads as a doubled or stuttering shot. New `6f Early echo trim dB` (0 = no change) lowers echoes arriving under 25 ms (414 of 1,216 did, some at −4.5 dB after 9 ms): they're physically real and fuse with the shot as colour, so judge them by ear after the voice fix.
 
 **Problem.** Your own shot is a stereo recording, the indoor or the outdoor set (fix 3c can mix them), plus the game's hidden Meta reverb copy (fix 5). None of that knows where the walls actually are or which way you fired. So it picks how "inside" you are, but it isn't *dynamic*: a wall 2 m to your right, a building face 40 m ahead, and firing into a room against firing out of it all sound alike (raid 6 feedback).
 
@@ -310,6 +314,8 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 ## Fix 7: Rain cutting out between rooms (0.4.0)
 
+**0.6.9: same clip = volume only.** When the game starts a rain crossfade and the clip wouldn't change, the playing copy's volume is ramped to the new target over the same time instead (S-curve). Raid 28 tag 2: six room changes in 3 s (targets 0.386 → 0.702) each crossfaded the clip into a second copy of itself at another loop position; the sum dipped ~6 dB in the middle (0.07) and flammed. These crossfades were the game's, not fix 7's.
+
 **Problem (a game bug).** Indoors, each baked room can play its own "rain on the roof" clip. The game's rain player (`PrecipitationAmbientBlender`) crossfades to a fresh copy of that clip whenever you change room. It does the same whenever, in rooms where roof rain follows your height, the volume target moves by more than 0.05. It picks the clip in `SetClip`. But its check returns "nothing new" when the clip is the *same* one as last time, and `SetClip` then sets **no clip**, so the crossfade fades the rain to silence. The next crossfade brings it back. Raid 10: "it cuts in and out a bit".
 
 **What changes.** `SetClip` is replaced with what it was meant to do: while it's raining, always pick the room's clip, or the default for that environment, even if it's the same clip. The crossfade then goes from rain to rain.
@@ -369,6 +375,13 @@ Logs: `ambience.csv` (exposureApplied, indoorLayers, bedPan, bedCutoffHz, roofRa
 ## Fix 9 and 9a: probe v2 (0.6.0, test switches)
 
 How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [AMBIENCE.md](AMBIENCE.md) §12–13.
+
+**0.6.9 changes (raid 28):**
+- **Roof rain (9i)** is measured per upward path (first leg > 30° up; reference 0.85), not per path of every direction: under a roof right overhead with big openings around, most paths escaped sideways first and it read 0.42. With two or more floors above (the exposure probe's up-rays, held 0.5 s) it is 0. If the game's indoor-layer fade also moves the rain's mixer volume (read from the blenders' parameter names, shown in the summary), roof rain is compensated for it, so openings around you don't turn the roof down.
+- **`8g Indoor wind follows openings`** (on): room tones whose clip name has "wind" in it follow how much of the outside reaches you (full above −10 dB of it, −1 dB per dB below, at most −40 dB) instead of how enclosed you are. Last tag: wind four floors down a stairwell. roomtone.csv logs every room tone so the clip names can be checked; other room tones are unchanged.
+- **`9l Rain through the building dB`** (−32; −60 = off): the outdoor sound's floor deep inside, muffled to ~350 Hz, faded in by enclosed. Tags 1 and 4: "not enough of the interior".
+- **9k** credits every path that leaves the building: side openings by how they face the battle (cos², as before), openings to the sky above at 0.35 from any direction, side openings facing away at 0.05. Last tag: the only way out was up the stair shaft and 0.6.8 found nothing. distant.csv now logs what each moved source actually outputs (volume, mixer, spatial settings, reverb zone mix).
+- All of these are geometry or settings, not per material: retune after the materials overhaul.
 
 **Problem.** Raid 21: the exposure probe counted only straight lines to points the room map calls outdoor, with a "your own ceiling" rule. A garage whose walls and roof are one collider read as deep underground (3 of 48 directions outside), and nothing modelled sound building up in a hard room. The opening sounds played up to 24 copies of the same loops, so quiet rain flammed.
 

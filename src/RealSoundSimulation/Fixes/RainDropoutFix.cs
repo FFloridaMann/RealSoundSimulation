@@ -42,7 +42,20 @@ namespace RealSoundSimulation.Fixes
         private static readonly AccessTools.FieldRef<PrecipitationAmbientBlender, int> LastHashRef =
             AccessTools.FieldRefAccess<PrecipitationAmbientBlender, int>("_lastClipHash");
 
-        public static int Calls, WouldDrop, Prevented;
+        public static int Calls, WouldDrop, Prevented, VolumeOnly;
+
+        // 0.6.9: a crossfade to the SAME clip is replaced by a volume ramp on the playing source. Raid 28 (tag 2): six room
+        // changes in 3 s each crossfaded the clip into a second copy of itself at another loop position; the sum dipped
+        // about 6 dB in the middle (to 0.07) and flammed.
+        private struct Ramp { public AudioSource Src; public float From, To, T0, Dur; }
+        private static readonly System.Collections.Generic.Dictionary<PrecipitationAmbientBlender, Ramp> Ramps =
+            new System.Collections.Generic.Dictionary<PrecipitationAmbientBlender, Ramp>();
+        private static readonly System.Collections.Generic.List<PrecipitationAmbientBlender> RampDone =
+            new System.Collections.Generic.List<PrecipitationAmbientBlender>();
+        private static readonly System.Reflection.MethodInfo UpdateGlobalsM =
+            AccessTools.Method(typeof(PrecipitationAmbientBlender), "UpdateGlobalsVolumeMult");
+        private static readonly AccessTools.FieldRef<PrecipitationAmbientBlender, float> GlobalsMultRef =
+            AccessTools.FieldRefAccess<PrecipitationAmbientBlender, float>("_globalsVolumeMult");
 
         public static void Apply(Harmony h)
         {
@@ -52,18 +65,52 @@ namespace RealSoundSimulation.Fixes
                 prefix: new HarmonyMethod(typeof(RainDropoutFix), nameof(StartCrossfaderPrefix)));
         }
 
-        public static void Reset() { Calls = WouldDrop = Prevented = Deferred = 0; Pending.Clear(); }
+        public static void Reset() { Calls = WouldDrop = Prevented = Deferred = VolumeOnly = 0; Pending.Clear(); Ramps.Clear(); }
+
+        // The clip SetClip would pick now (the room's, else the default for this environment); null if not raining.
+        private static AudioClip ChooseClip(PrecipitationAmbientBlender b, out bool roomClip)
+        {
+            AudioClip clip = null; roomClip = false;
+            RainController.ERainIntensity intensity = b.CurrentPrecipitationIntensity;
+            if (intensity == RainController.ERainIntensity.None) return null;
+            RoomAmbientData data = DataRef(b);
+            ESeasonStatus season = SeasonRef(b);
+            int hash = data != null ? data.GetPrecipitationClip(season, intensity, out clip) : -1;
+            roomClip = hash != -1;
+            if (!roomClip) SoundDataRef(b)?.TryGetPrecipitationClip(season, intensity, b._environment, out clip);
+            return clip;
+        }
+
+        private static bool TryVolumeOnly(PrecipitationAmbientBlender b, IAudioCrossfader cf, float duration)
+        {
+            AudioSource cur = cf.CurrentSource;
+            if (cur == null || !cur.isPlaying || cur.clip == null || UpdateGlobalsM == null) return false;
+            if (ChooseClip(b, out _) != cur.clip) return false;
+            UpdateGlobalsM.Invoke(b, null);
+            float to = b.CurrentTargetVolume * GlobalsMultRef(b);
+            float from = b._environment == EnvironmentType.Indoor ? AmbienceMix.RainGameVolume(cur) : cur.volume;
+            Ramps[b] = new Ramp { Src = cur, From = from, To = to, T0 = Time.time, Dur = Mathf.Max(0.05f, duration) };
+            VolumeOnly++;
+            Log(b, b.CurrentPrecipitationIntensity, cur.clip, false, true);
+            return true;
+        }
 
         private static bool StartCrossfaderPrefix(PrecipitationAmbientBlender __instance, float duration, float speed)
         {
             try
             {
-                if (_releasing || !Plugin.RainFixOn.Value) return true;
+                if (!Plugin.RainFixOn.Value) return true;
                 IAudioCrossfader cf = CrossfaderRef(__instance);
-                if (cf == null || !cf.IsCrossfadeStarted) return true;
-                Pending[__instance] = new Vector2(duration, speed); // latest request wins; it reads the current target when it runs
-                Deferred++;
-                return false;
+                if (cf == null) return true;
+                if (!_releasing && cf.IsCrossfadeStarted)
+                {
+                    Pending[__instance] = new Vector2(duration, speed); // latest request wins; it reads the current target when it runs
+                    Deferred++;
+                    return false;
+                }
+                if (!cf.IsCrossfadeStarted && TryVolumeOnly(__instance, cf, duration)) return false;
+                Ramps.Remove(__instance); // a real crossfade (new clip) takes over
+                return true;
             }
             catch (Exception e) { DiagRunner.ReportOnce("fix 7 crossfade wait", e); return true; }
         }
@@ -71,6 +118,21 @@ namespace RealSoundSimulation.Fixes
         // Called every frame: start waiting crossfades whose previous one has finished.
         public static void Tick()
         {
+            if (Ramps.Count > 0)
+            {
+                RampDone.Clear();
+                foreach (var kv in Ramps)
+                {
+                    Ramp r = kv.Value;
+                    if (kv.Key == null || r.Src == null) { RampDone.Add(kv.Key); continue; }
+                    float k = Mathf.Clamp01((Time.time - r.T0) / r.Dur);
+                    float v = Mathf.Lerp(r.From, r.To, k * k * (3f - 2f * k));
+                    // the indoor player's volume is the game's base; fix 8 multiplies its roof factor on top this frame
+                    r.Src.volume = v;
+                    if (k >= 1f) RampDone.Add(kv.Key);
+                }
+                foreach (PrecipitationAmbientBlender b in RampDone) Ramps.Remove(b);
+            }
             if (Pending.Count == 0) return;
             Ready.Clear();
             foreach (var kv in Pending)

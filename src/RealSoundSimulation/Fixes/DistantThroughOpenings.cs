@@ -142,14 +142,23 @@ namespace RealSoundSimulation.Fixes
                 m.Written = lt.position + dir * m.Dist;
                 m.Src.Position = m.Written;
                 if (row)
+                {
+                    // 0.6.9: what actually leaves the source (raid 28: gunfire heard where our gain was -45 dB)
+                    AudioSource a = m.Src.source1;
                     DiagLog.Row("distant.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), m.Src.GetInstanceID().ToString(),
                         DiagLog.F(m.Dist, "0"), DiagLog.F(AcousticProbe.RelAz(lt, trueDir), "0"), DiagLog.F(AcousticProbe.RelAz(lt, dir), "0"),
-                        DiagLog.F(m.T), DiagLog.F(m.Gain), DiagLog.F(w), m.Src.source1 != null && m.Src.source1.clip != null ? m.Src.source1.clip.name : ""));
+                        DiagLog.F(m.T), DiagLog.F(m.Gain), DiagLog.F(w), a != null && a.clip != null ? DiagLog.Csv(a.clip.name) : "",
+                        DiagLog.F(Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg, "0"),
+                        a != null ? DiagLog.F(a.volume, "0.0000") : "", DiagLog.F(m.Src.OcclusionVolumeFactor, "0.0000"),
+                        a != null && a.outputAudioMixerGroup != null ? DiagLog.Csv(a.outputAudioMixerGroup.name) : "",
+                        a != null ? DiagLog.F(a.spatialBlend) : "", a != null ? (a.spatialize ? "1" : "0") : "",
+                        a != null ? DiagLog.F(a.reverbZoneMix) : "", a != null && a.isPlaying ? "1" : "0"));
+                }
             }
             foreach (BetterSource b in Gone) Managed.Remove(b);
         }
 
-        public const string Header = "t,source,distanceM,trueAz,heardAz,transmission,gain,enclosed,clip";
+        public const string Header = "t,source,distanceM,trueAz,heardAz,transmission,gain,enclosed,clip,heardEl,outVolume,occlFactor,mixer,spatialBlend,spatialize,reverbZoneMix,playing";
 
         public static string Summary() =>
             $"DISTANT GUNFIRE THROUGH OPENINGS (9k {(Plugin.DistantThroughOpeningsOn.Value ? "ON" : "off")}): sounds handled {Moved}, at once max {MaxAtOnce}  (distant.csv)\n";

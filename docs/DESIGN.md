@@ -207,7 +207,11 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9h` | direction strength: how pointed the outdoor sound and roof rain are indoors (0 all round … 3) | 1 |
 | `9i` | roof rain traced from the roof (§2.6, §3.2b) | on |
 | `9j` | rain from openings: outdoor sound indoors comes from the exit points (window/door) (§2.6) | on |
-| `9k` | distant gunfire through openings (§3.2b; needs fix 4) | on |
+| `9k` | distant gunfire through openings (§3.2b; needs fix 4). 0.6.9: every escaping path counts (side openings by how they face the battle, openings to the sky above at 0.35, facing away 0.05) | on |
+| `9l` | rain through the building: muffled floor for the outdoor sound deep inside (0.6.9) | −32 dB |
+| `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9) | 1 |
+| `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
+| `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
 | `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |
 | Diagnostics: `Enclosure probe`, `Outdoor exposure probe`, `Acoustic probe v2` | the measurements (§2); fixes 3c, 8, 9 and 9a need them | on |
 | Diagnostics: `Probe ray view key` | draws probe v2's rays (§2.6) | F11 |

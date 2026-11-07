@@ -432,7 +432,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(AmbienceMix.Summary());
             sb.Append(DistantThroughOpenings.Summary());
             sb.Append(GunSoundSource.Summary());
-            sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}");
+            sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}; same-clip crossfades done as a volume ramp {RainDropoutFix.VolumeOnly}");
             sb.AppendLine(MetaAcousticsCheck.Describe());
             sb.AppendLine();
             sb.AppendLine("AudioSource maxDistance by group (25 m buckets, sampled while playing)");

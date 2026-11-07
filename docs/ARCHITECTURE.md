@@ -51,7 +51,10 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     │                        fix 5: own-gun room reverb boost
     ├── OffMapFix.cs         fix 4: sounds outside the baked map are treated as outdoors
     ├── DistantThroughOpenings.cs  9k (0.6.8): off-map distant sounds come through the openings when you're inside
-    ├── RainDropoutFix.cs    fix 7: the game's indoor rain fading to silence between rooms
+    ├── RainDropoutFix.cs    fix 7: the game's indoor rain fading to silence between rooms; 0.6.9: same-clip crossfades
+    │                        become a volume ramp
+    ├── RoomTone.cs          8g (0.6.9): "wind" room tones follow the outside's level (RoomToneController.ChangeRoomTone
+    │                        postfix; BetterSource.UpdateSourceVolume prefix scales the occlusion factor, like 9k)
     ├── AmbienceMix.cs       fix 8 (component, LateUpdate): outdoor level from exposure, indoor fade, roof rain, direction cue
 │   ├── BedDirection.cs      fix 9 (0.6.0): makes the game's own outdoor beds directional; 0.6.7 also the indoor roof rain player
     └── OpeningSounds.cs     fix 8 phase 4: 3D copies of the outdoor beds at up to 3 openings

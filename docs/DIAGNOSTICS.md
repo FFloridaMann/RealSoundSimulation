@@ -147,7 +147,15 @@ All 48 exposure directions at that moment: `ray`, `azimuthDeg` (relative to wher
 ### rain2.csv (0.6.8, every 0.25 s: the game's indoor rain player)
 One row per source (the player has two, for crossfades): `clip`, `channels`, `playing`, `virtual` (Unity dropped it for lack of voices), `mute`, `gameVolume` (what the game set), `ourFactor` (roof rain factor applied), `volume` (what plays), `spatialBlend`, `spread`, `spatialize`, `mixer`. Raid 27: the car dealer's roof rain went silent at some spots while our factor held.
 
-### distant.csv (0.6.8, every 0.25 s per sound, `9k`)
+0.6.9: rain2.csv ends with `fadeComp` (how much roof rain is raised to undo the indoor-layer fade; 1 = none).
+
+### roomtone.csv (0.6.9, each room tone change, `8g`)
+`room`, `clip` (the room tone clip), `roomToneVolume` (the room's own level), `wind` (1 = clip name contains "wind": it follows the outside's level), `gain` (the 8g gain at that moment). The summary's AMBIENCE MIX lists every room tone heard, and which mixer volumes the indoor-layer fade moves.
+
+0.6.9 elsewhere: probe2.csv `levelDb` floors at −60 dB and ends with `roofLevelAll` (the 0.6.7 all-paths roof measure; `roofLevel` is now per upward path). ownshots.csv ends with `weightUsed` (3c's weight after `3j`; `indoorWeight` is as measured). The RAIN summary counts same-clip crossfades done as a volume ramp.
+
+### distant.csv (0.6.8, every 0.25 s per sound, `9k`; 0.6.9 columns at the end)
+0.6.9 adds `heardEl`, `outVolume` (the AudioSource's volume as it plays), `occlFactor`, `mixer`, `spatialBlend`, `spatialize`, `reverbZoneMix`, `playing`: if a sound is heard while `outVolume` is tiny, something other than its volume carries it (a reverb send, another source).
 Each off-map sound moved through the openings: `source` (id), `distanceM`, `trueAz` (where it really is, relative to where you face), `heardAz` (where it's placed), `transmission` (0–1, how much gets in from its direction), `gain` (√ of that, blended by enclosed), `enclosed`, `clip`. The summary has a DISTANT GUNFIRE THROUGH OPENINGS line; ACOUSTIC PROBE V2 counts exit points found and not found. paths.csv gains `exitPointAz`, `exitPointM`.
 
 ### gunsounds.csv (setting 0, 0.6.3: each time a gun switches between SPT and SEB, or can't)

@@ -2,6 +2,22 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.9 — 7 Nov 2026 (raid 28 fixes: doubled gunshots, roof rain, stairwell wind and gunfire, rain floor)
+**Run in game:** not yet. The exposure probe stays on (user). Two reviews of raid 28's logs agreed on the causes; the user said "build" for all but turning the exposure probe off.
+- **Echo voices (fix 6):** pool 48 (was 24); when full, the voice that ends soonest is reused, not the one that started first. Raid 28: every sample was a full-auto loop plus a tail, the pool was full, and 274 echoes were cut off mid-sound (256 by tail echoes) - the likeliest cause of the doubled/stuttering shot.
+- **New `6f Early echo trim dB`** (0 = no change): added to echoes under 25 ms. 414 of 1,216 echoes arrived that early, some at −4.5 dB 9 ms after the shot. Judge by ear after the voice fix.
+- **New `3j Blend steepness`** (1): fix 3c leaves an even indoor/outdoor mix faster (0.6 → 0.79, 0.4 → 0.21); same crossover. 132 of 202 samples were between 0.25 and 0.75. ownshots.csv gains `weightUsed`.
+- **Roof rain (9i):** the roof level is now per upward path (first leg > 30° up). Under a roof right overhead in a room with big openings it read 0.42 ("half a roof") because most paths escaped sideways first; the roof radiates the same either way. probe2.csv keeps the old measure as `roofLevelAll`.
+- **Roof rain under two floors:** 0 when the exposure probe's up-rays count two or more floors above (held 0.5 s), whatever the roof test says (tag 4: 0.68 under two floors). One floor above stays the probe's call (raid 26's mezzanine edge).
+- **Roof rain and the indoor fade:** the plugin reads which mixer volumes the game's indoor-layer fade moves; if the rain's is one, roof rain is compensated so openings around you don't turn the roof down (tags 2–3: 0.65 × 0.53–0.68). Summary: "indoor-layer mixer volumes"; rain2.csv `fadeComp`.
+- **Rain crossfades (fix 7):** a crossfade to the same clip is a volume ramp instead (tag 2: six room changes in 3 s each crossfaded the clip into a second copy of itself, dipping to 0.07). Correction to the raid 28 review: fix 7 didn't cause these, the game did. Summary counts them.
+- **New `8g Indoor wind follows openings`** (on): room tones whose clip name contains "wind" follow how much of the outside reaches you (full above −10 dB, down to −40 dB) instead of how enclosed you are (last tag: wind four floors down a stairwell). New roomtone.csv logs every room tone and its clip, and the summary lists them, so the "wind" match can be checked.
+- **New `9l Rain through the building dB`** (−32; −60 = off): deep inside, the outdoor sound never drops below this, muffled to ~350 Hz, faded in by how enclosed you are (tags 1 and 4: "not enough of the interior"; a building in rain is never silent).
+- **9k:** every escaping path counts - side openings by how they face the battle (as before), openings to the sky above at 0.35 from any direction, side openings facing away at 0.05 (last tag: the only way out was up the stair shaft, so it found nothing and the direction jumped). distant.csv gains `heardEl, outVolume, occlFactor, mixer, spatialBlend, spatialize, reverbZoneMix, playing`, to find what carried the gunfire heard at −45 dB.
+- **probe2.csv `levelDb`** floors at −60 dB like the applied level (was −40).
+- **Self-check:** 8 new targets.
+- **Materials overhaul (user, 7 Nov):** sound propagation will change with realistic materials. The new constants (roof reference, 9k's 0.35/0.05, the rain floor) are geometry or settings, not per material, and should be retuned after it.
+
 ## 0.6.8 — 7 Nov 2026 (exit points, rain from openings, distant gunfire through openings; Meta leak fixed)
 **Run in game:** not yet (installed 11:51). User: "build .6.8 and give me a toggle for Exit points and the ambient gunfire mod through openings".
 - **Exit points:** for escaping paths while you're inside (~200 a second), where the escaping leg leaves cover (roof tests along it, refined): the window or door it went out of.

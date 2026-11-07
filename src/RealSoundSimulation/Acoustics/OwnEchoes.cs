@@ -57,6 +57,7 @@ namespace RealSoundSimulation.Acoustics
         private const float MinPath = 3f;          // shorter (under ~9 ms) is left to Meta's early reflections
         private const float MinLevelDb = -48f;
         private const float MaxLevelDb = -3f;
+        private const float EarlyEchoS = 0.025f; // 0.6.9 "6f": echoes arriving sooner than this fuse with the shot
         private const float ScatterDb = -3f;
         private const float MergeDelayS = 0.004f;
         private const float MergeCos = 0.866f;     // 30 deg
@@ -221,6 +222,7 @@ namespace RealSoundSimulation.Acoustics
                     ref Tap t = ref Taps[i];
                     float delay = t.Path / SpeedOfSound;
                     float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
+                    if (delay < EarlyEchoS) lvl += Mathf.Min(0f, Plugin.EarlyEchoTrimDb.Value); // 0.6.9 "6f"
                     float cutoff = t.Cutoff * HeadShadow(o, fwd, t.Pos);
                     bool stole = EchoVoices.Play(__instance, clip, t.Pos, startTime + delay, loop ? 0.0 : clipTime, loop, volume * DbToLin(lvl), pitch, cutoff, delay);
                     TapsPlayed++;
@@ -538,7 +540,9 @@ namespace RealSoundSimulation.Acoustics
     // echo) routed to the game's gunshot mixer group.
     internal class EchoVoices : MonoBehaviour
     {
-        public const int PoolSize = 24;
+        // 0.6.9: 48 (was 24). Raid 28: every own sample was a full-auto loop plus a tail, 6 echoes each; the pool was full
+        // and 274 voices were stolen (256 by tail echoes), each cut off mid-sound - heard as a doubled or stuttering shot.
+        public const int PoolSize = 48;
         private const double LoopSafetyS = 15.0;
 
         private class Voice
@@ -604,7 +608,9 @@ namespace RealSoundSimulation.Acoustics
             foreach (Voice v in Pool) if (v.BusyUntil <= now) { pick = v; break; }
             if (pick == null)
             {
-                foreach (Voice v in Pool) if (pick == null || v.Start < pick.Start) pick = v;
+                // 0.6.9: take the voice that ends soonest (least left to cut), not the one that started first - that was
+                // often a loop echo still sounding, or the previous burst's tail in full swing.
+                foreach (Voice v in Pool) if (pick == null || v.BusyUntil < pick.BusyUntil) pick = v;
                 pick.Src.Stop();
                 stole = true;
             }
