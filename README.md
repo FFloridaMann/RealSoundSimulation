@@ -43,7 +43,7 @@ Paths to the game are in `Directory.Build.props` (`SptDir`).
 
 ## Version control
 
-The project is a git repository (branch `main`, first commit 6 Nov 2026 at 0.5.7). Each build that goes into a raid gets a commit, so any earlier version can be rebuilt and compared. Logs, build output (`bin/`, `obj/`) and the bench WAVs (`bench_out/`) are not tracked (`.gitignore`). Line endings are kept as LF (`.gitattributes`). Nothing is pushed to GitHub yet.
+The project is a git repository (branch `main`, first commit 6 Nov 2026 at 0.5.7). Each build that goes into a raid gets a commit, so any earlier version can be rebuilt and compared. Logs, build output (`bin/`, `obj/`) and the bench WAVs (`bench_out/`) are not tracked (`.gitignore`). Line endings are kept as LF (`.gitattributes`). It is pushed to a **private** GitHub repo, https://github.com/FFloridaMann/RealSoundSimulation (`origin`). Push after each commit with `git push`.
 
 ## Rules this codebase follows
 
