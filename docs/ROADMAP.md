@@ -31,7 +31,7 @@ The agreed order of work (6 Nov 2026), and why. How things work right now: [DESI
    - **E. Correct code comments.** The `OutdoorExposure` header still describes 0.4.0 (every 0.25 s, indoors only, 1/(1+(d/5)²) weighting, 3 strongest openings, "logged only"). Rename `PreviewValue` to what it is now (the applied value); drop unused constants.
    - **Decided, kept:** the 15 s source scan (51.5 ms every 15 s; user, 6 Nov: keep it).
 3. **Current-state design doc — done:** [DESIGN.md](DESIGN.md). Roadmap table brought up to date; the raid-check sections below are marked as history.
-4. **A fixed test route** with expected results, run on every build.
+4. **Fixed test route — done:** [TESTING.md](../TESTING.md), 12 stops on Ground Zero with what you should hear and what the logs should show.
 4a. **Probe v2 and opening sounds v2 — proposed (raid 21, user: "we really need better probes"), to agree before building.** Details: [AMBIENCE.md](AMBIENCE.md) §12. Built behind a switch, so the current probe stays for A/B.
 5. **Then one change per build**, from: roof holes, phase 3 (roof material), step 6, weather research, material research, the Tarkov/3D-audio review, step 5, step 7.
 

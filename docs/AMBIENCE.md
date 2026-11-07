@@ -208,3 +208,9 @@ Output: a short write-up with options, discussed before any code (as for step 4b
 
 **Order:** the test route first (so v2 can be judged), then the review of how the game's 3D audio works, then v2 behind a switch.
 
+**Decisions (user, 6 Nov: "lets go").**
+1. **Glass and walls are physical by default:** a closed window about −20 to −25 dB and muffled. `8c` stays as a trim.
+2. **v2 sets the outdoor beds' volume and muffling directly** (dB and filter), instead of feeding one 0–1 value through the game's steep curves.
+3. **Ambience first, behind a switch**, with the current probe kept for A/B. Gunshots move onto v2 in a later step.
+4. **The doubled rain:** make the game's own bed sources directional (no copies; user: "the most realistic option"). The review checks it works with the game's 3D audio; one 3D copy per bed is only the fallback. Plus an in-game ray view (a key that draws the probe's paths).
+
