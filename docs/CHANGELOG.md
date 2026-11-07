@@ -3,7 +3,7 @@
 Newest first. Each version: what changed, and whether it has been run in game.
 
 ## 0.6.1 — 6 Nov 2026 (probe v2: steadier, direction from the earliest sound)
-**Run in game:** not yet (built 22:0x; the game was running, so not installed yet).
+**Run in game:** not yet (installed 22:04).
 Raid 22 (0.6.0, 9 and 9a on): "really good", garage "big improvement". Still: in the back of the Capital building rain came through the concrete back and side walls, some ambient sounds were placed oddly, and the audio changed in and out a little. Logs: at the Capital mark only 6 of 128 paths reached outside; 85% of the level was room build-up, spread all round (focus 0.07). The direction jumped a median 36° per 0.125 s (often 140°) and the level 0.2–2 dB. Focus was under 0.3 for 94% of the raid. v2 cost 21.8 ms/s.
 - **Direction from the earliest sound** (the precedence effect: you place a sound where its first arrival comes from). Escaping paths weigh by e^(−path length / 20 m) for direction and focus. The build-up no longer widens the sound, so it stays on the openings' side instead of coming through the back walls.
 - **Direction turns over ~1 s**; the level still follows in 0.35 s.
