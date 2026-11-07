@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.13 — 7 Nov 2026 (9k: pooled sources let go when reused for a near or on-map sound)
+**Run in game:** not yet. From the 0.6.12 review (hook verified: all four `PlayAtPoint` overloads return a `BetterSource` with a `position` parameter; `PickSingleClip(0)` = outdoor).
+- **Pooled-source reuse.** A source 9k manages stays managed until it has been silent for 0.5 s. If the pool hands it to a near or on-map sound in that window, 0.6.12 kept it: `PlayPostfix` returned early, and the per-frame step saw the moved source and adopted the new sound as distant, moving it. Now both places run the same test (80 m+ and off the room map): `PlayPostfix` lets go of a managed source whose new sound fails it, and the per-frame step does the same when a managed source turns up somewhere else. A reused source that passes re-reads the game's factor (the game resets occlusion per sound). Summary: "N pooled sources let go for a near or on-map sound".
+- Outdoor tail (3m) still unchanged until it has been raided; the 0.6.12 queue stands.
+
 ## 0.6.12 — 7 Nov 2026 (9k: distant sounds caught as they start)
 **Run in game:** not yet. User: "fix 3 now" (the review's third item); the outdoor tail (3m) is left as 0.6.11 until it has been raided.
 - **9k onset leak fixed.** Raid 29: 33 distant.csv rows indoors with 9k's gain under 0.3 but the sound playing above 0.3 - each distant shot began loud, from its true direction, because 9k only took a sound once fix 4's occlusion pass reached its container a few frames later, and the game then eased the volume down from full. Now a postfix on both `BetterAudio.PlayAtPoint` overloads takes a sound started 80 m+ away at a point the room map doesn't know (off the map, the same test as fix 4) in the frame it starts: position and gain are set at once and the volume the game just set is scaled by the gain. On-map sounds (a real grenade 90 m away) are not touched. Summary: "N caught as they started".

@@ -61,25 +61,44 @@ namespace RealSoundSimulation.Fixes
         private static readonly AccessTools.FieldRef<SpatialAudioSystem, AudioRoomStorage> StorageRef =
             AccessTools.FieldRefAccess<SpatialAudioSystem, AudioRoomStorage>("_audioRoomStorage");
 
+        // 80 m+ away at a point the room map doesn't know (off the map): one of ours. Same test at a sound's start
+        // (PlayPostfix) and when a managed pooled source turns up somewhere else (a new sound on it, Step).
+        private static bool DistantOffMap(Vector3 position)
+        {
+            if (!MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return false;
+            SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
+            Transform lt = sas.ListenerTransform;
+            if (lt == null || (position - lt.position).sqrMagnitude < MinDistance * MinDistance) return false;
+            AudioRoomStorage storage = StorageRef(sas);
+            if (storage == null) return false;
+            ISpatialAudioRoom r = CountedRay.Room(storage, sas.ListenerCurrentRoom, position);
+            return r == null || !r.IsValid; // on the map: the game's own occlusion handles it
+        }
+
+        public static int Dropped; // 0.6.13: pooled sources let go because their new sound wasn't one of ours
+
         private static void PlayPostfix(BetterSource __result, Vector3 position)
         {
             if (__result == null) return;
             try
             {
-                if (!On || !MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return;
-                SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
-                Transform lt = sas.ListenerTransform;
-                if (lt == null || (position - lt.position).sqrMagnitude < MinDistance * MinDistance) return;
-                AudioRoomStorage storage = StorageRef(sas);
-                if (storage == null) return;
-                ISpatialAudioRoom r = CountedRay.Room(storage, sas.ListenerCurrentRoom, position);
-                if (r != null && r.IsValid) return; // on the map: the game's own occlusion handles it
+                if (!On) return;
+                Transform lt = Listener() == Vector3.zero ? null : MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+                if (lt == null) return;
+                if (!DistantOffMap(position))
+                {
+                    // 0.6.13 (review of 0.6.12): the pool may hand a source we still manage (silent < 0.5 s) to a near or
+                    // on-map sound - let it go, or Step would adopt and move it
+                    if (Managed.TryGetValue(__result, out M old)) { Release(old); Managed.Remove(__result); Dropped++; }
+                    return;
+                }
                 if (!Managed.TryGetValue(__result, out M m))
                 {
-                    m = new M { Src = __result, Raw = __result.OcclusionVolumeFactor };
+                    m = new M { Src = __result };
                     Managed[__result] = m; Moved++;
                     if (Managed.Count > MaxAtOnce) MaxAtOnce = Managed.Count;
                 }
+                m.Raw = __result.OcclusionVolumeFactor; // the game reset occlusion for this sound
                 m.Orig = position; m.Written = position; m.Seen = Time.time; m.NextCalc = 0f; m.WrittenF = -1f;
                 Step(m, lt, Enc(), false);
                 m.WrittenF = Mathf.Clamp01(m.Raw * m.Gain);
@@ -95,7 +114,7 @@ namespace RealSoundSimulation.Fixes
         public static void Reset()
         {
             foreach (M m in Managed.Values) Release(m);
-            Managed.Clear(); Moved = 0; MaxAtOnce = 0; _nextRow = 0f; CaughtAtStart = 0;
+            Managed.Clear(); Moved = 0; MaxAtOnce = 0; _nextRow = 0f; CaughtAtStart = 0; Dropped = 0;
         }
 
         // From fix 4's postfix, for a container whose room is invalid (off the map): take its far sources.
@@ -167,7 +186,9 @@ namespace RealSoundSimulation.Fixes
                 if (m.Src == null || lt == null) { Gone.Add(kv.Key); continue; }
                 bool playing = m.Src.source1 != null && m.Src.source1.isPlaying;
                 if (!on || (!playing && Time.time - m.Seen > 0.5f)) { Release(m); Gone.Add(kv.Key); continue; }
-                if (!Step(m, lt, enc, true)) continue;
+                int st = Step(m, lt, enc, true);
+                if (st < 0) { Release(m); Gone.Add(kv.Key); Dropped++; continue; } // its new sound is not one of ours
+                if (st == 0) continue;
                 Vector3 trueDir = (m.Orig - lt.position) / m.Dist, dir = (m.Written - lt.position) / m.Dist;
                 float w = Mathf.Clamp01(enc);
                 if (row)
@@ -188,13 +209,18 @@ namespace RealSoundSimulation.Fixes
         }
 
         // One sound's position and gain for now. detectNew: a moved pooled source means a new sound on it (its real point).
-        private static bool Step(M m, Transform lt, float enc, bool detectNew)
+        // 1 = placed; 0 = skip this frame (too close to place); -1 = a new sound on this pooled source that is not ours (let go)
+        private static int Step(M m, Transform lt, float enc, bool detectNew)
         {
             Vector3 cur = m.Src.Position;
-            if (detectNew && (cur - m.Written).sqrMagnitude > 0.01f) { m.Orig = cur; m.NextCalc = 0f; } // a new sound on this pooled source
+            if (detectNew && (cur - m.Written).sqrMagnitude > 0.01f) // a new sound on this pooled source
+            {
+                if (!DistantOffMap(cur)) return -1; // 0.6.13: near or on the map - not ours
+                m.Orig = cur; m.NextCalc = 0f; m.Raw = m.Src.OcclusionVolumeFactor; m.WrittenF = -1f;
+            }
             Vector3 rel = m.Orig - lt.position;
             m.Dist = rel.magnitude;
-            if (m.Dist < 1f) return false;
+            if (m.Dist < 1f) return 0;
             Vector3 trueDir = rel / m.Dist;
             if (Time.time >= m.NextCalc)
             {
@@ -208,12 +234,12 @@ namespace RealSoundSimulation.Fixes
             m.Gain = Mathf.Lerp(1f, Mathf.Sqrt(Mathf.Clamp01(m.T)), w);
             m.Written = lt.position + dir * m.Dist;
             m.Src.Position = m.Written;
-            return true;
+            return 1;
         }
 
         public const string Header ="t,source,distanceM,trueAz,heardAz,transmission,gain,enclosed,clip,heardEl,outVolume,occlFactor,mixer,spatialBlend,spatialize,reverbZoneMix,playing";
 
         public static string Summary() =>
-            $"DISTANT GUNFIRE THROUGH OPENINGS (9k {(Plugin.DistantThroughOpeningsOn.Value ? "ON" : "off")}): sounds handled {Moved} ({CaughtAtStart} caught as they started), at once max {MaxAtOnce}  (distant.csv)\n";
+            $"DISTANT GUNFIRE THROUGH OPENINGS (9k {(Plugin.DistantThroughOpeningsOn.Value ? "ON" : "off")}): sounds handled {Moved} ({CaughtAtStart} caught as they started, {Dropped} pooled sources let go for a near or on-map sound), at once max {MaxAtOnce}  (distant.csv)\n";
     }
 }
