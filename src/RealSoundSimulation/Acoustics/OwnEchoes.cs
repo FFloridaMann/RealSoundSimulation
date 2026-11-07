@@ -129,6 +129,7 @@ namespace RealSoundSimulation.Acoustics
             GlassBarsTaps = 0; _glassMask = -1;
             _levelSum = _pathSum = 0f;
             _farTime = -100f;
+            Pending.Clear(); LoopEchoesSkipped = LoopEchoesLate = 0;
             EchoVoices.StopAll();
         }
 
@@ -202,6 +203,9 @@ namespace RealSoundSimulation.Acoustics
             if (!_own) return;
             try
             {
+                // 0.6.14: a loop held back (below) either turns out to be one round (next sample within LoopMinS: drop its
+                // echoes - the tail's cover it) or has run long enough (schedule now; CloseLoops then ends them)
+                ResolvePending(__instance, startTime);
                 // Any echo of this queue's looping sample ends where this sample starts (the game cuts the loop there).
                 EchoVoices.CloseLoops(__instance, startTime);
 
@@ -216,26 +220,80 @@ namespace RealSoundSimulation.Acoustics
                 bool loop = clipTime <= 0f;
                 string sample = _tail ? "tail" : (loop ? "loop" : "shot");
                 SamplesEchoed++;
-                float trim = Plugin.EchoLevelDb.Value;
-                for (int i = 0; i < TapN; i++)
+                if (loop && TapN > 0)
                 {
-                    ref Tap t = ref Taps[i];
-                    float delay = t.Path / SpeedOfSound;
-                    float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
-                    if (delay < EarlyEchoS) lvl += Mathf.Min(0f, Plugin.EarlyEchoTrimDb.Value); // 0.6.9 "6f"
-                    float cutoff = t.Cutoff * HeadShadow(o, fwd, t.Pos);
-                    bool stole = EchoVoices.Play(__instance, clip, t.Pos, startTime + delay, loop ? 0.0 : clipTime, loop, volume * DbToLin(lvl), pitch, cutoff, delay);
-                    TapsPlayed++;
-                    TapsByKind[(int)t.Kind]++;
-                    TapsByMaterial.TryGetValue(t.Mat, out int c); TapsByMaterial[t.Mat] = c + 1;
-                    _levelSum += lvl; _pathSum += t.Path;
-                    if (stole) Stolen++;
-                    LogTap(sample, i, ref t, delay, lvl, cutoff, o, fwd, stole);
+                    // 0.6.14: hold a loop's echoes until it has run LoopMinS (raid 30: pool 48/48, 57 cuts - every single round
+                    // of a full-auto gun is loop + tail, and the loop's echoes ran on under the tail's)
+                    var pl = new PendingLoop { Owner = __instance, Clip = clip, Start = startTime, Volume = volume, Pitch = pitch, O = o, Fwd = fwd, N = TapN };
+                    pl.T = new Tap[TapN]; Array.Copy(Taps, pl.T, TapN);
+                    Pending.Add(pl);
+                    return;
                 }
+                PlayTaps(__instance, clip, Taps, TapN, startTime, loop, clipTime, volume, pitch, o, fwd, sample, 0f);
                 if (TapN == 0) LogNone(sample);
-                if (EchoVoices.Busy > MaxBusy) MaxBusy = EchoVoices.Busy;
             }
             catch (Exception e) { DiagRunner.ReportOnce("6 own gun echoes (play)", e); }
+        }
+
+        private static void PlayTaps(object owner, AudioClip clip, Tap[] taps, int n, double startTime, bool loop, float clipTime,
+                                     float volume, float pitch, Vector3 o, Vector3 fwd, string sample, float lateS)
+        {
+            float trim = Plugin.EchoLevelDb.Value;
+            for (int i = 0; i < n; i++)
+            {
+                ref Tap t = ref taps[i];
+                float delay = t.Path / SpeedOfSound;
+                float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
+                if (delay < EarlyEchoS) lvl += Mathf.Min(0f, Plugin.EarlyEchoTrimDb.Value); // 0.6.9 "6f"
+                float cutoff = t.Cutoff * HeadShadow(o, fwd, t.Pos);
+                bool stole = EchoVoices.Play(owner, clip, t.Pos, startTime + lateS + delay, loop ? 0.0 : clipTime, loop, volume * DbToLin(lvl), pitch, cutoff, delay,
+                                             lateS * (pitch > 0f ? pitch : 1f), startTime);
+                TapsPlayed++;
+                TapsByKind[(int)t.Kind]++;
+                TapsByMaterial.TryGetValue(t.Mat, out int c); TapsByMaterial[t.Mat] = c + 1;
+                _levelSum += lvl; _pathSum += t.Path;
+                if (stole) Stolen++;
+                LogTap(sample, i, ref t, delay, lvl, cutoff, o, fwd, stole);
+            }
+            if (EchoVoices.Busy > MaxBusy) MaxBusy = EchoVoices.Busy;
+        }
+
+        // ---- 0.6.14: loop echoes held back until the loop has run LoopMinS ----
+        public const double LoopMinS = 0.2;
+        private class PendingLoop { public object Owner; public AudioClip Clip; public double Start; public float Volume, Pitch; public Vector3 O, Fwd; public Tap[] T; public int N; }
+        private static readonly List<PendingLoop> Pending = new List<PendingLoop>();
+        public static int LoopEchoesSkipped, LoopEchoesLate;
+
+        // The owner queue scheduled its next sample at nextStart.
+        private static void ResolvePending(object owner, double nextStart)
+        {
+            for (int i = Pending.Count - 1; i >= 0; i--)
+            {
+                PendingLoop pl = Pending[i];
+                if (!ReferenceEquals(pl.Owner, owner)) continue;
+                Pending.RemoveAt(i);
+                if (nextStart - pl.Start < LoopMinS) { LoopEchoesSkipped += pl.N; continue; } // one round
+                Schedule(pl);
+            }
+        }
+
+        // Called every frame (EchoVoices.Update): schedule held loops that have now run LoopMinS (a little ahead).
+        public static void TickPending(double now)
+        {
+            for (int i = Pending.Count - 1; i >= 0; i--)
+            {
+                PendingLoop pl = Pending[i];
+                if (pl.Owner == null || now + 0.05 < pl.Start + LoopMinS) continue;
+                Pending.RemoveAt(i);
+                if (Plugin.EchoOn.Value) Schedule(pl);
+            }
+        }
+
+        private static void Schedule(PendingLoop pl)
+        {
+            // starts LoopMinS late, from the matching point in the loop recording, so it stays in step with the loop
+            PlayTaps(pl.Owner, pl.Clip, pl.T, pl.N, pl.Start, true, 0f, pl.Volume, pl.Pitch, pl.O, pl.Fwd, "loop", (float)LoopMinS);
+            LoopEchoesLate += pl.N;
         }
 
         private static bool TryGetListener(out Vector3 pos, out Vector3 fwd)
@@ -526,7 +584,7 @@ namespace RealSoundSimulation.Acoustics
             sb.AppendLine($"  samples echoed {SamplesEchoed} (shots, firing loops, tails)   echoes played {TapsPlayed} = {(float)TapsPlayed / SamplesEchoed:0.0} per sample");
             sb.AppendLine($"  by kind: mirror {TapsByKind[0]}  scattered {TapsByKind[1]}  aim {TapsByKind[2]}  far {TapsByKind[3]}");
             if (TapsPlayed > 0) sb.AppendLine($"  mean level {_levelSum / TapsPlayed:0.0} dB   mean path {_pathSum / TapsPlayed:0.0} m");
-            sb.AppendLine($"  voices: max busy {MaxBusy} of {EchoVoices.PoolSize}, stolen {Stolen}");
+            sb.AppendLine($"  voices: max busy {MaxBusy} of {EchoVoices.PoolSize}, stolen {Stolen}; loop echoes held back for one-round loops (skipped) {LoopEchoesSkipped}, started 0.2 s late on longer loops {LoopEchoesLate}");
             var mats = new List<string>();
             foreach (var kv in TapsByMaterial) mats.Add($"{kv.Key}:{kv.Value}");
             sb.AppendLine("  surfaces: " + string.Join("  ", mats) + "   (None = no bullet material tag found)");
@@ -542,7 +600,9 @@ namespace RealSoundSimulation.Acoustics
     {
         // 0.6.9: 48 (was 24). Raid 28: every own sample was a full-auto loop plus a tail, 6 echoes each; the pool was full
         // and 274 voices were stolen (256 by tail echoes), each cut off mid-sound - heard as a doubled or stuttering shot.
-        public const int PoolSize = 48;
+        // 0.6.14: 96 (raid 30: 48/48 busy, 57 cuts with no bots). Unity has ~196 real voices; the game peaked at 40 playing
+        // sources with 16 bot shooters (raid 25). Not higher than 96.
+        public const int PoolSize = 96;
         private const double LoopSafetyS = 15.0;
 
         private class Voice
@@ -550,7 +610,7 @@ namespace RealSoundSimulation.Acoustics
             public GameObject Go;
             public AudioSource Src;
             public AudioLowPassFilter Lp;
-            public double Start, BusyUntil;
+            public double Start, BusyUntil, LoopStart;
             public bool OpenLoop;
             public object Owner;
             public float Delay;
@@ -600,7 +660,8 @@ namespace RealSoundSimulation.Acoustics
         }
 
         // Returns true if a busy voice had to be stopped to make room.
-        public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay)
+        public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,
+                                float clipOffset = 0f, double loopStart = 0.0)
         {
             Build();
             double now = AudioSettings.dspTime;
@@ -622,8 +683,9 @@ namespace RealSoundSimulation.Acoustics
             pick.Src.volume = Mathf.Clamp01(volume);
             pick.Src.pitch = pitch > 0f ? pitch : 1f;
             pick.Lp.cutoffFrequency = Mathf.Clamp(cutoff, 400f, 22000f);
+            pick.Src.time = clipOffset > 0f && clip != null && clip.length > 0f ? Mathf.Repeat(clipOffset, clip.length) : 0f; // 0.6.14: late loop echoes
             pick.Src.PlayScheduled(start);
-            pick.Start = start; pick.Owner = owner; pick.Delay = delay; pick.OpenLoop = loop;
+            pick.Start = start; pick.Owner = owner; pick.Delay = delay; pick.OpenLoop = loop; pick.LoopStart = loopStart > 0.0 ? loopStart : start - delay;
             if (loop)
             {
                 pick.BusyUntil = start + LoopSafetyS;
@@ -645,6 +707,12 @@ namespace RealSoundSimulation.Acoustics
             foreach (Voice v in Pool)
             {
                 if (!v.OpenLoop || !ReferenceEquals(v.Owner, owner)) continue;
+                if (nextStart - v.LoopStart < OwnEchoes.LoopMinS)
+                {
+                    // 0.6.14: one round - free it at once (normally held back and never scheduled; this is the safety net)
+                    v.Src.Stop(); v.BusyUntil = 0; v.OpenLoop = false; v.Owner = null;
+                    continue;
+                }
                 double end = nextStart + v.Delay;
                 v.Src.SetScheduledEndTime(end);
                 v.BusyUntil = end + 0.02;
@@ -667,6 +735,7 @@ namespace RealSoundSimulation.Acoustics
             if (!_built) return;
             if (!Plugin.EchoOn.Value) { if (Busy > 0) StopAll(); return; }
             double now = AudioSettings.dspTime;
+            OwnEchoes.TickPending(now);
             foreach (Voice v in Pool)
                 if (v.OpenLoop && now > v.Start + LoopSafetyS - 0.1) { v.OpenLoop = false; v.Owner = null; }
         }

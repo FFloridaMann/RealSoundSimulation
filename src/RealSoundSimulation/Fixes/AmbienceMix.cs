@@ -93,6 +93,14 @@ namespace RealSoundSimulation.Fixes
         // Added as energy, faded in by how enclosed you are; the muffling is the energy-weighted mix of the two.
         // Geometry-free: retune after the materials overhaul (walls of different materials pass different amounts).
         public const float FloorCutoffHz = 350f;
+        // 0.6.14: the floor's share of what the outdoor beds play; that share comes from all round (raid 29 tag 7)
+        public static float FloorShare(float level)
+        {
+            float db = Plugin.RainThroughBuildingDb.Value;
+            if (db <= -59.5f || float.IsNaN(level)) return 0f;
+            float fl = Mathf.Pow(10f, db / 10f) * Mathf.Clamp01(V2Indoor);
+            return fl > 0f ? fl / (Mathf.Max(level, 0f) + fl) : 0f;
+        }
         public static void ApplyFloor(ref float level, ref float cutoff)
         {
             float db = Plugin.RainThroughBuildingDb.Value;
@@ -286,7 +294,7 @@ namespace RealSoundSimulation.Fixes
                     OpeningSounds.Restore();
                     if (BedPan != 0f) foreach (Bed b in Beds) if (b.Src != null) b.Src.panStereo = 0f;
                     BedPan = 0f; BedCutoff = 22000f;
-                    BedDirection.Outdoor.Tick(dt, lt2, true, AcousticProbe.Arrival, AcousticProbe.Focus, AcousticProbe.Enclosed);
+                    BedDirection.Outdoor.Tick(dt, lt2, true, AcousticProbe.Arrival, AcousticProbe.Focus * (1f - FloorShare(V2Level)), AcousticProbe.Enclosed);
                     BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed, AcousticProbe.RoofCutoffHz);
                     return;
                 }
@@ -391,7 +399,7 @@ namespace RealSoundSimulation.Fixes
 
         public static string Summary() =>
             $"AMBIENCE MIX (fix 8): outdoor beds found {BedsFound} sources, indoor rain players {IndoorRainFound}, opening sound voices max {OpeningSounds.MaxVoices}\n" +
-            $"  indoor-layer mixer volumes: {(DoorwayBlend.IndoorParamNames.Length > 0 ? DoorwayBlend.IndoorParamNames : "not read")}; rain among them {(DoorwayBlend.IndoorParamsIncludeRain ? "yes (roof rain compensated)" : "no")}\n" +
+            $"  indoor-layer mixer volumes: {(DoorwayBlend.ReportNames.Length > 0 ? DoorwayBlend.ReportNames : "not read")}; rain among them {(DoorwayBlend.ReportRain ? "yes (roof rain compensated)" : "no")}\n" +
             RoomTone.Summary() +
             BedDirection.Outdoor.Summary() + BedDirection.Roof.Summary();
     }

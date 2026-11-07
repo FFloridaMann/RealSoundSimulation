@@ -29,7 +29,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private bool _inRaid;
         private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
-        private int _framesInWindow, _maxActive, _maxContainers, _maxPlaying, _maxBetterSources;
+        private int _framesInWindow, _maxActive, _maxContainers, _maxPlaying, _maxBetterSources, _maxContainerPlaying;
         private long _activeSum, _activeSamples;
         private int _containerRows, _rowsTierLow, _rowsTierMed, _rowsTierHigh, _rowsPropagated, _rowsGunOccluded;
         private readonly HashSet<string> _dumpedSourceKeys = new HashSet<string>();
@@ -130,14 +130,14 @@ namespace RealSoundSimulation.Diagnostics
             _raidStart = Time.time;
             RaidStartTime = _raidStart;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
-            _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = 0;
+            _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0;
             _activeSum = _activeSamples = 0;
             _containerRows = _rowsTierLow = _rowsTierMed = _rowsTierHigh = _rowsPropagated = _rowsGunOccluded = 0;
             _dumpedSourceKeys.Clear();
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
+            GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -232,10 +232,12 @@ namespace RealSoundSimulation.Diagnostics
             Vector3 lp = listener.position;
             ISpatialAudioRoom lroom = sas.ListenerCurrentRoom;
 
+            int playingInContainers = 0; // 0.6.14: playing sources in the sound containers, at every container sample
             foreach (KeyValuePair<int, AudioSourceContainer> kv in containers)
             {
                 AudioSourceContainer c = kv.Value;
                 if (c == null || !c.IsValid) continue;
+                if (c._sources != null) foreach (BetterSource b in c._sources) if (b != null && b.source1 != null && b.source1.isPlaying) playingInContainers++;
                 var r = new Row
                 {
                     Id = c.ID, Sources = c.Count, Dist = Vector3.Distance(lp, c.CurrentPosition), MaxDist = c.MaxDistance,
@@ -266,6 +268,7 @@ namespace RealSoundSimulation.Diagnostics
                 _rows.Add(r);
             }
             if (_rows.Count > _maxContainers) _maxContainers = _rows.Count;
+            if (playingInContainers > _maxContainerPlaying) _maxContainerPlaying = playingInContainers;
         }
 
         private void WriteRows(float t)
@@ -412,7 +415,8 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine($"  active occlusion processors: avg {(_activeSamples == 0 ? 0 : (double)_activeSum / _activeSamples):0.0}  max {_maxActive}   (BSG updates ONE per frame -> #8/#16)");
             sb.AppendLine($"  sound containers seen at once: max {_maxContainers}");
             var cfg = AudioSettings.GetConfiguration();
-            sb.AppendLine($"  playing sources (sampled every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})");
+            sb.AppendLine($"  playing sources (all, FindObjectsOfType every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})");
+            sb.AppendLine($"  playing sources in sound containers (counted at every container sample, every {Plugin.ContainerLogInterval.Value:0.0} s): max {_maxContainerPlaying}; our echo voices max busy {Acoustics.OwnEchoes.MaxBusy} of {Acoustics.EchoVoices.PoolSize}");
             sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");
             sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");

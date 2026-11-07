@@ -44,7 +44,7 @@ namespace RealSoundSimulation.Fixes
         public static bool PlayedThisCall;
         public static float LastLevelDb = float.NaN, LastDelayMs = float.NaN, LastAz = float.NaN;
         public static string LastThrough = "", LastSkip = "";
-        public static int Played;
+        public static int Played, Fallbacks;
         private static float _lvlSum, _delaySum;
         private static readonly Dictionary<string, int> Skips = new Dictionary<string, int>();
 
@@ -66,7 +66,7 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset()
         {
-            Played = 0; _lvlSum = _delaySum = 0f; Skips.Clear(); _glassMask = -1; _haveOpening = false; _wsp = null; _lastFind = -100f;
+            Played = 0; Fallbacks = 0; _lvlSum = _delaySum = 0f; Skips.Clear(); _glassMask = -1; _haveOpening = false; _wsp = null; _lastFind = -100f;
         }
 
         private static bool IsOwn(WeaponSoundPlayer w)
@@ -163,11 +163,15 @@ namespace RealSoundSimulation.Fixes
                 Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated ? MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform : null;
                 Vector3 l = lt != null ? lt.position : _origin;
                 float dist = Vector3.Distance(l, pos);
+                // 0.6.14: distance loss like the echoes' (-20 log10(path / 2 m)); fix 6's voices don't fade with distance,
+                // so a window 10 m away played as loud as one 1 m away
+                vol *= 2f / Mathf.Max(dist, 2f);
                 float delay = dist / OwnEchoes.SpeedOfSound;
                 float p = pitch > 0f ? pitch : 1f;
                 EchoVoices.Play(__instance, clip, pos, startTime + delay, clip.length / p, false, vol, p, cut, delay);
 
                 PlayedThisCall = true; Played++;
+                if (!_haveOpening) Fallbacks++;
                 LastLevelDb = 20f * Mathf.Log10(Mathf.Max(vol / Mathf.Max(volume, 1e-4f), 1e-5f));
                 LastDelayMs = delay * 1000f;
                 LastAz = lt != null && dist > 0.05f ? AcousticProbe.RelAz(lt, (pos - l) / dist) : float.NaN;
@@ -189,7 +193,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Skips) parts.Add($"{kv.Key} {kv.Value}");
             string lobe = GunEnvironmentBlend.LobeDiffN > 0 ? $"{GunEnvironmentBlend.LobeDiffSum / GunEnvironmentBlend.LobeDiffN:+0.00;-0.00} over {GunEnvironmentBlend.LobeDiffN} shots" : "no shots";
             return $"OUTDOOR TAIL FROM THE OPENING (3m {(Plugin.OutdoorTailOn.Value ? "ON" : "off")}): played {Played}" +
-                   (Played > 0 ? $", mean level {_lvlSum / Played:0.0} dB, mean delay {_delaySum / Played:0} ms" : "") +
+                   (Played > 0 ? $", mean level {_lvlSum / Played:0.0} dB, mean delay {_delaySum / Played:0} ms, {Fallbacks} from the 3 m fallback (cone open but no exit point found)" : "") +
                    $"; not played: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}\n" +
                    $"MUZZLE LOBE (3k {Plugin.MuzzleLobe.Value:0.0}): muzzle room sphere minus lobe, mean {lobe}\n";
         }

@@ -70,6 +70,7 @@ Every 0.25 s, 5 rays straight up (median, so one beam doesn't flip it): the firs
 
 ### 2.6 Acoustic probe v2 — sound that bounces (0.6.0; drives fixes 9 and 9a when they're on)
 `Acoustics/AcousticProbe.cs`. One ray-tracer for both the ambience and your gunshots. Setting `Acoustic probe v2` (on).
+- **0.6.14 (raid 30):** untagged surfaces (no material) absorb 0.15, scatter 0.4, brightness 8 kHz (was 0.06 / 0.3 / 10 kHz: deep corridors kept almost all their energy). Past the 3rd reflection each bounce dulls the build-up's brightness by `9n` (0.8). The running sums (level, build-up direction, roof) remember 3 s while you stand or walk slowly and 0.5 s from 1.5 m/s, so stepping behind a wall changes the sound at once; the openings memory is unchanged. A window with no escapes counts as least confident (longest smoothing) and its direction goes all round (focus × escapes / (escapes + 5)); the `9l` floor always comes from all round. Roof rain's brightness comes from the same upward paths as its level.
 - **192 paths per sweep:** 128 directions evenly over the whole sphere (randomly rotated every sweep) and 64 **guided** paths (0.6.4, below). About 640 paths start per second at `9g Ray quality` Medium (the default), so a sweep takes ~0.3 s; see §7 for the other levels. All the legs of a frame are cast in one batch on worker threads.
 - **Each path bounces like sound.** At a hit: glass passes at `9d` (−22 dB, muffled to 1.5 kHz) or reflects; thin planks, cardboard and fabric pass at −10 dB; bars and fences pass at 0.9; shattered glass and empty frames pass; solid objects on low-detail layers (cars, doors, building shells) block (0.6.2; sound through walls is step 6). **Back faces count (0.6.5):** a surface seen from behind (a floor from below) reflects like the front; only the far side of the pane or object a path has just passed through is skipped, so it isn't counted twice. Everything else reflects, losing energy by its material (concrete 2%, wood 10–15%, fabric 50%, grass 45%…), mirror-like or scattered by roughness, and duller by its brightness. A path's own result is direct plus up to 3 reflections; half the paths then go on to 8 reflections (12 casts) for the build-up (below).
 - **Outside = open sky:** a leg that hits nothing for 60 m has escaped, unless there's a roof over its end (a long interior). Since 0.6.5 every escape gets this roof test, with back faces on (raid 25: legs from under the building pointed upwards and passed up through one-sided floors). No room map, no ceiling rule.
@@ -153,6 +154,8 @@ Room, roof and size in steps 1–4 come from probe v2 (head and muzzle) instead 
 The game plays a hidden reverb-only copy of your shot through Meta XR's room acoustics. Its reverb sends get `5` (0 dB) + `5a` (+6 dB) × hard room, so stairwells and corridors ring more.
 
 ### 5.3 Echoes (fix 6)
+0.6.14: 96 voices (taken soonest-ending when all are busy). A full-auto loop's echoes are held back until the loop has run 0.2 s: one round (every single shot of a full-auto-capable gun is loop + tail) gets only the tail's echoes; a longer burst's loop echoes start 0.2 s late, from the matching point in the loop recording.
+
 Up to 4 echoes per shot (`6b`; up to 3 more in hard rooms), each a delayed, quieter, duller copy played from the surface it came from:
 - **Sources:** mirror reflections off walls and ceilings, scattered returns from corners and clutter, what you fire at (aim cone, including glass and bars), and far faces 30–250 m away (16 level rays, re-scanned when you move 5 m).
 - **Level:** distance (−20·log10(path / 2 m)), muzzle directivity (`6c`, 10 dB quieter straight behind), surface loss, `6a` trim, + `6e` (4 dB) × hard room.
@@ -213,7 +216,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9m` | roof rain directional mode (0.6.10; `9c` is the outdoor sounds only). Roof rain is also low-passed by its paths | UnityPanner |
 | `3k` | muzzle lobe: the muzzle's room measure weighted forward along the aim (0.6.11; §5.1) | 1 |
 | `3m`, `3l` | outdoor tail from the opening when firing out of a room, and its trim (0.6.11; §5.1) | on, 0 dB |
-| `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9) | 1 |
+| `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9; default 0.5 since 0.6.14) | 0.5 |
+| `9n` | deep bounce dulling: build-up brightness × this per bounce past the 3rd (0.6.14) | 0.8 |
 | `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
 | `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |

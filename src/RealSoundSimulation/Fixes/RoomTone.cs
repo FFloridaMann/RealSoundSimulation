@@ -43,8 +43,11 @@ namespace RealSoundSimulation.Fixes
         {
             Release();
             _room = null; _clip = ""; _wind = false; _gain = 1f;
-            Heard.Clear();
         }
+
+        // 0.6.14: the list of room tones heard is kept until the next raid starts (the end-of-raid reset ran before the
+        // summary was written, so it said "none")
+        public static void ClearReport() => Heard.Clear();
 
         private static void ChangedPostfix(RoomToneController __instance)
         {

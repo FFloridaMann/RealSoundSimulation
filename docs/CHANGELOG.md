@@ -2,6 +2,20 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.14 — 7 Nov 2026 (raid 30 fixes + the queued raid 29 items)
+**Run in game:** not yet. From the build request after raid 30 (raid_20261107_135517, 0.6.13): tag 1 ambience good; gunfire inside → outside better (the tail played at the window with the mix at 0.81–0.94 indoor, so 3m's gate stays 0.5). Problems: tag 2 rain too loud deep inside, the garage-mouth gunshot mix flipping abruptly, stairwell rain slow to start and stop, the echo pool saturated.
+- **Probe v2: untagged surfaces absorb more.** Material None (e.g. `Capital_corridor_1F_COLLIDER`) 0.06 → 0.15 absorption, scattering 0.3 → 0.4, brightness 10 → 8 kHz. Tag 2: 185 of 192 paths trapped, the one escape kept 84% after 8 bounces, level −15 dB with 90% build-up. Tagged materials unchanged (materials overhaul).
+- **New `9n Deep bounce dulling`** (0.8; 1 = off): past the 3rd reflection each further bounce multiplies the build-up's brightness by this (tag 2 read 10–14 kHz deep inside).
+- **Movement-gated memory:** the probe's running sums (level, build-up direction, roof) remember 3 s while you move under 0.5 m/s and 0.5 s from 1.5 m/s. The openings memory is unchanged. Stairwell: escapes went to 0 but the level took 3 s to fall. probe2.csv `memoryS`, `speedMs`.
+- **Zero escapes = least confident:** relErr 1, so the longest smoothing (2.5 s); raid 30 still showed 0.35 s with 0 escapes.
+- **Roof rain brightness** from the same upward paths as its level (raid 29 tag 3: 4.4 kHz right under the roof).
+- **Few escapes → all round:** the outdoor sound's focus × escapes / (escapes + 5); the `9l` floor's share is always all round (raid 29 tag 7: front-left with 0 escapes).
+- **`3j` default 1 → 0.5** (garage mouth: a measured change of 0.13 became 0.50). **Your config file was changed to 0.5 too** (it held the old default 1).
+- **3m tail distance loss:** × 2 / max(d, 2) with d = you to the opening (fix 6's voices don't fade with distance). Gate stays 0.5. Summary counts tails from the 3 m fallback (raid 30: 25 of 74).
+- **Echo pool 96** (was 48; raid 30: 48/48, 57 cuts, no bots).
+- **One-round loops:** a full-auto loop's echoes are held back until the loop has run 0.2 s. One round (next sample sooner): dropped, the tail's echoes cover it. Longer: started 0.2 s late from the matching point in the loop recording. CloseLoops also frees at once any loop voice closed within 0.2 s of its start. Summary counts both.
+- **Summary:** playing sources in the sound containers, counted at every container sample (0.5 s), beside the 15 s full scan and our echo voices; the indoor-layer mixer volumes and room tones heard are kept until the next raid starts (they were cleared before the summary was written).
+
 ## 0.6.13 — 7 Nov 2026 (9k: pooled sources let go when reused for a near or on-map sound)
 **Run in game:** not yet. From the 0.6.12 review (hook verified: all four `PlayAtPoint` overloads return a `BetterSource` with a `position` parameter; `PickSingleClip(0)` = outdoor).
 - **Pooled-source reuse.** A source 9k manages stays managed until it has been silent for 0.5 s. If the pool hands it to a near or on-map sound in that window, 0.6.12 kept it: `PlayPostfix` returned early, and the per-frame step saw the moved source and adopted the new sound as distant, moving it. Now both places run the same test (80 m+ and off the room map): `PlayPostfix` lets go of a managed source whose new sound fails it, and the per-frame step does the same when a managed source turns up somewhere else. A reused source that passes re-reads the game's factor (the game resets occlusion per sound). Summary: "N pooled sources let go for a near or on-map sound".

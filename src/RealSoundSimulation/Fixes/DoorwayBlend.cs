@@ -308,8 +308,13 @@ namespace RealSoundSimulation.Fixes
                 if (l.Contains("precip") || l.Contains("rain")) IndoorParamsIncludeRain = true;
             }
             Plugin.Log.LogInfo($"Indoor-layer mixer volumes: {IndoorParamNames} (rain among them: {IndoorParamsIncludeRain})");
+            ReportNames = IndoorParamNames; ReportRain = IndoorParamsIncludeRain;
         }
 
+        // 0.6.14: what the summary reports is kept until the next raid starts (ClearReport); the end-of-raid reset ran
+        // before the summary was written, so it said "not read"
+        public static string ReportNames = ""; public static bool ReportRain;
+        public static void ClearReport() { ReportNames = ""; ReportRain = false; }
         public static void ResetIndoorParams() { _paramsRead = false; IndoorApplied = 1f; IndoorParamsIncludeRain = false; IndoorParamNames = ""; }
 
         private static float Smooth01(float x)
