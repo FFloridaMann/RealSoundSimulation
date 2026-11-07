@@ -3,7 +3,7 @@
 Newest first. Each version: what changed, and whether it has been run in game.
 
 ## 0.5.8 — 6 Nov 2026 (clean-up)
-**Run in game:** not yet (installed 20:59, game closed). With the settings you already had, nothing should sound different. Part of the consolidation (ROADMAP.md).
+**Run in game:** raid 21 (21:10, medium rain): "interior transitions sound better". Still: quiet rain deep inside sounds doubled, and the garage reads as deep underground (see DIAGNOSTICS raid 21, ROADMAP probe v2). With the settings you already had, nothing should sound different. Part of the consolidation (ROADMAP.md).
 - **Defaults are now the tested setup.** Every raid since raid 10 ran with: every fix on, `2 Obstruction score` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` HRTF on. The code defaults were "everything off", so a reset or a fresh install would have given an untested setup. Your config file keeps its own values; the section name is unchanged, so nothing was reset. Every fix is still switchable, and all off is still the game's own audio.
 - **Removed fix 3h "Ambience through glass".** Fix 8 replaced it in 0.4.2; with fix 8 on it did nothing. Its line stays in the config file, unused (BepInEx keeps unknown entries).
 - **Removed dead code:** `AmbienceMix.IndoorFade()` (replaced by `IndoorLayers()` in 0.5.7) and the 0.5.0 opening grouping in the exposure probe (the opening sounds use the 6 fixed sectors since 0.5.2; the grouping was only logged).

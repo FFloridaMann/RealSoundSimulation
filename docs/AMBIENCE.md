@@ -183,3 +183,28 @@ Output: a short write-up with options, discussed before any code (as for step 4b
 - Starting each copy at its own point in the loop keeps the same rain character, loudness and filtering. But at any moment each source has different "drops", so they add up like real, separate rain from each direction. The brain then places it by which directions are louder, which is the intended effect.
 - The rain loop has no beginning or end you can hear, so starting at 7.3 s instead of 2.1 s sounds the same on its own. It only changes how the copies combine.
 
+## 12. Raid 21: why the probe falls short, and a proposal for probe v2 (6 Nov; not built)
+
+**What raid 21 showed (0.5.8, medium rain).**
+- **Doubled quiet rain.** Deep inside (Nakatani, exposure 0.05) 12 copies of the outdoor loops were playing at once: 6 sectors × each bed. Each copy starts at a different point in the loop (0.5.4, to stop phasing), so each distinct drop is heard several times a fraction of a second apart. Loud rain hides it; quiet, muffled rain is sparse enough that the repeats stand out ("like two gunshots at once").
+- **Garage reads as deep underground.** One open side about 9 m away, one concrete slab above. Only 3 of 48 directions counted as outside (2 more hit a parked car), so the value was 0.14.
+  - The walls and the roof are **one collider** (`Road_descent_cover`). The "your own ceiling" rule (made for the Capital lobby) therefore rejected every roofed point the rays reached.
+  - The probe only counts **straight lines** to the outside. A bare concrete room with one open side fills up with the sound coming in: it reflects off the walls and builds up, so it is loud everywhere inside, from the opening's direction. There is no physics for that.
+- **The probe's limits so far:** only 2 elevations (0° and 15°), so roof holes are missed; it depends on the game's room map, which is wrong in places; two separate probes (enclosure for guns, exposure for ambience) disagree about the same space.
+
+**Proposal: one acoustic probe (v2).**
+1. **Directions over the whole sphere** (about 128, evenly spread), rotated randomly every frame, measured continuously. This covers the upper hemisphere too, so roof holes and skylights are found.
+2. **"Outside" = sky.** A path reaches the outside where it escapes to open sky. The room map becomes a hint, not the judge, and there's no ceiling-collider rule.
+3. **Bounces (1–3).** At each hit the ray reflects, and its energy is reduced by the surface's absorption (bare concrete ~2–5%, fabric ~50%). The energy that escapes to the sky after bounces is the **reflected** share. Sabine's rule for a room: level ∝ open area ÷ total absorption. So a hard room with one opening is loud inside, and a furnished one isn't.
+4. **Through glass:** a path can pass intact glass at a loss (`8c`) and get duller, as now.
+5. **Outputs, from one measure:**
+   - outdoor level (direct + reflected);
+   - where it arrives from (the first leg of each path, so sound that comes in by a wall arrives from that wall);
+   - enclosure, room size, mean free path, absorption and a reverb-time estimate (for the gunshot blend, fix 5 and echoes);
+   - what is above you.
+6. **Cost:** batched raycasts (Unity `RaycastCommand`, run on worker threads), so a few hundred rays a second costs less on the main thread than the current ~600.
+
+**Proposal: opening sounds v2 (no duplicate loops).** Instead of 6 copies per bed, at most **one 3D copy** per bed, crossfaded against the flat bed, never several loud at once. Its direction is the probe's arrival direction, and its width follows how spread out the openings are. Better still, if the game's own bed source can be made 3D directly (Unity's 2D↔3D blend on one source), that needs no copy at all. Checking whether the game's spatializer allows this is part of the agreed review.
+
+**Order:** the test route first (so v2 can be judged), then the review of how the game's 3D audio works, then v2 behind a switch.
+
