@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.4 — 7 Nov 2026 (probe v2: measured build-up, guided rays, smoothing by confidence)
+**Run in game:** not yet (installed 09:30). Affects fix 9 (ambience) and, slightly, 9a (gunshot room readings).
+- **Raid 24 (0.6.2):** sound from inside "improved"; outdoor ambience still too loud far into the building. At mark 1 (Capital) the room build-up was 88% of the level. Lowering `9e` helped, but what was left came from 2–5 paths and jumped in and out.
+- **Build-up measured, not assumed.** Half the paths keep bouncing after their 3rd reflection, up to 8, to measure where the remaining energy goes in this building (in energy: an escape through closed glass now counts at −22 dB, not like an open door). Only the energy still bouncing after 8 uses the room formula. Smoothed over ~3 s. 0.6.3's value is logged as `tailOld` for comparison.
+- **Guided rays (`9f`, on):** 64 of every 192 paths aim at the openings already found (windows, doors), each counted as p_uniform / p_mixture so totals stay right. Openings are remembered (fade over ~2 s unless found again) and re-checked every sweep. The user's "weighted rays" idea, and "fixed rays" done as rays fixed on real openings.
+- **Smoothing by confidence:** fix 9 averages the level for 0.35 s when many paths get out, up to 2.5 s when few do; the direction over at least 1 s.
+- Ray view: 192 paths, guided ones fainter, colour = where the path finally ended. probe2.csv and paths.csv: new columns (DIAGNOSTICS.md). Overlay: paths out, openings, error, smoothing time.
+- Cost: more rays deep inside (~4,000/s expected, was ~2,200). Next build: a ray quality setting.
+
 ## 0.6.3 — 7 Nov 2026 (setting 0: gun sounds from SPT or SEB)
 **Run in game:** not yet. With the default (`0 Gun sounds` = SPT) nothing sounds different from 0.6.2.
 - **New setting 0, "Gun sounds"**, at the top of F12 (section "0. Gun sounds"): SPT (default) or SEB, Sound Engine Backport's EFT 1.0 recordings, without SEB's engine. Switches at the next trigger pull, never mid-burst. FIXES.md "Setting 0".

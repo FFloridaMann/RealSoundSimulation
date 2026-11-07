@@ -75,7 +75,8 @@ namespace RealSoundSimulation.Fixes
         {
             float lv = Mathf.Max(AcousticProbe.Level, 1e-4f), cut = Mathf.Max(AcousticProbe.CutoffHz, 100f);
             if (float.IsNaN(V2Level)) { V2Level = lv; V2Cutoff = cut; V2Indoor = AcousticProbe.Enclosed; _coverSm = AcousticProbe.Coverage; return; }
-            float a = 1f - Mathf.Exp(-dt / Smooth);
+            // 0.6.4: averaged longer when few probe paths get out (AcousticProbe.SmoothS 0.35..2.5 s)
+            float a = 1f - Mathf.Exp(-dt / Mathf.Max(Smooth, AcousticProbe.SmoothS));
             float db = 10f * Mathf.Log10(V2Level), tdb = 10f * Mathf.Log10(lv);
             V2Level = Mathf.Pow(10f, (db + (tdb - db) * a) / 10f);
             float lc = Mathf.Log(V2Cutoff), tc = Mathf.Log(cut);

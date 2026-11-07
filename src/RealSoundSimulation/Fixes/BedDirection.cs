@@ -44,12 +44,12 @@ namespace RealSoundSimulation.Fixes
         public static void Tick(float dt, Transform lt, bool on)
         {
             if (lt == null) return;
-            float a = 1f - Mathf.Exp(-dt / AmbienceMix.Smooth);
+            float a = 1f - Mathf.Exp(-dt / Mathf.Max(AmbienceMix.Smooth, AcousticProbe.SmoothS)); // 0.6.4: by confidence
             float target = on && AcousticProbe.Valid ? Mathf.Clamp01(Plugin.BedDirectional.Value) * AcousticProbe.Enclosed : 0f;
             Blend += (target - Blend) * a;
             Focus += ((on ? AcousticProbe.Focus : 0f) - Focus) * a;
             // 0.6.1: the direction turns over ~1 s (the level still follows in 0.35 s): it swung a median 36 deg per 0.125 s
-            if (on && AcousticProbe.Valid) _dir = Vector3.Slerp(_dir, AcousticProbe.Arrival, 1f - Mathf.Exp(-dt / 1f)).normalized;
+            if (on && AcousticProbe.Valid) _dir = Vector3.Slerp(_dir, AcousticProbe.Arrival, 1f - Mathf.Exp(-dt / Mathf.Max(1f, AcousticProbe.SmoothS))).normalized;
             if (Blend < 0.002f && target <= 0f) { Restore(); return; }
 
             bool meta = Plugin.BedMode.Value == Mode.MetaHrtf;

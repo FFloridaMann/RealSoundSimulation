@@ -3,12 +3,13 @@ using UnityEngine.Rendering;
 
 namespace RealSoundSimulation.Diagnostics
 {
-    // Probe ray view (0.6.0): draws the latest path of each of the 128 probe v2 directions in the world, so you can see
-    // what the probe sees. Toggle with "Probe ray view key" (F11) in raid. Colours:
+    // Probe ray view (0.6.0): draws the latest path of each of the 192 probe v2 paths of a sweep in the world (128 even
+    // directions, 64 guided at known openings, drawn fainter), so you can see what the probe sees. Toggle with "Probe ray
+    // view key" (F11) in raid. Colour = where the path finally ended (0.6.4: deep paths go on to 8 reflections):
     //   green   reached open sky directly
     //   cyan    reached open sky after bouncing
     //   yellow  reached the sky through glass
-    //   red     trapped (absorbed, or still bouncing after 3 reflections)
+    //   red     trapped (absorbed, or still bouncing at the end)
     //   magenta a long interior (ran 60 m without hitting anything, but under a roof)
     // Drawn on top of everything, 1.5 cm wide. Nothing is drawn while it's off.
     internal static class RayView
@@ -35,7 +36,7 @@ namespace RealSoundSimulation.Diagnostics
             if (!_on || !Acoustics.AcousticProbe.Valid) { Hide(); return; }
             if (_root == null && !Build()) { _on = false; return; }
             if (!_root.activeSelf) _root.SetActive(true);
-            for (int i = 0; i < Acoustics.AcousticProbe.N; i++)
+            for (int i = 0; i < Acoustics.AcousticProbe.M; i++)
             {
                 LineRenderer lr = _lines[i];
                 int n = Acoustics.AcousticProbe.PtN[i];
@@ -44,13 +45,14 @@ namespace RealSoundSimulation.Diagnostics
                 lr.positionCount = n;
                 for (int k = 0; k < n; k++) lr.SetPosition(k, Acoustics.AcousticProbe.Pts[i * Acoustics.AcousticProbe.MaxPts + k]);
                 Color c;
-                switch (r.Fate)
+                switch (r.Final)
                 {
                     case Acoustics.AcousticProbe.Fate.Sky: c = r.ViaGlass ? new Color(1f, 0.9f, 0.2f) : new Color(0.2f, 1f, 0.3f); break;
                     case Acoustics.AcousticProbe.Fate.SkyAfterBounces: c = r.ViaGlass ? new Color(1f, 0.9f, 0.2f) : new Color(0.2f, 0.9f, 1f); break;
                     case Acoustics.AcousticProbe.Fate.LongInterior: c = new Color(1f, 0.3f, 1f); break;
                     default: c = new Color(1f, 0.25f, 0.2f, 0.6f); break;
                 }
+                if (r.Guided) c.a *= 0.55f; // guided paths (aimed at known openings): fainter
                 lr.startColor = c; lr.endColor = c;
             }
         }
@@ -64,7 +66,7 @@ namespace RealSoundSimulation.Diagnostics
             if (_mat.HasProperty("_Cull")) _mat.SetInt("_Cull", (int)CullMode.Off);
             _root = new GameObject("CA2 probe ray view");
             Object.DontDestroyOnLoad(_root);
-            _lines = new LineRenderer[Acoustics.AcousticProbe.N];
+            _lines = new LineRenderer[Acoustics.AcousticProbe.M];
             for (int i = 0; i < _lines.Length; i++)
             {
                 var go = new GameObject("ray" + i);

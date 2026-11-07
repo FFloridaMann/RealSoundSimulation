@@ -14,7 +14,7 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly string[] Names = { "enclosure sweep (32+5 rays, 10/s)", "muzzle room (37 rays, per shot)", "aim cone (9 rays, per shot)",
             "echo search (per shot, own rays)", "outdoor exposure (continuous, ~290 rays/s)", "ambience mix + opening sounds (per frame)",
             "diagnostics: containers, overlay, timing (per frame)", "diagnostics: source scan (every 15 s)", "diagnostics: ambience/probe rows (per frame)",
-            "diagnostics: saving log files (every 2 s)", "acoustic probe v2 (~2000 rays/s, batched)" };
+            "diagnostics: saving log files (every 2 s)", "acoustic probe v2 (~4000 rays/s, batched, guided)" };
 
         private static readonly long[] Calls = new long[(int)Part.Count];
         private static readonly double[] TotalMs = new double[(int)Part.Count], MaxMs = new double[(int)Part.Count];

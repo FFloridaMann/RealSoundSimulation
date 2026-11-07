@@ -26,7 +26,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   ├── CountedRay.cs        Physics.Raycast / room lookup wrappers that count themselves (COST)
 │   ├── Loudness.cs          diagnostics: loudness of each gun's indoor vs outdoor recordings (summary)
 │   ├── OutdoorExposure.cs   component (step 4b): indoors, which directions reach the outside and through what; floors
-│   ├── AcousticProbe.cs     probe v2 (0.6.0): bouncing rays to open sky, batched; ambience + gunshot outputs
+│   ├── AcousticProbe.cs     probe v2 (0.6.0): bouncing rays to open sky, batched; ambience + gunshot outputs; 0.6.4 guided rays, measured build-up
 │   │                        above and roof material. Measure only in 0.4.0
 │   └── OwnEchoes.cs         fix 6: finds reflecting surfaces when you fire and schedules echoes;
 │                            EchoVoices component: the pool of 24 echo AudioSources

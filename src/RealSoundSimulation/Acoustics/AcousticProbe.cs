@@ -15,9 +15,9 @@ namespace RealSoundSimulation.Acoustics
     // current behaviour: docs/DESIGN.md §2.6. Replaces the room-map/ceiling rules of the exposure probe (raid 21: a garage
     // whose walls and roof are one collider read as "2 storeys underground") and straight-line-only exposure.
     //
-    //   128 directions spread evenly over the whole sphere (Fibonacci), a new random rotation every cycle. About
-    //   PathsPerSecond paths start per second (each direction ~4 times a second). Every frame, every path in flight casts
-    //   one leg; all legs of a frame go in one batch on the worker threads (RaycastCommand).
+    //   Per sweep 192 paths: 128 directions spread evenly over the whole sphere (Fibonacci, a new random rotation every
+    //   sweep) and 64 GUIDED paths aimed at the openings found so far (0.6.4, below). About PathsPerSecond paths start per
+    //   second. Every frame, every path in flight casts one leg; all legs of a frame go in one batch on the worker threads.
     //   A leg that hits nothing within 60 m has ESCAPED: that is the outside (open sky). A level or downward leg that
     //   escapes is only outside if there is no roof above its end point (otherwise it is a long interior: trapped).
     //   A hit:
@@ -28,34 +28,47 @@ namespace RealSoundSimulation.Acoustics
     //     solid objects on low-detail layers (cars, doors, building shells) reflect (0.6.2: no leak)
     //     anything else reflects: energy x (1 - absorption of its material), mirror or scattered by its roughness, and
     //     duller by its brightness. The ground/floor under the first leg absorbs nothing (it is part of the rain field).
-    //   Up to 3 reflections (6 casts). Energy still in flight then is "remaining".
-    //   Rooms ring: the remaining energy would keep bouncing; the share of it that eventually escapes is estimated the way
-    //   Sabine's room formula does: escape rate per reflected leg p, absorption a -> p / (p + (1 - p) a), x "9e".
-    //   So a bare concrete garage open on one side is loud inside (p 0.1, a 0.03 -> ~0.77), a furnished one is not.
+    //   A path's own result (direct + after up to 3 reflections, and the energy still bouncing then = "remaining") is what
+    //   the level, direction and brightness are made of.
     //
-    // Outputs (aggregated every frame from the latest path of each direction):
+    // 0.6.4 (raid 24: outdoor ambience too loud far inside; lowering "9e" helped but then it jumped in and out):
+    //   BUILD-UP MEASURED, not assumed. Up to 0.6.3 the remaining energy's escape was one room formula (Sabine) with a leak
+    //   rate counted in RAYS: an escape through closed glass (-22 dB) counted like an open door, and the whole interior was
+    //   treated as one room evenly fed by its openings. Now half the paths keep bouncing after their 3rd reflection, up to
+    //   8, only to measure where the remaining energy goes in THIS building: the share that gets out in reflections 4-8
+    //   (energy, glass at its real loss) and the share still bouncing after 8. Only that last part uses the room formula,
+    //   with a leak rate in ENERGY from legs after 5+ reflections. Averaged over ~3 s (thousands of paths), so it is smooth:
+    //   build-up = remaining x (escaped in 4-8 + still bouncing x p / (p + (1 - p) a)) / energy at the 3rd reflection, x "9e".
+    //   The 0.6.3 formula is still computed and logged (probe2.csv tailOld) for comparison.
+    //   GUIDED RAYS ("9f"; user: "what if we weighted the rays?"): every escaping path leaves an "opening": the point its first
+    //   leg went to, weighted by the energy it brought (fades over ~2 s unless found again). Each sweep, 64 paths are aimed
+    //   at the remembered openings (spread around each by its size seen from you, at least ~5% of them per opening, so
+    //   every one is re-checked every sweep, ~0.3 s). Every path then counts as p_uniform / p_mixture (multiple importance
+    //   sampling, balance heuristic): the totals stay right, but a window 15 m down a corridor gets dozens of paths instead
+    //   of two or three. Directions where nothing was found are still covered by the 128 even directions.
+    //   SMOOTHING BY CONFIDENCE: the statistical error of the level (from the escaping paths' spread) sets how long it is
+    //   averaged: 0.35 s when many paths get out (doorways stay quick), up to 2.5 s when only a few do (deep interiors).
+    //
+    // Outputs (aggregated every frame from the last two sweeps):
     //   Level      outdoor sound energy reaching you, 0..1 (1 in open air): direct + after bounces + room build-up
     //   CutoffHz   how bright it is (energy-weighted; glass ~1.5 kHz, concrete reflections ~13 kHz, open 22 kHz)
-    //   Arrival    the direction it comes from (first leg of each escaping path), Focus 0 all round .. 1 one direction
+    //   Arrival    the direction it comes from (first leg of each escaping path, earliest arrivals weigh most), Focus
     //   SkyOpen    direct escape / half the sphere (1 under open sky); Enclosed from it (indoor layers, directional beds)
-    //   Coverage   share of the upward cone (within 53 deg of straight up) covered within 40 m; RoofMat
+    //   Coverage   share of the upward cone (within 53 deg of straight up) covered within 40 m; RoofMat (even directions only)
+    //   SmoothS    how long the users of Level should average it (confidence)
     //   For gunshots: Room = 1 - share escaping within one wall/roof bounce (floors don't count, thin surfaces by "3f"),
     //   MeanFreePath, Absorption, Size (0.5 small .. 1), HardRoom, Rt60 (estimate)
-    // 0.6.1 (raid 22, Capital): the build-up (85% of the level there) was spread all round and its leak rate came from
-    // every bounce, including the early ones near the windows; only 6 of 128 paths escaped, so the direction jumped a
-    // median 36 deg per 0.125 s and rain seemed to come through the back walls.
-    //   - direction from the EARLIEST sound (precedence effect): escaping paths weigh by exp(-path length / 20 m); the
-    //     build-up no longer widens the sound
-    //   - two sweeps averaged (2 x 128 results) and 640 paths/s: less noise
-    //   - leak rate p from late bounces only (legs after 2+ reflections): back rooms quieter, a single hard room the same
-    //   - each collider's kind is cached; hit labels are only built for F10 dumps (cost)
+    // 0.6.1: direction from the earliest sound (precedence, exp(-path length / 20 m)); two sweeps averaged; kind cache.
     internal class AcousticProbe : MonoBehaviour
     {
-        public const int N = 128;
-        public const int MaxCasts = 6, MaxBounces = 3, MaxPts = MaxCasts + 1;
+        public const int N = 128, G = 64, M = N + G;
+        public const int EarlyBounces = 3, MaxBounces = 8, MaxCasts = 12, MaxPts = MaxCasts + 1;
+        private const int LateFrom = 5, MaxLobes = 16;
         private const float MaxLeg = 60f, Skin = 0.02f, PathsPerSecond = 640f, PrecedenceM = 20f;
+        private const float DeepShare = 0.5f, StatTau = 3f, LobeTau = 2f, LobeFloor = 0.05f;
         public const int Sweeps = 2;
         private const int MaxActive = 256;
+        private const float PUniform = 1f / (4f * Mathf.PI);
 
         public enum Fate : byte { None, Sky, SkyAfterBounces, Trapped, LongInterior }
 
@@ -63,20 +76,22 @@ namespace RealSoundSimulation.Acoustics
         {
             public Vector3 First;
             public float Direct, Reflected, Remaining, Geo, Cut;
-            public bool ViaGlass, FirstHit;
+            public bool ViaGlass, FirstHit, Guided;
             public float FirstHitM;
             public MaterialType FirstMat;
-            public Fate Fate;
+            public Fate Fate;   // the path's own result (after up to 3 reflections)
+            public Fate Final;  // where it ended after deep tracing (ray view, paths.csv)
             public int Casts;
             public float PathLen;
+            public float W;     // importance weight (1 = an even direction with no openings known)
         }
 
         private struct PathState
         {
-            public bool Active;
+            public bool Active, Reported, Deep, Guided;
             public int Dir;
-            public Vector3 O, D, First;
-            public float E, G, Cut;
+            public Vector3 O, D, First, FirstPt;
+            public float E, G, Cut, W;
             public int Casts, Bounces, GeoBounces;
             public bool ViaGlass, FirstHit;
             public float FirstHitM;
@@ -84,17 +99,41 @@ namespace RealSoundSimulation.Acoustics
             public int Pn;
             public int Layer;
             public float Len;
+            public Result Rep;
         }
 
-        // the last two sweeps' results (aggregated together), and the latest path per direction with its points and hits
-        // (ray view, paths.csv)
-        public static readonly Result[] Results = new Result[Sweeps * N];
-        public static readonly Result[] Latest = new Result[N];
-        public static readonly Vector3[] Pts = new Vector3[N * MaxPts];
-        public static readonly int[] PtN = new int[N];
-        public static readonly Collider[] HitCol = new Collider[N * MaxPts];
-        public static readonly float[] HitM = new float[N * MaxPts];
-        public static readonly int[] HitN = new int[N];
+        // Running sums (exponential, StatTau). Everything is weighted by the path's importance weight W.
+        private struct Stats
+        {
+            public double Alpha, Hits, Len, LenN, CutLog;
+            public double LateEsc, LateLeg, LateLegN;   // energy escaping / entering legs after LateFrom+ reflections
+            public double OldEsc, OldLeg;               // 0.6.3's leak rate: rays, legs after 2-3 reflections (log only)
+            public double DeepBase, DeepEsc, DeepRem;   // energy at the 3rd reflection, escaping in 4-8, still bouncing after
+            public void Scale(double k)
+            {
+                Alpha *= k; Hits *= k; Len *= k; LenN *= k; CutLog *= k; LateEsc *= k; LateLeg *= k; LateLegN *= k;
+                OldEsc *= k; OldLeg *= k; DeepBase *= k; DeepEsc *= k; DeepRem *= k;
+            }
+            public void Add(in Stats o)
+            {
+                Alpha += o.Alpha; Hits += o.Hits; Len += o.Len; LenN += o.LenN; CutLog += o.CutLog; LateEsc += o.LateEsc;
+                LateLeg += o.LateLeg; LateLegN += o.LateLegN; OldEsc += o.OldEsc; OldLeg += o.OldLeg;
+                DeepBase += o.DeepBase; DeepEsc += o.DeepEsc; DeepRem += o.DeepRem;
+            }
+        }
+
+        // An opening: where an escaping path's first leg went (wall point, or 20 m along it for a straight escape).
+        private struct Lobe { public Vector3 P; public float W; }
+
+        // the last two sweeps' results (aggregated together), and the latest path per slot with its points and hits
+        // (ray view, paths.csv). Slots 0..127 are the even directions, 128..191 the guided paths.
+        public static readonly Result[] Results = new Result[Sweeps * M];
+        public static readonly Result[] Latest = new Result[M];
+        public static readonly Vector3[] Pts = new Vector3[M * MaxPts];
+        public static readonly int[] PtN = new int[M];
+        public static readonly Collider[] HitCol = new Collider[M * MaxPts];
+        public static readonly float[] HitM = new float[M * MaxPts];
+        public static readonly int[] HitN = new int[M];
         private static int _layer;
 
         private static readonly PathState[] Paths = new PathState[MaxActive];
@@ -109,14 +148,23 @@ namespace RealSoundSimulation.Acoustics
         private static float _budget, _nextRow;
         private static NativeArray<RaycastCommand> _cmds;
         private static NativeArray<RaycastHit> _hits;
+        private static Stats _acc;
+        private static Vector3 _listener;
 
-        // running statistics (exponential, ~2 s): escape rate per reflected leg, absorption, free path, brightness
-        private static double _escAcc, _legAcc, _lateEscAcc, _lateLegAcc, _alphaAcc, _hitAcc, _lenAcc, _lenN, _cutLogAcc;
+        // openings, and the guide built from them at the start of each sweep
+        private static readonly Lobe[] Lobes = new Lobe[MaxLobes];
+        private static readonly Vector3[] GP = new Vector3[MaxLobes];
+        private static readonly float[] GKappa = new float[MaxLobes], GPi = new float[MaxLobes], GNorm = new float[MaxLobes];
+        private static int _gN;
+        public static int Openings, MaxOpenings;
+        public static long GuidedPaths;
 
         public static bool Valid;
-        public static float Level = float.NaN, Direct, Traced, Tail, Remaining, EscapeRate, Absorption, MeanFreePath = float.NaN,
+        public static float Level = float.NaN, Direct, Traced, Tail, TailOld, Remaining, EscapeRate, EscapeRateOld, Absorption,
+            MeanFreePath = float.NaN, DeepEscShare, DeepRemShare,
             CutoffHz = 22000f, Focus, SkyOpen, Enclosed, Coverage, DiffuseShare, Room = float.NaN, Size = float.NaN, HardRoom = float.NaN,
-            Rt60 = float.NaN;
+            Rt60 = float.NaN, RelErr, SmoothS = 0.35f;
+        public static int Escapes;
         public static Vector3 Arrival = Vector3.forward;
         public static MaterialType RoofMat = MaterialType.None;
         public static long RaysCast, PathsDone;
@@ -131,11 +179,13 @@ namespace RealSoundSimulation.Acoustics
             Valid = false; Level = Room = Size = HardRoom = Rt60 = MeanFreePath = float.NaN;
             MuzzleRoom = MuzzleSize = MuzzleCoverage = MuzzleHardRoom = float.NaN; _muzzleTime = -10f;
             for (int i = 0; i < Results.Length; i++) Results[i] = default;
-            for (int i = 0; i < N; i++) { Latest[i] = default; PtN[i] = 0; HitN[i] = 0; }
+            for (int i = 0; i < M; i++) { Latest[i] = default; PtN[i] = 0; HitN[i] = 0; }
             for (int i = 0; i < HitCol.Length; i++) HitCol[i] = null;
-            KindCache.Clear(); _layer = 0;
+            for (int i = 0; i < MaxLobes; i++) Lobes[i] = default;
+            _gN = 0; Openings = MaxOpenings = 0; GuidedPaths = 0; SmoothS = 0.35f; RelErr = 0f; Escapes = 0;
+            KindCache.Clear(); _layer = 0; _cursor = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
-            _escAcc = _legAcc = _lateEscAcc = _lateLegAcc = _alphaAcc = _hitAcc = _lenAcc = _lenN = _cutLogAcc = 0;
+            _acc = default;
             RaysCast = PathsDone = 0; _budget = 0f; _nextRow = 0f; _maskBlock = -1;
         }
 
@@ -165,6 +215,11 @@ namespace RealSoundSimulation.Acoustics
             int block = EnclosureProbe.CurrentMask();
             int mask = V2Mask(block);
             float dt = Mathf.Max(Time.unscaledDeltaTime, 0f);
+            _listener = lt.position;
+
+            // openings fade unless found again
+            float fade = Mathf.Exp(-dt / LobeTau);
+            for (int k = 0; k < MaxLobes; k++) { Lobes[k].W *= fade; if (Lobes[k].W < 1e-6f) Lobes[k].W = 0f; }
 
             // start new paths
             _budget = Mathf.Min(_budget + PathsPerSecond * dt, 32f);
@@ -172,9 +227,13 @@ namespace RealSoundSimulation.Acoustics
             {
                 if (Paths[i].Active) continue;
                 _budget -= 1f;
-                Start(ref Paths[i], i, _cursor, lt.position, _rot * Fib[_cursor]);
+                int j = _cursor;
+                bool guided = j >= N;
+                Vector3 d = guided ? SampleGuide(_listener) : _rot * Fib[j];
+                Start(ref Paths[i], i, j, _listener, d, WeightFor(d, _listener), guided);
+                if (guided && _gN > 0) GuidedPaths++;
                 _cursor++;
-                if (_cursor >= N) { _cursor = 0; _rot = UnityEngine.Random.rotationUniform; _layer = (_layer + 1) % Sweeps; }
+                if (_cursor >= M) { _cursor = 0; _rot = UnityEngine.Random.rotationUniform; _layer = (_layer + 1) % Sweeps; BuildGuide(_listener); }
             }
 
             // one leg for every path in flight, in one batch
@@ -186,23 +245,19 @@ namespace RealSoundSimulation.Acoustics
                 _cmds[n] = new RaycastCommand(Paths[i].O, Paths[i].D, qp, MaxLeg);
                 Idx[n++] = i;
             }
+            _acc.Scale(Math.Exp(-dt / StatTau));
             if (n > 0)
             {
                 JobHandle h = RaycastCommand.ScheduleBatch(_cmds.GetSubArray(0, n), _hits.GetSubArray(0, n), 8, 1);
                 h.Complete();
                 RaysCast += n; CountedRay.Rays += n;
-                double esc = 0, legs = 0, alpha = 0, hits = 0, len = 0, lenN = 0, cutLog = 0;
-                _lateEsc = _lateLegs = 0;
+                Stats s = default;
                 for (int k = 0; k < n; k++)
                 {
                     int i = Idx[k];
-                    Advance(ref Paths[i], i, _hits[k], block, true, ref esc, ref legs, ref alpha, ref hits, ref len, ref lenN, ref cutLog);
+                    Advance(ref Paths[i], i, _hits[k], block, true, ref s);
                 }
-                double decay = Math.Exp(-dt / 2.0);
-                _escAcc = _escAcc * decay + esc; _legAcc = _legAcc * decay + legs;
-                _lateEscAcc = _lateEscAcc * decay + _lateEsc; _lateLegAcc = _lateLegAcc * decay + _lateLegs;
-                _alphaAcc = _alphaAcc * decay + alpha; _hitAcc = _hitAcc * decay + hits; _cutLogAcc = _cutLogAcc * decay + cutLog;
-                _lenAcc = _lenAcc * decay + len; _lenN = _lenN * decay + lenN;
+                _acc.Add(s);
             }
             Aggregate();
             if (Time.time >= _nextRow)
@@ -212,38 +267,123 @@ namespace RealSoundSimulation.Acoustics
             }
         }
 
-        private static void Start(ref PathState p, int slot, int dir, Vector3 o, Vector3 d)
+        private static void Start(ref PathState p, int slot, int dir, Vector3 o, Vector3 d, float w, bool guided)
         {
             p = default;
-            p.Active = true; p.Dir = dir; p.O = o; p.D = d; p.First = d; p.E = 1f; p.G = 1f; p.Cut = 22000f;
+            p.Active = true; p.Dir = dir; p.O = o; p.D = d; p.First = d; p.E = 1f; p.G = 1f; p.Cut = 22000f; p.W = w; p.Guided = guided;
+            p.Deep = UnityEngine.Random.value < DeepShare;
             p.Pn = 0; p.Layer = _layer;
             Scratch[slot * MaxPts + p.Pn++] = o;
             ScratchHitN[slot] = 0;
         }
 
-        // One leg's result. Shared by the continuous probe (record = true) and the muzzle measure.
-        private static void Advance(ref PathState p, int slot, RaycastHit hit, int block, bool record,
-            ref double esc, ref double legs, ref double alpha, ref double hits, ref double len, ref double lenN, ref double cutLog)
+        // ---------------- guided rays ----------------
+
+        // The guide for the next sweep, from the remembered openings: a von Mises-Fisher lobe around each, as wide as an
+        // opening ~3 m across looks from here (6-20 deg), weighted by the energy it brought (at least LobeFloor of the total,
+        // so weak openings are still re-checked).
+        private static void BuildGuide(Vector3 l)
         {
-            bool fromReflection = p.Bounces >= 1, late = p.Bounces >= 2;
+            float total = 0f; int cnt = 0;
+            for (int k = 0; k < MaxLobes; k++) if (Lobes[k].W > 0f) { total += Lobes[k].W; cnt++; }
+            Openings = cnt; if (cnt > MaxOpenings) MaxOpenings = cnt;
+            _gN = 0;
+            if (!Plugin.GuidedRays.Value || cnt == 0 || total <= 0f) return;
+            float sum = 0f;
+            for (int k = 0; k < MaxLobes; k++)
+            {
+                if (Lobes[k].W <= 0f) continue;
+                Vector3 v = Lobes[k].P - l;
+                float dist = v.magnitude;
+                if (dist < 0.3f) continue;
+                float sigma = Mathf.Clamp(Mathf.Atan2(1.5f, dist), 0.1f, 0.35f);
+                float kappa = 1f / (sigma * sigma);
+                GP[_gN] = Lobes[k].P; GKappa[_gN] = kappa;
+                GNorm[_gN] = kappa / (2f * Mathf.PI * (1f - Mathf.Exp(-2f * kappa)));
+                GPi[_gN] = Mathf.Max(Lobes[k].W, LobeFloor * total);
+                sum += GPi[_gN];
+                _gN++;
+            }
+            for (int k = 0; k < _gN; k++) GPi[k] /= sum;
+        }
+
+        private static Vector3 SampleGuide(Vector3 l)
+        {
+            if (_gN == 0) return UnityEngine.Random.onUnitSphere;
+            float u = UnityEngine.Random.value, c = 0f; int k = _gN - 1;
+            for (int i = 0; i < _gN; i++) { c += GPi[i]; if (u <= c) { k = i; break; } }
+            Vector3 mu = GP[k] - l;
+            if (mu.sqrMagnitude < 1e-6f) return UnityEngine.Random.onUnitSphere;
+            mu.Normalize();
+            float kappa = GKappa[k];
+            float r = Mathf.Max(UnityEngine.Random.value, 1e-7f);
+            float w = Mathf.Clamp(1f + Mathf.Log(r + (1f - r) * Mathf.Exp(-2f * kappa)) / kappa, -1f, 1f);
+            float phi = 2f * Mathf.PI * UnityEngine.Random.value, s = Mathf.Sqrt(Mathf.Max(0f, 1f - w * w));
+            Vector3 t = Mathf.Abs(mu.y) < 0.9f ? Vector3.Cross(mu, Vector3.up).normalized : Vector3.Cross(mu, Vector3.right).normalized;
+            Vector3 b = Vector3.Cross(mu, t);
+            return (mu * w + (t * Mathf.Cos(phi) + b * Mathf.Sin(phi)) * s).normalized;
+        }
+
+        // Importance weight: p_uniform / p_mixture, where the mixture is N even + G guided paths per sweep.
+        private static float WeightFor(Vector3 d, Vector3 l)
+        {
+            if (_gN == 0) return 1f;
+            float pg = 0f;
+            for (int k = 0; k < _gN; k++)
+            {
+                Vector3 mu = GP[k] - l;
+                if (mu.sqrMagnitude < 1e-6f) continue;
+                mu.Normalize();
+                pg += GPi[k] * GNorm[k] * Mathf.Exp(GKappa[k] * (Vector3.Dot(mu, d) - 1f));
+            }
+            return M * PUniform / (N * PUniform + G * pg);
+        }
+
+        private static void Remember(Vector3 first, Vector3 point, float c)
+        {
+            if (c <= 0f) return;
+            int best = -1; float bestDot = Mathf.Cos(10f * Mathf.Deg2Rad);
+            for (int k = 0; k < MaxLobes; k++)
+            {
+                if (Lobes[k].W <= 0f) continue;
+                Vector3 mu = Lobes[k].P - _listener;
+                if (mu.sqrMagnitude < 1e-6f) continue;
+                float dot = Vector3.Dot(mu.normalized, first);
+                if (dot > bestDot) { bestDot = dot; best = k; }
+            }
+            if (best >= 0)
+            {
+                Lobes[best].W += c;
+                Lobes[best].P = Vector3.Lerp(Lobes[best].P, point, c / Lobes[best].W);
+                return;
+            }
+            int slot = 0;
+            for (int k = 1; k < MaxLobes; k++) if (Lobes[k].W < Lobes[slot].W) slot = k;
+            if (Lobes[slot].W < c) { Lobes[slot].P = point; Lobes[slot].W = c; }
+        }
+
+        // ---------------- tracing ----------------
+
+        // One leg's result. Shared by the continuous probe (record = true) and the muzzle measure.
+        private static void Advance(ref PathState p, int slot, RaycastHit hit, int block, bool record, ref Stats s)
+        {
             p.Casts++;
-            if (fromReflection) legs++;
-            if (late) _lateLegs++;
             Collider c = hit.collider;
             if (c == null)
             {
                 Vector3 end = p.O + p.D * MaxLeg;
+                if (p.Casts == 1) p.FirstPt = p.O + p.D * 20f;
                 if (record) AddPt(ref p, slot, end);
                 bool sky = p.D.y > 0.5f || !CountedRay.Raycast(end + Vector3.up * 0.5f, Vector3.up, out RaycastHit _, 60f, block, QueryTriggerInteraction.Ignore);
                 p.Len += MaxLeg;
-                if (sky) { if (fromReflection) esc++; if (late) _lateEsc++; Finish(ref p, slot, p.Bounces == 0 ? Fate.Sky : Fate.SkyAfterBounces, record); }
-                else Finish(ref p, slot, Fate.LongInterior, record);
+                if (sky) Escape(ref p, slot, record, ref s);
+                else End(ref p, slot, Fate.LongInterior, record, ref s);
                 return;
             }
             if (record) AddPt(ref p, slot, hit.point);
             MaterialType m = Surfaces.Material(c);
-            if (p.Casts == 1) { p.FirstHit = true; p.FirstHitM = hit.distance; p.FirstMat = m; }
-            len += hit.distance; lenN++; p.Len += hit.distance;
+            if (p.Casts == 1) { p.FirstHit = true; p.FirstHitM = hit.distance; p.FirstMat = m; p.FirstPt = hit.point; }
+            s.Len += hit.distance * p.W; s.LenN += p.W; p.Len += hit.distance;
 
             // what kind of surface: pass-through (glass, thin, bars, open frames, props) or reflect
             bool blocking = (block & (1 << c.gameObject.layer)) != 0;
@@ -260,7 +400,7 @@ namespace RealSoundSimulation.Acoustics
                     p.E *= t * w; p.G *= tg * w; p.Cut = Mathf.Min(p.Cut, passCut);
                     if (glass) p.ViaGlass = true;
                     p.O = hit.point + p.D * Skin;
-                    if (p.Casts >= MaxCasts || p.E < 1e-5f) Finish(ref p, slot, Fate.Trapped, record);
+                    if (p.Casts >= MaxCasts || p.E < 1e-5f) End(ref p, slot, Fate.Trapped, record, ref s);
                     return;
                 }
                 float wr = 1f / (1f - pp);
@@ -270,31 +410,70 @@ namespace RealSoundSimulation.Acoustics
             // reflect
             Props(m, out float a, out float scatter, out float bright);
             bool ground = hit.normal.y > 0.7f;
-            alpha += a; hits++; cutLog += Math.Log(bright); // the room's statistics use the real surface
+            s.Alpha += a * p.W; s.Hits += p.W; s.CutLog += Math.Log(bright) * p.W; // the room's statistics use the real surface
             if (p.Casts == 1 && ground) a = 0f; // ...but the ground under you is part of the outdoor sound field: no loss
             p.E *= 1f - a; p.Cut = Mathf.Min(p.Cut, bright);
             p.Bounces++;
             if (!ground) p.GeoBounces++;
-            if (p.Bounces > MaxBounces || p.Casts >= MaxCasts || p.E < 1e-5f) { Finish(ref p, slot, Fate.Trapped, record); return; }
+            // the path's own result ends at its 4th reflection (as up to 0.6.3); deep paths go on for the build-up statistics
+            if (!p.Reported && p.Bounces > EarlyBounces)
+            {
+                if (!record || !p.Deep) { End(ref p, slot, Fate.Trapped, record, ref s); return; }
+                Report(ref p, Fate.Trapped);
+                s.DeepBase += p.E * p.W;
+            }
+            if (p.Bounces > MaxBounces || p.Casts >= MaxCasts || p.E < 1e-5f) { End(ref p, slot, Fate.Trapped, record, ref s); return; }
+            if (p.Bounces >= LateFrom) { s.LateLeg += p.E * p.W; s.LateLegN++; }
+            if (p.Bounces == 2 || p.Bounces == 3) s.OldLeg++;
             Vector3 nrm = hit.normal;
             if (Vector3.Dot(nrm, p.D) > 0f) nrm = -nrm;
             p.D = UnityEngine.Random.value < scatter ? CosineHemisphere(nrm) : Vector3.Reflect(p.D, nrm).normalized;
             p.O = hit.point + nrm * Skin;
         }
 
-        private static void Finish(ref PathState p, int slot, Fate fate, bool record)
+        private static void Escape(ref PathState p, int slot, bool record, ref Stats s)
+        {
+            Fate fate = p.Bounces == 0 ? Fate.Sky : Fate.SkyAfterBounces;
+            if (p.Bounces >= LateFrom) s.LateEsc += p.E * p.W;
+            if (p.Bounces == 2 || p.Bounces == 3) s.OldEsc++;
+            p.Active = false;
+            if (!record) { _syncFate = fate; return; }
+            if (!p.Reported) Report(ref p, fate);
+            else s.DeepEsc += p.E * p.W;
+            View(ref p, slot, fate);
+        }
+
+        private static void End(ref PathState p, int slot, Fate fate, bool record, ref Stats s)
         {
             p.Active = false;
             if (!record) { _syncFate = fate; return; }
+            if (!p.Reported) Report(ref p, fate);
+            else s.DeepRem += p.E * p.W;
+            View(ref p, slot, fate);
+        }
+
+        // the path's own result (direct + up to 3 reflections) into the sweep
+        private static void Report(ref PathState p, Fate fate)
+        {
+            p.Reported = true;
             Result r = default;
-            r.First = p.First; r.Cut = p.Cut; r.ViaGlass = p.ViaGlass; r.Casts = p.Casts; r.Fate = fate;
-            r.FirstHit = p.FirstHit; r.FirstHitM = p.FirstHitM; r.FirstMat = p.FirstMat;
+            r.First = p.First; r.Cut = p.Cut; r.ViaGlass = p.ViaGlass; r.Casts = p.Casts; r.Fate = fate; r.Final = fate;
+            r.FirstHit = p.FirstHit; r.FirstHitM = p.FirstHitM; r.FirstMat = p.FirstMat; r.Guided = p.Guided; r.W = p.W;
             bool escaped = fate == Fate.Sky || fate == Fate.SkyAfterBounces;
             if (escaped) { if (p.Bounces == 0) r.Direct = p.E; else r.Reflected = p.E; }
             else r.Remaining = p.E;
             r.Geo = escaped && p.GeoBounces <= 1 ? p.G : 0f;
             r.PathLen = p.Len;
-            Results[p.Layer * N + p.Dir] = r;
+            Results[p.Layer * M + p.Dir] = r;
+            p.Rep = r;
+            PathsDone++;
+            if (escaped) Remember(p.First, p.FirstPt, (r.Direct + r.Reflected) * p.W);
+        }
+
+        // ray view and paths.csv: the latest path per slot, with where it finally ended
+        private static void View(ref PathState p, int slot, Fate final)
+        {
+            Result r = p.Rep; r.Final = final; r.Casts = p.Casts;
             Latest[p.Dir] = r;
             int o = slot * MaxPts, d = p.Dir * MaxPts;
             for (int k = 0; k < p.Pn; k++) Pts[d + k] = Scratch[o + k];
@@ -302,11 +481,9 @@ namespace RealSoundSimulation.Acoustics
             int hn = ScratchHitN[slot];
             for (int k = 0; k < hn; k++) { HitCol[d + k] = ScratchCol[o + k]; HitM[d + k] = ScratchM[o + k]; }
             HitN[p.Dir] = hn;
-            PathsDone++;
         }
 
         private static Fate _syncFate;
-        private static double _lateEsc, _lateLegs;
 
         private static void AddPt(ref PathState p, int slot, Vector3 v)
         {
@@ -429,41 +606,61 @@ namespace RealSoundSimulation.Acoustics
 
         private static void Aggregate()
         {
-            float direct = 0f, refl = 0f, rem = 0f, geo = 0f, eW = 0f, pW = 0f; double cutLog = 0; Vector3 arr = Vector3.zero;
-            int n = 0, up = 0, upHit = 0;
+            float direct = 0f, refl = 0f, rem = 0f, geo = 0f, eW = 0f, pW = 0f, c2 = 0f; double cutLog = 0; Vector3 arr = Vector3.zero;
+            int n = 0, up = 0, upHit = 0, esc = 0;
             Array.Clear(RoofCount, 0, RoofCount.Length);
             for (int i = 0; i < Results.Length; i++)
             {
                 ref Result r = ref Results[i];
                 if (r.Fate == Fate.None) continue;
                 n++;
-                direct += r.Direct; refl += r.Reflected; rem += r.Remaining; geo += r.Geo;
-                float e = r.Direct + r.Reflected;
+                float w = r.W;
+                direct += r.Direct * w; refl += r.Reflected * w; rem += r.Remaining * w; geo += r.Geo * w;
+                float e = (r.Direct + r.Reflected) * w;
                 if (e > 0f)
                 {
+                    esc++; c2 += e * e;
                     eW += e; cutLog += e * Math.Log(Mathf.Max(r.Cut, 100f));
                     // precedence: you place a sound where its EARLIEST arrival comes from, so short paths decide the direction
-                    float w = e * Mathf.Exp(-r.PathLen / PrecedenceM);
-                    arr += r.First * w; pW += w;
+                    float pw = e * Mathf.Exp(-r.PathLen / PrecedenceM);
+                    arr += r.First * pw; pW += pw;
                 }
-                if (r.First.y > 0.6f)
+                if (!r.Guided && r.First.y > 0.6f) // coverage counts directions, so only the even ones
                 {
                     up++;
                     if (r.FirstHit && r.FirstHitM < 40f) { upHit++; int mi = (int)r.FirstMat; if (mi >= 0 && mi < RoofCount.Length) RoofCount[mi]++; }
                 }
             }
             if (n < N / 2) { Valid = false; return; }
-            Direct = direct / n; Traced = refl / n; Remaining = rem / n;
-            // leak rate of the energy still bouncing: from late bounces (2+ reflections) when there are enough of them
-            EscapeRate = _lateLegAcc > 20 ? (float)(_lateEscAcc / _lateLegAcc) : _legAcc > 1 ? (float)(_escAcc / _legAcc) : 0f;
-            Absorption = _hitAcc > 1 ? (float)(_alphaAcc / _hitAcc) : 0.05f;
-            MeanFreePath = _lenN > 1 ? (float)(_lenAcc / _lenN) : float.NaN;
-            float p = EscapeRate, a = Absorption;
+            Direct = direct / n; Traced = refl / n; Remaining = rem / n; Escapes = esc;
+            Absorption = _acc.Hits > 1 ? (float)(_acc.Alpha / _acc.Hits) : 0.05f;
+            MeanFreePath = _acc.LenN > 1 ? (float)(_acc.Len / _acc.LenN) : float.NaN;
+            float a = Absorption;
+            // 0.6.3's leak rate (rays, legs after 2-3 reflections) and its build-up, for comparison in the log
+            EscapeRateOld = _acc.OldLeg > 1 ? (float)(_acc.OldEsc / _acc.OldLeg) : 0f;
+            float pOld = EscapeRateOld;
+            float shareOld = pOld + (1f - pOld) * a > 1e-6f ? pOld / (pOld + (1f - pOld) * a) : 0f;
+            // leak rate in ENERGY from legs after 5+ reflections (where the remaining energy has spread to)
+            float p = _acc.LateLegN > 20 && _acc.LateLeg > 1e-9 ? (float)(_acc.LateEsc / _acc.LateLeg) : pOld;
+            EscapeRate = p;
             float share = p + (1f - p) * a > 1e-6f ? p / (p + (1f - p) * a) : 0f;
-            Tail = Remaining * share * Mathf.Max(0f, Plugin.RoomBuildUp.Value);
+            float buildUp = Mathf.Max(0f, Plugin.RoomBuildUp.Value);
+            float factor;
+            if (_acc.DeepBase > 1e-3)
+            {
+                DeepEscShare = (float)(_acc.DeepEsc / _acc.DeepBase);
+                DeepRemShare = (float)(_acc.DeepRem / _acc.DeepBase);
+                factor = DeepEscShare + DeepRemShare * share;
+            }
+            else { DeepEscShare = DeepRemShare = 0f; factor = share; }
+            Tail = Remaining * factor * buildUp;
+            TailOld = Remaining * shareOld * buildUp;
             Level = Mathf.Clamp01(Direct + Traced + Tail);
+            // confidence: standard error of the traced part relative to the level -> how long to average it
+            RelErr = Level > 1e-5f ? Mathf.Sqrt(c2) / n / Level : 1f;
+            SmoothS = 0.35f + 2.15f * Mathf.Clamp01((RelErr - 0.08f) / 0.32f);
             // brightness: the direct/bounced paths' own, and for the build-up the room's surfaces (many bounces: duller)
-            float roomCut = _hitAcc > 1 ? (float)Math.Exp(_cutLogAcc / _hitAcc) * 0.8f : 12000f;
+            float roomCut = _acc.Hits > 1 ? (float)Math.Exp(_acc.CutLog / _acc.Hits) * 0.8f : 12000f;
             double wSum = eW + Tail;
             CutoffHz = wSum > 1e-6 ? (float)Math.Exp((cutLog + Tail * Math.Log(Mathf.Max(roomCut, 100f))) / wSum) : 22000f;
             Arrival = arr.sqrMagnitude > 1e-10f ? arr.normalized : Vector3.forward;
@@ -503,8 +700,8 @@ namespace RealSoundSimulation.Acoustics
                 int mask = V2Mask(block);
                 var qp = new QueryParameters(mask, false, QueryTriggerInteraction.Ignore, false);
                 Quaternion rot = UnityEngine.Random.rotationUniform;
-                for (int i = 0; i < 64; i++) { Sync[i] = default; Sync[i].Active = true; Sync[i].O = o; Sync[i].D = rot * Fib64[i]; Sync[i].First = Sync[i].D; Sync[i].E = Sync[i].G = 1f; Sync[i].Cut = 22000f; }
-                double esc = 0, legs = 0, alpha = 0, hits = 0, len = 0, lenN = 0, cutLog = 0;
+                for (int i = 0; i < 64; i++) { Sync[i] = default; Sync[i].Active = true; Sync[i].O = o; Sync[i].D = rot * Fib64[i]; Sync[i].First = Sync[i].D; Sync[i].E = Sync[i].G = Sync[i].W = 1f; Sync[i].Cut = 22000f; }
+                Stats s = default;
                 float geo = 0f; int up = 0, upHit = 0;
                 for (int leg = 0; leg < 3; leg++)
                 {
@@ -517,14 +714,14 @@ namespace RealSoundSimulation.Acoustics
                     {
                         int i = Idx[k];
                         _syncFate = Fate.None;
-                        Advance(ref Sync[i], i, _hits[k], block, false, ref esc, ref legs, ref alpha, ref hits, ref len, ref lenN, ref cutLog);
+                        Advance(ref Sync[i], i, _hits[k], block, false, ref s);
                         if (!Sync[i].Active && (_syncFate == Fate.Sky || _syncFate == Fate.SkyAfterBounces) && Sync[i].GeoBounces <= 1) geo += Sync[i].G;
                         if (leg == 0 && Sync[i].First.y > 0.6f) { up++; if (Sync[i].FirstHit && Sync[i].FirstHitM < 40f) upHit++; }
                     }
                 }
                 MuzzleRoom = Mathf.Clamp01(1f - geo / 64f);
-                float mfp = lenN > 0 ? (float)(len / lenN) : float.NaN;
-                float a = hits > 0 ? (float)(alpha / hits) : 0.05f;
+                float mfp = s.LenN > 0 ? (float)(s.Len / s.LenN) : float.NaN;
+                float a = s.Hits > 0 ? (float)(s.Alpha / s.Hits) : 0.05f;
                 MuzzleHardRoom = Mathf.InverseLerp(0.5f, 0.85f, MuzzleRoom) * Mathf.InverseLerp(0.15f, 0.04f, a);
                 MuzzleSize = Mathf.Lerp(SizeFrom(mfp), 1f, MuzzleHardRoom);
                 MuzzleCoverage = up > 0 ? (float)upHit / up : 0f;
@@ -557,7 +754,7 @@ namespace RealSoundSimulation.Acoustics
 
         // ---------------- logs ----------------
 
-        public const string Header = "t,level,levelDb,direct,traced,tail,remaining,escapeRate,absorption,meanFreePathM,rt60S,skyOpen,enclosed,coverage,roofMat,cutoffHz,arrivalAz,arrivalEl,focus,diffuseShare,room,size,hardRoom,raysPerS";
+        public const string Header = "t,level,levelDb,direct,traced,tail,remaining,escapeRate,absorption,meanFreePathM,rt60S,skyOpen,enclosed,coverage,roofMat,cutoffHz,arrivalAz,arrivalEl,focus,diffuseShare,room,size,hardRoom,raysPerS,escapeRateOld,tailOld,deepEscShare,deepRemShare,escapes,openings,relErr,smoothS";
 
         private static float _lastRaysT; private static long _lastRays; private static float _raysPerS;
 
@@ -569,7 +766,9 @@ namespace RealSoundSimulation.Acoustics
                 DiagLog.F(Direct), DiagLog.F(Traced), DiagLog.F(Tail), DiagLog.F(Remaining), DiagLog.F(EscapeRate), DiagLog.F(Absorption),
                 DiagLog.F(MeanFreePath, "0.0"), DiagLog.F(Rt60, "0.00"), DiagLog.F(SkyOpen), DiagLog.F(Enclosed), DiagLog.F(Coverage), RoofMat.ToString(),
                 DiagLog.F(CutoffHz, "0"), DiagLog.F(RelAz(lt, Arrival), "0"), DiagLog.F(Mathf.Asin(Mathf.Clamp(Arrival.y, -1f, 1f)) * Mathf.Rad2Deg, "0"),
-                DiagLog.F(Focus), DiagLog.F(DiffuseShare), DiagLog.F(Room), DiagLog.F(Size), DiagLog.F(HardRoom), DiagLog.F(_raysPerS, "0"));
+                DiagLog.F(Focus), DiagLog.F(DiffuseShare), DiagLog.F(Room), DiagLog.F(Size), DiagLog.F(HardRoom), DiagLog.F(_raysPerS, "0"),
+                DiagLog.F(EscapeRateOld), DiagLog.F(TailOld), DiagLog.F(DeepEscShare), DiagLog.F(DeepRemShare), Escapes.ToString(), Openings.ToString(),
+                DiagLog.F(RelErr), DiagLog.F(SmoothS, "0.00"));
         }
 
         public static float RelAz(Transform lt, Vector3 dir)
@@ -579,15 +778,15 @@ namespace RealSoundSimulation.Acoustics
             return f.sqrMagnitude > 1e-4f && d.sqrMagnitude > 1e-6f ? Vector3.SignedAngle(f, d, Vector3.up) : float.NaN;
         }
 
-        public const string PathsHeader = "t,mark,dir,azimuthDeg,elevationDeg,fate,casts,direct,reflected,remaining,geo,cutoffHz,viaGlass,hits";
+        public const string PathsHeader = "t,mark,dir,azimuthDeg,elevationDeg,fate,casts,direct,reflected,remaining,geo,cutoffHz,viaGlass,guided,weight,finalFate,hits";
 
-        // F10: every direction's latest path (paths.csv)
+        // F10: every slot's latest path (paths.csv)
         public static void DumpPaths(int mark, float t)
         {
             if (!DiagLog.IsOpen || !Valid) return;
             Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
             var sb = new StringBuilder(256);
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < M; i++)
             {
                 ref Result r = ref Latest[i];
                 if (r.Fate == Fate.None) continue;
@@ -601,6 +800,7 @@ namespace RealSoundSimulation.Acoustics
                 DiagLog.Row("paths.csv", string.Join(",", DiagLog.F(t, "0.00"), mark.ToString(), i.ToString(), DiagLog.F(RelAz(lt, r.First), "0"),
                     DiagLog.F(Mathf.Asin(Mathf.Clamp(r.First.y, -1f, 1f)) * Mathf.Rad2Deg, "0"), r.Fate.ToString(), r.Casts.ToString(),
                     DiagLog.F(r.Direct), DiagLog.F(r.Reflected), DiagLog.F(r.Remaining), DiagLog.F(r.Geo), DiagLog.F(r.Cut, "0"), r.ViaGlass ? "1" : "0",
+                    r.Guided ? "1" : "0", DiagLog.F(r.W), r.Final.ToString(),
                     sb.ToString().Replace(',', ';').Trim()));
             }
         }
@@ -609,16 +809,17 @@ namespace RealSoundSimulation.Acoustics
         {
             if (!Plugin.AcousticProbeOn.Value) return "";
             if (!Valid) return "probe v2: -\n";
-            return $"probe v2: level {Level:0.00} ({10f * Mathf.Log10(Mathf.Max(Level, 1e-4f)):0.0} dB: direct {Direct:0.00} bounced {Traced:0.00} build-up {Tail:0.00})  " +
+            return $"probe v2: level {Level:0.00} ({10f * Mathf.Log10(Mathf.Max(Level, 1e-4f)):0.0} dB: direct {Direct:0.00} bounced {Traced:0.00} build-up {Tail:0.00}, was {TailOld:0.00})  " +
                    $"{CutoffHz:0} Hz  focus {Focus:0.00}  sky {SkyOpen:0.00}  roof {Coverage:0.00} {RoofMat}  room {Room:0.00} RT {Rt60:0.00} s  " +
+                   $"out {Escapes} paths, {Openings} openings, error {RelErr:0.00}, smooth {SmoothS:0.0} s  " +
                    $"ambience {(Plugin.AmbienceV2On.Value ? "v2" : "v1")} guns {(Plugin.GunV2On.Value ? "v2" : "v1")}\n";
         }
 
         public static string Summary()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"ACOUSTIC PROBE V2 (ambience {(Plugin.AmbienceV2On.Value ? "ON" : "off")}, gunshots {(Plugin.GunV2On.Value ? "ON" : "off")}, glass loss {Plugin.GlassLossDb.Value:0} dB, build-up x{Plugin.RoomBuildUp.Value:0.00})");
-            sb.AppendLine($"  rays cast {RaysCast}, paths completed {PathsDone}");
+            sb.AppendLine($"ACOUSTIC PROBE V2 (ambience {(Plugin.AmbienceV2On.Value ? "ON" : "off")}, gunshots {(Plugin.GunV2On.Value ? "ON" : "off")}, glass loss {Plugin.GlassLossDb.Value:0} dB, build-up x{Plugin.RoomBuildUp.Value:0.00}, guided rays {(Plugin.GuidedRays.Value ? "ON" : "off")})");
+            sb.AppendLine($"  rays cast {RaysCast}, paths completed {PathsDone}, guided paths aimed at openings {GuidedPaths}, most openings remembered at once {MaxOpenings}");
             return sb.ToString();
         }
     }
