@@ -12,13 +12,16 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.2")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.3")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
+
+        internal static ConfigEntry<GunSoundSet> GunSounds;
+        internal static ConfigEntry<bool> SebOnFullAuto;
 
         internal static ConfigEntry<bool> OverlayOn;
         internal static ConfigEntry<KeyboardShortcut> OverlayKey;
@@ -85,6 +88,10 @@ namespace RealSoundSimulation
 
         private void Load()
         {
+            const string guns = "0. Gun sounds";
+            GunSounds = Config.Bind(guns, "0 Gun sounds", GunSoundSet.SPT, new ConfigDescription("Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings (6 to 48 single-shot takes per sound where SPT has one loop), built into the plugin's seb_sounds folder by tools/build_seb_sounds.py. Switches at the next trigger pull, never mid-burst. Logged to gunsounds.csv.", null, new ConfigurationManagerAttributes { Order = 100 }));
+            SebOnFullAuto = Config.Bind(guns, "0a SEB on full-auto guns", false, new ConfigDescription("Also use SEB's recordings on guns that can fire full-auto. Off by default: the game loops one recording while the trigger is held, and SEB's are single shots, so a burst plays one shot repeating every 3 s until playback is patched.", null, new ConfigurationManagerAttributes { Order = 99 }));
+
             const string diag = "1. Diagnostics";
             OverlayOn = Config.Bind(diag, "Overlay", false, "Show the live occlusion overlay (top left) in raid.");
             OverlayKey = Config.Bind(diag, "Overlay key", new KeyboardShortcut(KeyCode.F9), "Toggle the overlay.");
@@ -143,6 +150,7 @@ namespace RealSoundSimulation
             Safe("timing patches", () => TimingPatches.Apply(Harmony));
             Safe("shot probe", () => ShotProbe.Apply(Harmony));
             Safe("env probe", () => EnvProbe.Apply(Harmony));
+            Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony));
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("fix 2 obstruction score", () => ObstructionScoreFix.Apply(Harmony));
             Safe("fix 3 doorway blend", () => DoorwayBlend.Apply(Harmony));
@@ -162,6 +170,7 @@ namespace RealSoundSimulation
         }
 
         internal static string FixState() =>
+            $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
             $"fix3 doorways {(DoorwayOn.Value ? $"ON (in {DoorwayInside.Value:0.0} m / out {DoorwayOutside.Value:0.0} m)" : "off")} | " +

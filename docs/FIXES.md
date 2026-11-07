@@ -6,6 +6,7 @@ Status key: **Built** = in the plugin, not yet heard in game. **Heard** = heard 
 
 | # | Fix | Status | Since | Notes |
 |---|---|---|---|---|
+| 0 | Gun sounds: SPT or SEB (a choice, not a fix) | Built | 0.6.3 | Default SPT. Full-auto guns stay SPT unless 0a |
 | 1 | Gun mixer hysteresis | Built | 0.2.0 | Raid 4 had no AI, so it has had nothing to act on yet |
 | 2 | Obstruction score | Built | 0.2.0 | Left on Game in raid 4 |
 | 3 | Smooth doorways | Heard | 0.2.0, reworked 0.2.1, 0.2.2 | Raids 4–5: "improved". 0.2.1 removed the startup error and most of the jump. Raid 6 (0.2.2, sticky doorway): no doorway swaps, no jumps |
@@ -20,6 +21,29 @@ Background terms used below:
 - **Occlusion** (0–1): how blocked a sound is. 0 = clear, 1 = fully blocked. The game builds it from *obstruction* (walls between you, same space) and *propagation* (sound travelling through doorways between rooms).
 - **Snapshot**: a saved state of the game's audio mixer (reverb, EQ, volumes). The game has two: Outdoor and Indoor.
 - **Portal / doorway**: an opening between baked audio rooms (doors, windows, gaps).
+
+---
+
+## Setting 0: Gun sounds, SPT or SEB (0.6.3)
+
+F12 → Real Sound Simulation → **"0. Gun sounds"** (top of the list). Not a fix: it picks which recordings guns use.
+
+**What it is.** Sound Engine Backport (SEB, by red_the_fox, MIT) ships EFT 1.0's gun sound banks. They have the same bank names as SPT's (`akm_main`, `akm_tail`, …) but hold 6 to 48 single-shot takes per sound (indoor/outdoor × close/distant/far × suppressed), where SPT holds one full-auto loop plus a tail and, for many guns, few or borrowed single shots (the M4A1's are MCX recordings, the MP5's another rifle's).
+
+**Evidence (7 Nov).** Decoded both versions: AK-74 363 clips (295 single shots) against 101 (9); M4A1 374 (306) against 113 (27); MP5 239 (192) against 60 (9); AKM 90 (72) against 18 (0). Clips with the same name are the same audio (median difference 0.0 s, 0.1 dB); SEB re-encodes most from PCM to ADPCM. An AKM single shot (SEB take 01 against SPT's loop cut + tail) matched within 0.5 dB in every band and in decay. SEB's 8 AKM takes differ from each other (attack correlation 0.31–0.62). So the gain is variety shot to shot, not a better recording.
+
+**What it changes.**
+- On each trigger pull, never during a burst (`_isFiring`), the gun's six banks (Body, BodySilenced, Tail, TailSilenced, Doublet, DoubletSilenced) are swapped to SEB's by name, or back to the ones the game set.
+- `_firingLoopLength` is recomputed as the game does, since the full-auto beat is Body length ÷ 16.
+- The patch is a `WeaponSoundPlayer.FireBullet` prefix that runs first, so fixes 3c and 6 work on whichever banks are in place.
+- **Full-auto guns stay SPT unless `0a` is on.** For any gun that can fire full-auto (`Non_auto` false) the game loops one Body recording while the trigger is held and cuts it to the tail on release. SEB's recordings are single shots, so a burst would be one shot repeating every ~3 s, and semi fire would play only the first beat (Body length ÷ 16) of the take. Turn `0a` on once playback queues one recording per round.
+- **Loading.** SEB's banks are copied by `tools/build_seb_sounds.py` with new internal (CAB) names, because Unity can't hold two bundles with the same internal name. They load in the background the first time a gun needs them; until then that gun stays SPT. A bank with a clip that didn't resolve is skipped (logged) and that gun keeps SPT's version of it.
+
+**Settings.** `0 Gun sounds` SPT (default) / SEB. `0a SEB on full-auto guns` off.
+
+**How to check.** `gunsounds.csv` has a row each time a gun switches, or can't (reason: `full-auto gun (0a off)`, `not in SEB`, `SEB loading`, `SEB load failed`, `seb_sounds not built`). The summary's GUN SOUNDS line counts banks loaded and switches. LogOutput shows `SEB gun sounds: <bundle> ready, N banks`.
+
+**Install.** Build once: `python -I tools/build_seb_sounds.py` (needs UnityPy; reads `~/Downloads/SPT-SEB-1.0.1.zip` by default, writes `G:\SPT\BepInEx\plugins\FFloridaMann-RealSoundSimulation\seb_sounds`). SEB's own server mod must **not** be installed, or "SPT" would already be SEB's banks.
 
 ---
 

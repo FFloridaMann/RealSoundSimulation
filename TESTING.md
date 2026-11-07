@@ -27,6 +27,8 @@ Agreed 6 Nov 2026 (consolidation step 4). Every build is judged on the same stop
 
 **Testing probe v2 (0.6.0):** F12 → `9 Ambience from probe v2` and/or `9a Gunshots from probe v2` on (one at a time is fine). Run the route as usual. At any stop, F11 shows the probe's rays: green reached the sky, cyan after bouncing, yellow through glass, red trapped. If something sounds wrong, say what the rays showed ("red everywhere in the garage" or "green through the wall"). To compare, flip 9 or 9a off and on at a stop.
 
+**Testing gun sounds (0.6.3):** at stop 1, with a semi-only gun (pistol, SKS, bolt-action, pump shotgun), fire 5 single shots with `0 Gun sounds` = SPT, then switch it to SEB in F12 and fire 5 more. The first SEB shot may still be SPT while its sounds load. With SEB, each shot should differ slightly; with SPT they're identical. Then an AKM or M4: it should stay SPT (`0a` off). Check `gunsounds.csv` and the summary's GUN SOUNDS line. If a gun stays SPT, the `reason` column says why.
+
 **Between stops, listen for:** sounds cutting in and out, clicks, rain coming from overhead or from inside a building, anything doubled.
 
 **Dry raid now and then:** the same route without rain checks wind and the day/night background.

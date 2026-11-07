@@ -144,6 +144,9 @@ All 48 exposure directions at that moment: `ray`, `azimuthDeg` (relative to wher
 ### rain.csv (each time a rain player picks a clip)
 `environment` (Indoor/Outdoor player), `intensity`, `clip`, `targetVolume`, `gameWouldSilence` (1 = the game's own code would have faded the rain out here; fix 7), `fixOn`.
 
+### gunsounds.csv (setting 0, 0.6.3: each time a gun switches between SPT and SEB, or can't)
+`player` (id), `firstPerson`, `gun` (the gun's Body bank as the game set it, e.g. `akm_main`), `auto` (1 = can fire full-auto), `set` (SPT/SEB), `reason` (why it stays SPT: `full-auto gun (0a off)`, `not in SEB`, `SEB loading`, `SEB load failed`, `seb_sounds not built`; empty when switched to SEB), `banksSwapped` (how many of the six banks came from SEB). One row per change, not per shot. The summary's GUN SOUNDS line counts SEB banks loaded, bundles, load failures and switches.
+
 ### marks.csv (each press of the mark key, F10)
 Where you were and what was measured when you pressed it: position, `roomIndoor`, `doorwayTarget`, `enclosure`, `wallClosure`, `roofClosure`, `zenithClosure` (0.3.2), `room`, `sizeFactor`, `thinShare`, `meanHitM`, the time and indoor weight of your last own shot, and `surfaces` (what the probe rays hit, as material:count). From 0.4.0 also the exposure columns (exposureOpen/Glass/Other, open/glass/blocked rays, nearest open/glass opening, roomOutdoorFloor, outdoorValue (`previewOutdoorValue` before 0.5.8), ceiling, floors above, roof material). Also logged as a line in the BepInEx log.
 

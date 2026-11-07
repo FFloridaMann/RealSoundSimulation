@@ -21,6 +21,7 @@ namespace RealSoundSimulation.Diagnostics
             ["echoes.csv"] = "t,sample,taps,tap,kind,material,pathM,delayMs,levelDb,directivityDb,cutoffHz,azimuthDeg,elevationDeg,stolen",
             ["marks.csv"] = "t,mark,x,y,z,roomIndoor,doorwayTarget,enclosure,wallClosure,roofClosure,zenithClosure,room,sizeFactor,thinShare,meanHitM,lastOwnShotT,lastIndoorWeight,surfaces,exposureOpen,exposureGlass,exposureOther,openRays,glassRays,blockedRays,nearestOpenM,nearestGlassM,roomOutdoorFloor,outdoorValue,ceilingM,ceilingMat,floorsAbove,roofMat,v2Level,v2CutoffHz,v2Focus,v2SkyOpen,v2Coverage,v2Room,v2Rt60",
             ["exposure.csv"] = Acoustics.OutdoorExposure.Header,
+            ["gunsounds.csv"] = Fixes.GunSoundSource.Header,
             ["probe2.csv"] = Acoustics.AcousticProbe.Header,
             ["paths.csv"] = Acoustics.AcousticProbe.PathsHeader,
             ["rain.csv"] = "t,environment,intensity,clip,targetVolume,gameWouldSilence,fixOn",

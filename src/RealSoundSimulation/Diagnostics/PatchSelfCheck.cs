@@ -18,6 +18,18 @@ namespace RealSoundSimulation.Diagnostics
 
         private static readonly Target[] Targets =
         {
+            // setting 0 gun sounds (SPT or SEB)
+            new Target("0", "WeaponSoundPlayer", "FireBullet", "M"),
+            new Target("0", "WeaponSoundPlayer", "Body", "F"),
+            new Target("0", "WeaponSoundPlayer", "BodySilenced", "F"),
+            new Target("0", "WeaponSoundPlayer", "Tail", "F"),
+            new Target("0", "WeaponSoundPlayer", "TailSilenced", "F"),
+            new Target("0", "WeaponSoundPlayer", "Doublet", "F"),
+            new Target("0", "WeaponSoundPlayer", "DoubletSilenced", "F"),
+            new Target("0", "WeaponSoundPlayer", "_isFiring", "F"),
+            new Target("0", "WeaponSoundPlayer", "_firingLoopLength", "F"),
+            new Target("0", "WeaponSoundPlayer", "Non_auto", "F"),
+            new Target("0", "EFT.SoundBank", "Environments", "F"),
             // 2.1 portal positioning
             new Target("2.1", "Audio.SpatialSystem.SoundPropagationJobScheduler", "Schedule", "M"),
             new Target("2.1", "Audio.SpatialSystem.SoundPropagationJobScheduler", "Complete", "M"),

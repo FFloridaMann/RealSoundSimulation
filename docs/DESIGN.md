@@ -125,6 +125,9 @@ Separately, the game switches the whole mix (mostly reverb) between its Indoor a
 
 ## 5. Your own gunshots
 
+### 5.0 Which recordings (setting 0, 0.6.3)
+`0 Gun sounds` picks SPT's banks (default) or Sound Engine Backport's EFT 1.0 banks, which hold 6 to 48 single-shot takes per sound. The switch swaps the gun's banks at the next trigger pull, before everything below runs, so 3c, 5 and 6 work the same on either set. Guns that can fire full-auto stay SPT unless `0a` is on, because the game loops one recording while the trigger is held. Applies to everyone's guns, not only yours. Details: FIXES.md "Setting 0".
+
 ### 5.1 Indoor/outdoor recording mix (fix 3c, Enclosure mode)
 Every gun has indoor and outdoor recordings. The game plays one, picked by trigger volumes. The plugin plays **both, mixed** (the gun player's free second slot), with the indoor share from the enclosure probe:
 1. **Room** (2.4), mapped 0.15 → open, 0.65 → fully indoor.
@@ -172,6 +175,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 
 | Setting | Part | Default |
 |---|---|---|
+| `0`, `0a` | which gun recordings: SPT or SEB (§5.0); SEB on full-auto guns | SPT, off |
 | `1`, `1a`–`1c` | remote gun muffle switching (§4) | on, 0.60 / 0.45 / 0.5 s |
 | `2 Obstruction score` | remote sound blocking (§4) | ParallelPaths |
 | `3`, `3a`, `3b` | mix snapshot at doorways (§3.3); needed by fix 8 | on, 1.5 m / 1.0 m |

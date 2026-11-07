@@ -43,6 +43,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   └── DiagLog.cs           one folder per raid, buffered CSV writing, errors.txt
 │
 └── Fixes/                   change sound; each switchable live (defaults = the tested setup)
+    ├── GunSoundSource.cs    setting 0 (0.6.3): swap a gun's banks to SEB's (seb_sounds/, background-loaded) or back
     ├── GunMixerFix.cs       fix 1: stop muffled/clear flip-flop on gunshots
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways
@@ -57,7 +58,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 
 ### Startup order (`Plugin.Awake`)
 
-1. Bind every setting (F12 sections "1. Diagnostics" and "2. Fixes (all off means vanilla audio)").
+1. Bind every setting (F12 sections "0. Gun sounds", "1. Diagnostics" and "2. Fixes (all off means vanilla audio)").
 2. Run `PatchSelfCheck`, which writes `BepInEx/RealSoundSimulationLogs/selfcheck.txt`. **A fresh timestamp on this file is how you know the plugin loaded.**
 3. Install the Harmony patches: timing, shot probe, env probe, then fixes 1, 2, 3, 3c, 4 and 6. Each install is wrapped in `Safe()`, so one failing patch doesn't stop the others; failures are written to the BepInEx log and `RealSoundSimulationLogs/errors.txt`.
 4. Add four components to the plugin's GameObject: `DiagRunner` (diagnostics), `DoorwayBlend` (fix 3), `EnclosureProbe` (acoustics) and `EchoVoices` (fix 6). All four run every frame.
@@ -81,6 +82,7 @@ Every hooked member is listed in `PatchSelfCheck.cs` and checked at startup (89 
 | Hooked member (game class.method) | Kind | By | Purpose |
 |---|---|---|---|
 | `SpatialAudioSystem.Update` / `LateUpdate`, `BetterAudio.Update` | prefix + postfix | TimingPatches | time the game's audio work |
+| `WeaponSoundPlayer.FireBullet` | prefix, `Priority.First` (never skips) | Setting 0 | when not mid-burst: swap the gun's six SoundBank fields to SEB's by name, or back; recompute `_firingLoopLength`. Runs before 3c and 6 so they see the banks in use |
 | `WeaponSoundPlayer.FireBullet` | postfix | ShotProbe | log each remote shot |
 | `WeaponSoundPlayer.UpdateMixerGroup` | postfix | ShotProbe | count mixer flips |
 | `WeaponSoundPlayer.UpdateMixerGroup` | prefix (replaces when on) | Fix 1 | hysteresis on the gun mixer choice |
@@ -102,7 +104,9 @@ Every hooked member is listed in `PatchSelfCheck.cs` and checked at startup (89 
 
 Read directly (public): `WindowBreaker.ObstructiveCollider` (Surfaces registers windows as glass), `BallisticCollider.TypeOfMaterial`.
 
-Fields read through `AccessTools.FieldRefAccess` (private in the game): `BaseSoundPlayer.playersBridge`, `WeaponSoundPlayer._queue`, `WeaponSoundPlayer._currentMixerGroup`, `AmbientSoundBlender._currentOutdoorFilterValue`, `AmbientSoundBlender._masterMixer` (fix 3 waits until it is set), and the `SpatialAudioSystem` container/processor tables.
+Setting 0 also loads bundles itself: `AssetBundle.LoadFromFileAsync` for `seb_sounds/*.bundle` (dependencies first, from `index.txt`), then `LoadAllAssetsAsync<SoundBank>()`. Bundles stay loaded for the session. Public fields written: `WeaponSoundPlayer.Body`, `BodySilenced`, `Tail`, `TailSilenced`, `Doublet`, `DoubletSilenced`.
+
+Fields read through `AccessTools.FieldRefAccess` (private in the game): `WeaponSoundPlayer._isFiring`, `WeaponSoundPlayer._firingLoopLength` (setting 0), `BaseSoundPlayer.playersBridge`, `WeaponSoundPlayer._queue`, `WeaponSoundPlayer._currentMixerGroup`, `AmbientSoundBlender._currentOutdoorFilterValue`, `AmbientSoundBlender._masterMixer` (fix 3 waits until it is set), and the `SpatialAudioSystem` container/processor tables.
 
 ### How a fix is switched
 

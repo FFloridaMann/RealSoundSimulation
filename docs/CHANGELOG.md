@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.3 — 7 Nov 2026 (setting 0: gun sounds from SPT or SEB)
+**Run in game:** not yet. With the default (`0 Gun sounds` = SPT) nothing sounds different from 0.6.2.
+- **New setting 0, "Gun sounds"**, at the top of F12 (section "0. Gun sounds"): SPT (default) or SEB, Sound Engine Backport's EFT 1.0 recordings, without SEB's engine. Switches at the next trigger pull, never mid-burst. FIXES.md "Setting 0".
+- **Why:** compared on 7 Nov, SEB's gun banks hold the same recordings as SPT's plus 6 to 48 single-shot takes per sound (AK-74 295 single-shot clips against SPT's 9, M4A1 306 against 27). The SPT recordings they share are the same audio. An AKM single shot measured within 0.5 dB per band of SPT's loop-start + tail; the gain is variety, not quality.
+- **`0a SEB on full-auto guns`** (off): the game loops one Body recording while the trigger is held on any gun that can fire full-auto. SEB's are single shots, so those guns stay SPT until playback is patched.
+- **New tool `tools/build_seb_sounds.py`:** copies SEB's 39 gun bank bundles and the 28 they reference with new internal names (Unity can't load two bundles with the same internal name), into `BepInEx/plugins/FFloridaMann-RealSoundSimulation/seb_sounds/` with `index.txt`. Not in git.
+- **Logs:** new `gunsounds.csv`; a GUN SOUNDS line in the summary; setting 0 in settings.txt; 11 new self-check targets.
+- SEB's server mod is no longer installed (moved to `G:\SPT\_removed_mods`), so the game loads SPT's own banks and the switch decides.
+
 ## 0.6.2 — 6 Nov 2026 (bug fix: rays leaked through solid low-detail shapes)
 **Run in game:** not yet (installed 22:16).
 - **Solid objects on low-detail layers now block completely.** 0.6.0 gave them a small leak, done by chance: 5% of rays passed **at full strength**. The Capital has a whole-floor low-detail collider (`Capital_Indoor_1F_COLLIDER`, no material tag) in front of its real walls. In raid 23 at mark 1, 10 of the 11 paths that "reached outside" had gone through it, through the back and side walls and once down through the floor to the ground 48 m below. That put the rain behind you and made the level jump whenever a lucky path got through. Sound through walls belongs to step 6 (by material and thickness), not to this probe.
