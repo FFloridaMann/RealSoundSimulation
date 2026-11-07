@@ -377,7 +377,7 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 - **Fix 9** (`9 Ambience from probe v2`, off): the outdoor beds' volume and muffling are set directly from it; the game's own beds become directional (no copies); indoor layers and roof rain follow it.
 - **Fix 9a** (`9a Gunshots from probe v2`, off): the gunshot indoor/outdoor mix and the hard-room boosts use its room measure.
 
-**Settings.** `9`, `9a` (off), `9b Game sounds directional` 1, `9c Directional mode` UnityPanner / MetaHrtf, `9d Glass loss dB` 22, `9e Sound build-up in rooms` 1, `9f Guided rays` on (0.6.4). `Probe ray view key` F11.
+**Settings.** `9`, `9a` (off), `9b Game sounds directional` 1, `9c Directional mode` UnityPanner / MetaHrtf, `9d Glass loss dB` 22, `9e Sound build-up in rooms` 1, `9f Guided rays` on (0.6.4), `9g Ray quality` Medium (0.6.6: Low / Medium / High / Ultra = 0.5× / 1× / 2× / 4× the paths and the cost; DESIGN.md §7). `Probe ray view key` F11.
 
 **0.6.4 (raid 24: outdoor ambience too loud far inside; lowering `9e` helped but then it jumped in and out).** At mark 1 (Capital) 2 of 128 paths got out: −24 dB from them, −14 dB with the build-up (88% build-up). The build-up was one room formula for the whole interior with a leak rate counted in rays. Now the build-up is measured by tracing half the paths on to 8 reflections, in energy (glass at its real loss), smoothed over ~3 s. Guided rays aim 64 of every 192 paths at the openings already found, weighted so the totals stay right, so the level from the few paths that get out is steady. Fix 9 averages longer when the probe is unsure (0.35 → 2.5 s). DESIGN.md §2.6.
 

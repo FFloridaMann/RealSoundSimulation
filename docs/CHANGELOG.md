@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.6 — 7 Nov 2026 (probe v2 ray quality setting)
+**Run in game:** not yet. At the default (Medium) it is exactly 0.6.5.
+- **New `9g Ray quality`** (user idea): Low / Medium / High / Ultra = 320 / 640 / 1280 / 2560 paths a second, averaged over 1 / 2 / 4 / 8 sweeps, so the window stays ~0.6 s and more paths really mean less noise (Ultra: half the noise of Medium at ~4× the cost, about 0.6 ms per frame at 107 fps). Changes live. DESIGN.md §7.
+- Room for up to 1024 paths in flight (was 256) and a per-frame start cap that grows with the rate, so Ultra isn't throttled at 60 fps.
+- Summary and settings line show the quality; COST line renamed "acoustic probe v2 (batched, guided, rays by 9g)".
+
 ## 0.6.5 — 7 Nov 2026 (probe v2: leak through floors fixed, direction by what you hear)
 **Run in game:** not yet. Built 7 Nov; not installed yet (the game was running). Affects fix 9 (ambience) and, slightly, 9a.
 - **Raid 25 (0.6.4):** the measured build-up was 3–5× lower than the old formula (−18 dB at mark 1, was −14). But deep in the Capital the rain came from both sides and from behind. No path really got out there: the only "escapes" fell through a hole in the ground floor to the map's catch plane 48 m below and came back up through the building (raycasts don't hit the back of one-sided floors). With focus ≈ 1, one or two of them set the direction alone.

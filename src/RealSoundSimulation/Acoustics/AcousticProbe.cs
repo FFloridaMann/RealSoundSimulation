@@ -70,16 +70,24 @@ namespace RealSoundSimulation.Acoustics
     //   towards where escaping paths left the building (each escape's last contact: the glass or frame it passed through,
     //   or the last surface it came off), energy-weighted over ~3 s, never fully focused (x0.6: a diffuse field
     //   surrounds you). Arrival/Focus = the sum of both.
+    // 0.6.6: "9g Ray quality" (user idea) sets paths per second AND how many sweeps are averaged, so the averaging window
+    // stays ~0.6 s and more paths really mean less noise (noise falls with the square root of the path count):
+    //   Low 320/s, 1 sweep | Medium 640/s, 2 sweeps (0.6.5) | High 1280/s, 4 sweeps | Ultra 2560/s, 8 sweeps. Cost scales
+    //   the same way (raid 25, Medium: 16 ms per second of game time).
     // 0.6.1: direction from the earliest sound (precedence, exp(-path length / 20 m)); two sweeps averaged; kind cache.
     internal class AcousticProbe : MonoBehaviour
     {
         public const int N = 128, G = 64, M = N + G;
         public const int EarlyBounces = 3, MaxBounces = 8, MaxCasts = 12, MaxPts = MaxCasts + 1;
         private const int LateFrom = 5, MaxLobes = 16;
-        private const float MaxLeg = 60f, Skin = 0.02f, PathsPerSecond = 640f, PrecedenceM = 20f;
+        private const float MaxLeg = 60f, Skin = 0.02f, PrecedenceM = 20f;
         private const float DeepShare = 0.5f, StatTau = 3f, LobeTau = 2f, LobeFloor = 0.05f, DiffuseFocus = 0.6f;
-        public const int Sweeps = 2;
-        private const int MaxActive = 256;
+        public enum RayQuality { Low, Medium, High, Ultra }
+        public const int MaxSweeps = 8;
+        public static int Sweeps = 2;
+        private static float _rate = 640f;
+        private static int _quality = -1;
+        private const int MaxActive = 1024;
         private const float PUniform = 1f / (4f * Mathf.PI);
 
         public enum Fate : byte { None, Sky, SkyAfterBounces, Trapped, LongInterior }
@@ -146,7 +154,7 @@ namespace RealSoundSimulation.Acoustics
 
         // the last two sweeps' results (aggregated together), and the latest path per slot with its points and hits
         // (ray view, paths.csv). Slots 0..127 are the even directions, 128..191 the guided paths.
-        public static readonly Result[] Results = new Result[Sweeps * M];
+        public static readonly Result[] Results = new Result[MaxSweeps * M];
         public static readonly Result[] Latest = new Result[M];
         public static readonly Vector3[] Pts = new Vector3[M * MaxPts];
         public static readonly int[] PtN = new int[M];
@@ -207,7 +215,7 @@ namespace RealSoundSimulation.Acoustics
             KindCache.Clear(); _layer = 0; _cursor = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
             _acc = default;
-            RaysCast = PathsDone = 0; _budget = 0f; _nextRow = 0f; _maskBlock = -1;
+            RaysCast = PathsDone = 0; _budget = 0f; _nextRow = 0f; _maskBlock = -1; _quality = -1;
         }
 
         private void OnDestroy()
@@ -243,7 +251,8 @@ namespace RealSoundSimulation.Acoustics
             for (int k = 0; k < MaxLobes; k++) { Lobes[k].W *= fade; if (Lobes[k].W < 1e-6f) Lobes[k].W = 0f; }
 
             // start new paths
-            _budget = Mathf.Min(_budget + PathsPerSecond * dt, 32f);
+            ApplyQuality();
+            _budget = Mathf.Min(_budget + _rate * dt, Mathf.Max(32f, _rate * 0.1f));
             for (int i = 0; i < MaxActive && _budget >= 1f; i++)
             {
                 if (Paths[i].Active) continue;
@@ -286,6 +295,23 @@ namespace RealSoundSimulation.Acoustics
                 _nextRow = Time.time + 0.125f;
                 if (Valid && DiagLog.IsOpen) DiagLog.Row("probe2.csv", RowCsv(Time.time - DiagRunner.RaidStartTime, lt));
             }
+        }
+
+        // "9g Ray quality": paths per second and sweeps averaged (window ~0.6 s at every level)
+        private static void ApplyQuality()
+        {
+            int q = (int)Plugin.RayQualityCfg.Value;
+            if (q == _quality) return;
+            _quality = q;
+            switch (Plugin.RayQualityCfg.Value)
+            {
+                case RayQuality.Low: _rate = 320f; Sweeps = 1; break;
+                case RayQuality.High: _rate = 1280f; Sweeps = 4; break;
+                case RayQuality.Ultra: _rate = 2560f; Sweeps = 8; break;
+                default: _rate = 640f; Sweeps = 2; break;
+            }
+            for (int i = Sweeps * M; i < Results.Length; i++) Results[i] = default;
+            _layer %= Sweeps;
         }
 
         private static void Start(ref PathState p, int slot, int dir, Vector3 o, Vector3 d, float w, bool guided)
@@ -521,7 +547,7 @@ namespace RealSoundSimulation.Acoustics
             r.Geo = escaped && p.GeoBounces <= 1 ? p.G : 0f;
             r.PathLen = p.Len;
             if (escaped) r.Exit = p.ExitDir;
-            Results[p.Layer * M + p.Dir] = r;
+            Results[(p.Layer < Sweeps ? p.Layer : 0) * M + p.Dir] = r; // a path started before a quality change
             p.Rep = r;
             PathsDone++;
             if (escaped) Remember(p.First, p.FirstPt, (r.Direct + r.Reflected) * p.W);
@@ -890,7 +916,7 @@ namespace RealSoundSimulation.Acoustics
         public static string Summary()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"ACOUSTIC PROBE V2 (ambience {(Plugin.AmbienceV2On.Value ? "ON" : "off")}, gunshots {(Plugin.GunV2On.Value ? "ON" : "off")}, glass loss {Plugin.GlassLossDb.Value:0} dB, build-up x{Plugin.RoomBuildUp.Value:0.00}, guided rays {(Plugin.GuidedRays.Value ? "ON" : "off")})");
+            sb.AppendLine($"ACOUSTIC PROBE V2 (ambience {(Plugin.AmbienceV2On.Value ? "ON" : "off")}, gunshots {(Plugin.GunV2On.Value ? "ON" : "off")}, glass loss {Plugin.GlassLossDb.Value:0} dB, build-up x{Plugin.RoomBuildUp.Value:0.00}, guided rays {(Plugin.GuidedRays.Value ? "ON" : "off")}, ray quality {Plugin.RayQualityCfg.Value} at the end)");
             sb.AppendLine($"  rays cast {RaysCast}, paths completed {PathsDone}, guided paths aimed at openings {GuidedPaths}, most openings remembered at once {MaxOpenings}");
             sb.AppendLine($"  back faces hit (reflected as surfaces) {BackfaceHits}, far sides of passed objects skipped {ExitFacesSkipped}, upward escapes rejected by the roof test {SkyRejected}   <- 0.6.5 leak fix (raid 25: paths came up through floors)");
             return sb.ToString();
