@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.16")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.17")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -177,6 +177,7 @@ namespace RealSoundSimulation
 
             Harmony = new Harmony(Guid);
             Safe("self-check", PatchSelfCheck.Run);
+            Safe("allocation counter", Perf.InitAlloc); // 0.6.17
             Safe("timing patches", () => TimingPatches.Apply(Harmony));
             Safe("shot probe", () => ShotProbe.Apply(Harmony));
             Safe("env probe", () => EnvProbe.Apply(Harmony));

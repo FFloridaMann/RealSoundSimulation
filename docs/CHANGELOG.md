@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.17 — 7 Nov 2026 (allocation counter that works under Unity's Mono)
+**Run in game:** not yet. Raid 32 (raid_20261107_160950, 0.6.16): plugin 12.1 ms/s, the exposure sweep skipped every frame, probe v2 8.7 ms/s, echo voices stolen 0, the headroom cap never engaged; FrameDiag blames Real Sound Simulation only inside the raid's loading freeze (first 2 s).
+- **COST's `alloc KB/s` read 0.0 everywhere:** under Unity's Mono `GC.GetAllocatedBytesForCurrentThread` returns 0 without failing. Now at startup each counter is tried with a deliberate 64 KB allocation, and the first that sees it is used: the per-thread counter, else `GC.GetTotalMemory(false)` deltas, else `Profiler.GetMonoUsedSizeLong` deltas. The two heap counters are whole-heap and approximate (other threads count; a part during which a collection ran is dropped). The COST total line names the counter and what the test read; the BepInEx log too.
+- Not done (optional in the request): spreading the raid-start setup over several frames. Its spikes all fall inside the game's own loading freeze.
+
 ## 0.6.16 — 7 Nov 2026 (exposure sweep skipped under fix 9, echo headroom cap, probe batch within the frame)
 **Run in game:** not yet. From the 0.6.15 review (user: "Yes to the skip").
 - **Exposure probe:** while fix 9 runs, its 48-direction sweep is skipped (6–7 ms per second and the odd 50 ms frame, read only by exposure.csv and the marks columns). The 5 up-rays still run every 0.25 s for fix 9's roof rain cut under two floors (now gated on their own flag). The sweep resumes by itself when fix 9 is off. Summary counts the skipped frames. Longer term the floors count can come from probe v2's roof test and the exposure probe can go.

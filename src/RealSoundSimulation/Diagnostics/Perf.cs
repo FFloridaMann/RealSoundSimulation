@@ -22,11 +22,50 @@ namespace RealSoundSimulation.Diagnostics
         // 0.6.15: bytes allocated on the main thread per part (raid 31: heap 2.0 -> 3.1 GB, 67 GCs - our share measured)
         private static readonly long[] Bytes = new long[(int)Part.Count];
         private static readonly long[] Alloc0 = new long[MaxDepth], ChildBytes = new long[MaxDepth];
-        private static bool _allocOk = true;
+        // 0.6.17: raid 32's column read 0.0 everywhere - under Unity's Mono the per-thread counter returns 0 without failing.
+        // At startup each counter is tested with a deliberate 64 KB allocation and the first that sees it is used:
+        //   Thread  GC.GetAllocatedBytesForCurrentThread (exact, this thread only)
+        //   Heap    GC.GetTotalMemory(false) deltas (whole managed heap: approximate - other threads count too, and a
+        //           collection inside a part makes the delta negative; those are dropped)
+        //   Mono    Profiler.GetMonoUsedSizeLong deltas (the same, from Unity)
+        public enum AllocSource { None, Thread, Heap, Mono }
+        public static AllocSource Source = AllocSource.None;
+        public static long TestMeasured; // what the chosen counter read for the 64 KB test allocation
+        private static bool _allocOk;
+
+        private static long Read(AllocSource s)
+        {
+            switch (s)
+            {
+                case AllocSource.Thread: return System.GC.GetAllocatedBytesForCurrentThread();
+                case AllocSource.Heap: return System.GC.GetTotalMemory(false);
+                case AllocSource.Mono: return UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
+                default: return 0;
+            }
+        }
+
+        public static void InitAlloc()
+        {
+            foreach (AllocSource s in new[] { AllocSource.Thread, AllocSource.Heap, AllocSource.Mono })
+            {
+                try
+                {
+                    long a0 = Read(s);
+                    byte[] test = new byte[64 * 1024];
+                    test[test.Length - 1] = 1;
+                    long a1 = Read(s);
+                    System.GC.KeepAlive(test);
+                    if (a1 - a0 >= 60000) { Source = s; TestMeasured = a1 - a0; _allocOk = true; break; }
+                }
+                catch { }
+            }
+            RealSoundSimulation.Plugin.Log.LogInfo(_allocOk ? $"Allocation counter: {Source} (64 KB test read as {TestMeasured / 1024.0:0.0} KB)" : "Allocation counter: none works in this runtime");
+        }
+
         private static long Alloc()
         {
             if (!_allocOk) return 0;
-            try { return System.GC.GetAllocatedBytesForCurrentThread(); }
+            try { return Read(Source); }
             catch { _allocOk = false; return 0; }
         }
         private static double _startTime;
@@ -58,8 +97,8 @@ namespace RealSoundSimulation.Diagnostics
             double self = ms - ChildMs[_depth];
             Calls[i]++; TotalMs[i] += self; if (self > MaxMs[i]) MaxMs[i] = self;
             Rays[i] += rays - ChildRays[_depth]; Lookups[i] += look - ChildLook[_depth];
-            long bytes = Alloc() - Alloc0[_depth];
-            Bytes[i] += bytes - ChildBytes[_depth];
+            long bytes = System.Math.Max(0L, Alloc() - Alloc0[_depth]); // heap counters: a collection inside the part reads negative
+            Bytes[i] += System.Math.Max(0L, bytes - ChildBytes[_depth]);
             _depth--;
             if (_depth >= 0 && _depth < MaxDepth) { ChildMs[_depth] += ms; ChildRays[_depth] += rays; ChildLook[_depth] += look; ChildBytes[_depth] += bytes; }
         }
@@ -92,7 +131,7 @@ namespace RealSoundSimulation.Diagnostics
                 sb.AppendLine($"  {Names[i],-44} {Calls[i] / secs,7:0.0} {avg,8:0.000} {MaxMs[i],8:0.00} {perSec,6:0.00} {Rays[i] / secs,8:0} {Lookups[i] / secs,9:0} {(_allocOk ? (Bytes[i] / secs / 1024.0).ToString("0.0").PadLeft(11) : "        n/a")}");
             }
             sb.AppendLine($"  total {total:0.00} ms per second of game time ({total / 10.0:0.00}% of one CPU core), {rays / secs:0} raycasts/s, {look / secs:0} room lookups/s, " +
-                (_allocOk ? $"{bytes / secs / 1024.0:0.0} KB/s allocated ({bytes / 1048576.0:0.0} MB this raid)" : "allocations n/a (runtime has no per-thread counter)"));
+                (_allocOk ? $"{bytes / secs / 1024.0:0.0} KB/s allocated ({bytes / 1048576.0:0.0} MB this raid; counter {Source}, 64 KB test read as {TestMeasured / 1024.0:0.0} KB{(Source == AllocSource.Thread ? "" : ", whole-heap deltas: approximate")})" : "allocations n/a (no counter saw the 64 KB startup test)"));
             return sb.ToString();
         }
 
