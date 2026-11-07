@@ -245,6 +245,7 @@ namespace RealSoundSimulation.Acoustics
 
         public static void Reset()
         {
+            DropPending(); // 0.6.15: nothing may still be writing _hits when the paths are cleared
             Valid = false; Level = Room = Size = HardRoom = Rt60 = MeanFreePath = float.NaN;
             MuzzleRoom = MuzzleSize = MuzzleCoverage = MuzzleHardRoom = float.NaN; _muzzleTime = -10f;
             for (int i = 0; i < Results.Length; i++) Results[i] = default;
@@ -262,6 +263,7 @@ namespace RealSoundSimulation.Acoustics
 
         private void OnDestroy()
         {
+            DropPending();
             if (_cmds.IsCreated) _cmds.Dispose();
             if (_hits.IsCreated) _hits.Dispose();
         }
@@ -270,7 +272,7 @@ namespace RealSoundSimulation.Acoustics
         {
             bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
             if (inRaid && Plugin.RayViewKey.Value.IsDown()) RayView.Toggle();
-            if (!inRaid || !Plugin.AcousticProbeOn.Value) { Valid = false; RayView.Hide(); return; }
+            if (!inRaid || !Plugin.AcousticProbeOn.Value) { DropPending(); Valid = false; RayView.Hide(); return; }
             Perf.Begin();
             try { Step(MonoBehaviourSingleton<SpatialAudioSystem>.Instance); }
             catch (Exception e) { DiagRunner.ReportOnce("acoustic probe v2", e); }
@@ -283,6 +285,7 @@ namespace RealSoundSimulation.Acoustics
             Transform lt = sas.ListenerTransform;
             if (lt == null) return;
             if (!_cmds.IsCreated) { _cmds = new NativeArray<RaycastCommand>(MaxActive, Allocator.Persistent); _hits = new NativeArray<RaycastHit>(MaxActive, Allocator.Persistent); }
+            FinishPending(); // last frame's batch
             int block = EnclosureProbe.CurrentMask();
             int mask = V2Mask(block);
             _blockMask = block;
@@ -333,16 +336,12 @@ namespace RealSoundSimulation.Acoustics
             _acc.UpStarts += _startedUpW; _startedUpW = 0f;
             if (n > 0)
             {
-                JobHandle h = RaycastCommand.ScheduleBatch(_cmds.GetSubArray(0, n), _hits.GetSubArray(0, n), 8, 1);
-                h.Complete();
+                // 0.6.15: the batch runs on the worker threads while the frame goes on; its hits are processed at the start
+                // of the next frame (FinishPending) instead of the main thread waiting here (raid 31 performance review)
+                _pending = RaycastCommand.ScheduleBatch(_cmds.GetSubArray(0, n), _hits.GetSubArray(0, n), 8, 1);
+                JobHandle.ScheduleBatchedJobs();
+                _pendingN = n; _pendingBlock = block; _hasPending = true;
                 RaysCast += n; CountedRay.Rays += n;
-                Stats s = default;
-                for (int k = 0; k < n; k++)
-                {
-                    int i = Idx[k];
-                    Advance(ref Paths[i], i, _hits[k], block, true, ref s);
-                }
-                _acc.Add(s);
             }
             Aggregate();
             if (Time.time >= _nextRow)
@@ -350,6 +349,33 @@ namespace RealSoundSimulation.Acoustics
                 _nextRow = Time.time + 0.125f;
                 if (Valid && DiagLog.IsOpen) DiagLog.Row("probe2.csv", RowCsv(Time.time - DiagRunner.RaidStartTime, lt));
             }
+        }
+
+        // 0.6.15: the batch scheduled last frame (null-safe; also called before anything else reuses _cmds/_hits)
+        private static JobHandle _pending;
+        private static int _pendingN, _pendingBlock;
+        private static bool _hasPending;
+
+        private static void FinishPending()
+        {
+            if (!_hasPending) return;
+            _hasPending = false;
+            _pending.Complete();
+            Stats s = default;
+            for (int k = 0; k < _pendingN; k++)
+            {
+                int i = Idx[k];
+                if (Paths[i].Active) Advance(ref Paths[i], i, _hits[k], _pendingBlock, true, ref s);
+            }
+            _acc.Add(s);
+        }
+
+        // Complete without using the results (probe off, raid over): the paths are simply cast again later.
+        private static void DropPending()
+        {
+            if (!_hasPending) return;
+            _hasPending = false;
+            _pending.Complete();
         }
 
         // "9g Ray quality": paths per second and sweeps averaged (window ~0.6 s at every level)
@@ -994,6 +1020,7 @@ namespace RealSoundSimulation.Acoustics
         public static bool MeasureAt(Vector3 o, Vector3 aim)
         {
             if (!Valid || !_cmds.IsCreated) return false;
+            FinishPending(); // 0.6.15: the continuous batch uses the same buffers
             if (aim.sqrMagnitude > 1e-6f) aim.Normalize();
             if ((o - _muzzleAt).sqrMagnitude < 0.0225f && Time.time - _muzzleTime < 0.1f && Vector3.Dot(aim, _muzzleAim) > 0.995f) return !float.IsNaN(MuzzleRoom);
             Perf.Begin();

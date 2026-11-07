@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.14")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.15")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -111,9 +111,9 @@ namespace RealSoundSimulation
             OverlayOn = Config.Bind(diag, "Overlay", false, "Show the live occlusion overlay (top left) in raid.");
             OverlayKey = Config.Bind(diag, "Overlay key", new KeyboardShortcut(KeyCode.F9), "Toggle the overlay.");
             OverlayRows = Config.Bind(diag, "Overlay rows", 14, new ConfigDescription("Nearest sound containers to list.", new AcceptableValueRange<int>(4, 40)));
-            LogsOn = Config.Bind(diag, "Write logs", true, "Write CSV logs and a summary per raid to BepInEx/RealSoundSimulationLogs.");
-            ContainerLogInterval = Config.Bind(diag, "Container log interval s", 0.5f, new ConfigDescription("How often every sound container's occlusion state is logged.", new AcceptableValueRange<float>(0.1f, 5f)));
-            SourceScanInterval = Config.Bind(diag, "Source scan interval s", 15f, new ConfigDescription("How often playing sources are counted and new rolloff curves dumped (FindObjectsOfType; keep it slow).", new AcceptableValueRange<float>(2f, 60f)));
+            LogsOn = Config.Bind(diag, "Write logs", true, "Write CSV logs and a summary per raid to BepInEx/RealSoundSimulationLogs. Switching it off in raid stops writing log rows at once (the summary is still written at raid end); switching it on starts logging at the next raid.");
+            ContainerLogInterval = Config.Bind(diag, "Container log interval s", 0.5f, new ConfigDescription("How often every sound container's occlusion state is logged (at least every 1 s while there are more than 50 containers).", new AcceptableValueRange<float>(0.1f, 5f)));
+            SourceScanInterval = Config.Bind(diag, "Source scan interval s", 0f, new ConfigDescription("How often every playing source in the scene is counted and new rolloff curves dumped (FindObjectsOfType: ~56 ms each time, a visible hitch). 0 = off (default since 0.6.15); the summary's playing sources in sound containers (every 0.5 s) replaces it.", new AcceptableValueRange<float>(0f, 60f)));
             TimingOn = Config.Bind(diag, "Time the audio systems", true, "Measure milliseconds spent in SpatialAudioSystem and BetterAudio each frame.");
             ProbeOn = Config.Bind(diag, "Enclosure probe", true, "Measure how enclosed the space around you is with 32 short rays every 0.1 s. Logged to probe.csv; used by fix 3c in Enclosure mode. Changes no sound by itself.");
             ExposureProbeOn = Config.Bind(diag, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what (open, glass, bars, other): 48 directions all round (level and 15 deg up), re-measured continuously at about 290 rays per second, plus what is above you (floors, roof). Runs indoors and outdoors. Fix 8 needs it on. Logged to exposure.csv and shown on the overlay.");

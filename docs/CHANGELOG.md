@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.15 — 7 Nov 2026 (raid 31 performance)
+**Run in game:** not yet. From the raid 31 performance review (FFloridaMann-FrameDiag/frames.log and summary.txt). Not done: gating the exposure probe off while fix 9 runs (user: leave it on), and the echo "headroom cap" (not defined; to discuss). The flashlight flicker was another mod (removed); NvgFlash's thermal update (114 ms per hit) is its own project.
+- **`Write logs` is live:** switched off in raid, no more log rows are built or written; settings.txt and summary.txt are still written. Switched on, logging starts at the next raid.
+- **Source scan off by default:** `Source scan interval s` 0 = off, default 0 (range 0–60). FrameDiag put DiagRunner.Update behind 83 frames of ~56 ms: this FindObjectsOfType scan, the plugin's only hitch. The playing-sources count at every container sample (0.6.14) stays. **Your config file was changed to 0** (it held 15; backup in `G:\SPT\_backups`).
+- **containers.csv** at most every 1 s while there are more than 50 containers (raid 31: 167 × 2/s).
+- **Allocations measured:** COST has an `alloc KB/s` column per part and a total (bytes allocated on the main thread during each part, `GC.GetAllocatedBytesForCurrentThread`; "n/a" if the runtime lacks it). Raid 31's heap grew 2.0 → 3.1 GB with 67 GCs; this shows our share.
+- **Echo voices priority 220** (was 40): when Unity runs short of real voices, game sounds keep theirs and ours go virtual first.
+- **Probe v2's ray batch finishes on the next frame:** scheduled and left running on the worker threads; completed and processed at the start of the next frame, instead of the main thread waiting for it. The muzzle measure, the raid reset and switching the probe off finish or drop it first (they share its buffers). The probe's results are one frame later than before.
+
 ## 0.6.14 — 7 Nov 2026 (raid 30 fixes + the queued raid 29 items)
 **Run in game:** not yet. From the build request after raid 30 (raid_20261107_135517, 0.6.13): tag 1 ambience good; gunfire inside → outside better (the tail played at the window with the mix at 0.81–0.94 indoor, so 3m's gate stays 0.5). Problems: tag 2 rain too loud deep inside, the garage-mouth gunshot mix flipping abruptly, stairwell rain slow to start and stop, the echo pool saturated.
 - **Probe v2: untagged surfaces absorb more.** Material None (e.g. `Capital_corridor_1F_COLLIDER`) 0.06 → 0.15 absorption, scattering 0.3 → 0.4, brightness 10 → 8 kHz. Tag 2: 185 of 192 paths trapped, the one escape kept 84% after 8 bounces, level −15 dB with 90% build-up. Tagged materials unchanged (materials overhaul).

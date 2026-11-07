@@ -19,6 +19,16 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly long[] Calls = new long[(int)Part.Count];
         private static readonly double[] TotalMs = new double[(int)Part.Count], MaxMs = new double[(int)Part.Count];
         private static readonly long[] Rays = new long[(int)Part.Count], Lookups = new long[(int)Part.Count];
+        // 0.6.15: bytes allocated on the main thread per part (raid 31: heap 2.0 -> 3.1 GB, 67 GCs - our share measured)
+        private static readonly long[] Bytes = new long[(int)Part.Count];
+        private static readonly long[] Alloc0 = new long[MaxDepth], ChildBytes = new long[MaxDepth];
+        private static bool _allocOk = true;
+        private static long Alloc()
+        {
+            if (!_allocOk) return 0;
+            try { return System.GC.GetAllocatedBytesForCurrentThread(); }
+            catch { _allocOk = false; return 0; }
+        }
         private static double _startTime;
         private static readonly double TickMs = 1000.0 / Stopwatch.Frequency;
 
@@ -35,6 +45,7 @@ namespace RealSoundSimulation.Diagnostics
             StartTs[_depth] = Stopwatch.GetTimestamp(); ChildMs[_depth] = 0;
             Rays0[_depth] = Acoustics.CountedRay.Rays; Look0[_depth] = Acoustics.CountedRay.Lookups;
             ChildRays[_depth] = ChildLook[_depth] = 0;
+            Alloc0[_depth] = Alloc(); ChildBytes[_depth] = 0;
         }
 
         public static void End(Part p)
@@ -47,13 +58,15 @@ namespace RealSoundSimulation.Diagnostics
             double self = ms - ChildMs[_depth];
             Calls[i]++; TotalMs[i] += self; if (self > MaxMs[i]) MaxMs[i] = self;
             Rays[i] += rays - ChildRays[_depth]; Lookups[i] += look - ChildLook[_depth];
+            long bytes = Alloc() - Alloc0[_depth];
+            Bytes[i] += bytes - ChildBytes[_depth];
             _depth--;
-            if (_depth >= 0 && _depth < MaxDepth) { ChildMs[_depth] += ms; ChildRays[_depth] += rays; ChildLook[_depth] += look; }
+            if (_depth >= 0 && _depth < MaxDepth) { ChildMs[_depth] += ms; ChildRays[_depth] += rays; ChildLook[_depth] += look; ChildBytes[_depth] += bytes; }
         }
 
         public static void Reset(double now)
         {
-            for (int i = 0; i < (int)Part.Count; i++) { Calls[i] = 0; TotalMs[i] = MaxMs[i] = 0; Rays[i] = Lookups[i] = 0; }
+            for (int i = 0; i < (int)Part.Count; i++) { Calls[i] = 0; TotalMs[i] = MaxMs[i] = 0; Rays[i] = Lookups[i] = 0; Bytes[i] = 0; }
             _startTime = now; _depth = -1;
         }
 
@@ -69,16 +82,17 @@ namespace RealSoundSimulation.Diagnostics
             double secs = System.Math.Max(1.0, now - _startTime);
             var sb = new StringBuilder();
             sb.AppendLine("COST (Real Sound Simulation, main thread)");
-            sb.AppendLine("  part                                          calls/s   avg ms   max ms   ms/s    rays/s  lookups/s");
-            double total = 0; long rays = 0, look = 0;
+            sb.AppendLine("  part                                          calls/s   avg ms   max ms   ms/s    rays/s  lookups/s   alloc KB/s");
+            double total = 0; long rays = 0, look = 0, bytes = 0;
             for (int i = 0; i < (int)Part.Count; i++)
             {
                 if (Calls[i] == 0) continue;
                 double avg = TotalMs[i] / Calls[i], perSec = TotalMs[i] / secs;
-                total += perSec; rays += Rays[i]; look += Lookups[i];
-                sb.AppendLine($"  {Names[i],-44} {Calls[i] / secs,7:0.0} {avg,8:0.000} {MaxMs[i],8:0.00} {perSec,6:0.00} {Rays[i] / secs,8:0} {Lookups[i] / secs,9:0}");
+                total += perSec; rays += Rays[i]; look += Lookups[i]; bytes += Bytes[i];
+                sb.AppendLine($"  {Names[i],-44} {Calls[i] / secs,7:0.0} {avg,8:0.000} {MaxMs[i],8:0.00} {perSec,6:0.00} {Rays[i] / secs,8:0} {Lookups[i] / secs,9:0} {(_allocOk ? (Bytes[i] / secs / 1024.0).ToString("0.0").PadLeft(11) : "        n/a")}");
             }
-            sb.AppendLine($"  total {total:0.00} ms per second of game time ({total / 10.0:0.00}% of one CPU core), {rays / secs:0} raycasts/s, {look / secs:0} room lookups/s");
+            sb.AppendLine($"  total {total:0.00} ms per second of game time ({total / 10.0:0.00}% of one CPU core), {rays / secs:0} raycasts/s, {look / secs:0} room lookups/s, " +
+                (_allocOk ? $"{bytes / secs / 1024.0:0.0} KB/s allocated ({bytes / 1048576.0:0.0} MB this raid)" : "allocations n/a (runtime has no per-thread counter)"));
             return sb.ToString();
         }
 

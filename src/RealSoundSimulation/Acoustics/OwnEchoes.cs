@@ -647,7 +647,7 @@ namespace RealSoundSimulation.Acoustics
                 src.spread = 0f;
                 src.reverbZoneMix = 0f;
                 src.bypassReverbZones = true;
-                src.priority = 40;
+                src.priority = 220; // 0.6.15 (was 40): when Unity runs short of real voices, game sounds keep theirs and ours go virtual first
                 src.rolloffMode = AudioRolloffMode.Custom;
                 src.maxDistance = 100000f;
                 src.SetCustomCurve(AudioSourceCurveType.CustomRolloff, _flat);

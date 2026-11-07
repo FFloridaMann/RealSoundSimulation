@@ -166,7 +166,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private void RaidEnd()
         {
-            if (DiagLog.IsOpen) DiagLog.Text("summary.txt", BuildSummary());
+            if (DiagLog.HasRaidDir) DiagLog.Text("summary.txt", BuildSummary());
             DiagLog.Close();
             _overlayText = "";
         }
@@ -187,7 +187,8 @@ namespace RealSoundSimulation.Diagnostics
                 CollectRows(sas);
                 if (now >= _nextContainerLog)
                 {
-                    _nextContainerLog = now + Plugin.ContainerLogInterval.Value;
+                    // 0.6.15: every 1 s when there are more than 50 containers (raid 31: 167 containers x 2/s was the largest row writer)
+                    _nextContainerLog = now + (_rows.Count > 50 ? Mathf.Max(1f, Plugin.ContainerLogInterval.Value) : Plugin.ContainerLogInterval.Value);
                     if (DiagLog.IsOpen) WriteRows(now - _raidStart);
                 }
                 if (Plugin.OverlayOn.Value && now >= _nextOverlay)
@@ -197,7 +198,9 @@ namespace RealSoundSimulation.Diagnostics
                 }
             }
 
-            if (now >= _nextScan)
+            // 0.6.15: 0 = off (the default). Raid 31: FrameDiag found this FindObjectsOfType scan behind 83 frames of ~56 ms -
+            // the plugin's only hitch. The playing-sources count at every container sample (0.6.14) replaces it.
+            if (Plugin.SourceScanInterval.Value > 0f && now >= _nextScan)
             {
                 _nextScan = now + Plugin.SourceScanInterval.Value;
                 Perf.Begin();
@@ -415,7 +418,9 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine($"  active occlusion processors: avg {(_activeSamples == 0 ? 0 : (double)_activeSum / _activeSamples):0.0}  max {_maxActive}   (BSG updates ONE per frame -> #8/#16)");
             sb.AppendLine($"  sound containers seen at once: max {_maxContainers}");
             var cfg = AudioSettings.GetConfiguration();
-            sb.AppendLine($"  playing sources (all, FindObjectsOfType every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})");
+            sb.AppendLine(Plugin.SourceScanInterval.Value > 0f
+                ? $"  playing sources (all, FindObjectsOfType every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})"
+                : $"  playing sources (all): source scan off (Source scan interval s = 0); realVoices {cfg.numRealVoices}");
             sb.AppendLine($"  playing sources in sound containers (counted at every container sample, every {Plugin.ContainerLogInterval.Value:0.0} s): max {_maxContainerPlaying}; our echo voices max busy {Acoustics.OwnEchoes.MaxBusy} of {Acoustics.EchoVoices.PoolSize}");
             sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");

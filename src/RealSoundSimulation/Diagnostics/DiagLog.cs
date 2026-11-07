@@ -36,7 +36,10 @@ namespace RealSoundSimulation.Diagnostics
 
         public static string RootDir => Path.Combine(BepInEx.Paths.BepInExRootPath, "RealSoundSimulationLogs");
         public static string RaidDir { get; private set; }
-        public static bool IsOpen => RaidDir != null;
+        // 0.6.15: "Write logs" is live - switched off in raid, no more rows are built or written (callers check IsOpen);
+        // the summary is still written (HasRaidDir)
+        public static bool IsOpen => RaidDir != null && Plugin.LogsOn.Value;
+        public static bool HasRaidDir => RaidDir != null;
 
         public static void Open()
         {
@@ -47,7 +50,7 @@ namespace RealSoundSimulation.Diagnostics
 
         public static void Row(string file, string line)
         {
-            if (RaidDir == null) return;
+            if (RaidDir == null || !Plugin.LogsOn.Value) return;
             if (!Writers.TryGetValue(file, out StreamWriter w))
             {
                 w = new StreamWriter(Path.Combine(RaidDir, file), false, new UTF8Encoding(false), 1 << 16);
@@ -59,7 +62,7 @@ namespace RealSoundSimulation.Diagnostics
 
         public static void Text(string file, string text)
         {
-            if (RaidDir == null) return;
+            if (RaidDir == null) return; // settings.txt and summary.txt: written even with "Write logs" switched off mid-raid
             File.WriteAllText(Path.Combine(RaidDir, file), text);
         }
 
