@@ -25,6 +25,8 @@ namespace RealSoundSimulation.Diagnostics
             ["probe2.csv"] = Acoustics.AcousticProbe.Header,
             ["paths.csv"] = Acoustics.AcousticProbe.PathsHeader,
             ["rain.csv"] = "t,environment,intensity,clip,targetVolume,gameWouldSilence,fixOn",
+            ["rain2.csv"] = Fixes.AmbienceMix.RainHeader,
+            ["distant.csv"] = Fixes.DistantThroughOpenings.Header,
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
             ["transitions.csv"] = "t,system,now,x,y,z,fadeS,room",
             ["ambience.csv"] = "t,x,y,z,snapshotIndoor,roomIndoor,outdoorAmbience,doorwayTarget,doorwayApplied,doorwayPortals,portalId,throughPlaneM,sidewaysM,exposureApplied,indoorLayers,bedPan,bedCutoffHz,roofRainFactor,openingShare,openingVoices,opening1Az,opening1Gain",

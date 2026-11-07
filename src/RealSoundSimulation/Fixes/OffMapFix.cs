@@ -26,8 +26,22 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.OffMapOn.Value || sourceContainer == null) return;
             try
             {
+                // 0.6.8 "9k": sounds we've moved through the openings keep the game's loss at 0 (we set their level),
+                // even if their moved position lands inside the map
+                if (DistantThroughOpenings.Handles(sourceContainer))
+                {
+                    __instance._propagationScore = 0f; __instance._earlyOutThisFrame = true; Applied++;
+                    DistantThroughOpenings.Register(sourceContainer);
+                    return;
+                }
                 ISpatialAudioRoom room = sourceContainer.CurrentAudioRoom;
                 if (room != null && room.IsValid) return;
+                DistantThroughOpenings.Register(sourceContainer);
+                if (DistantThroughOpenings.Handles(sourceContainer))
+                {
+                    __instance._propagationScore = 0f; __instance._earlyOutThisFrame = true; Applied++;
+                    return;
+                }
 
                 float o = DoorwayBlend.TargetOutdoorness;
                 float score;

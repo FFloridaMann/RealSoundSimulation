@@ -73,7 +73,7 @@ namespace RealSoundSimulation.Fixes
 
         private static void V2Smooth(float dt)
         {
-            float lv = Mathf.Max(AcousticProbe.Level, 1e-4f), cut = Mathf.Max(AcousticProbe.CutoffHz, 100f);
+            float lv = Mathf.Max(AcousticProbe.Level, 1e-6f), cut = Mathf.Max(AcousticProbe.CutoffHz, 100f); // 0.6.8: down to -60 dB (was -40)
             if (float.IsNaN(V2Level)) { V2Level = lv; V2Cutoff = cut; V2Indoor = AcousticProbe.Enclosed; _coverSm = AcousticProbe.Coverage; return; }
             // 0.6.4: averaged longer when few probe paths get out (AcousticProbe.SmoothS 0.35..2.5 s)
             float a = 1f - Mathf.Exp(-dt / Mathf.Max(Smooth, AcousticProbe.SmoothS));
@@ -151,6 +151,26 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        // 0.6.8: the game's indoor rain player, every 0.25 s (raid 27: roof rain went silent at car dealer spots while our
+        // factor held at 0.55). rain2.csv.
+        private static float _nextRainRow;
+        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer";
+        private static void LogRain()
+        {
+            if (!DiagLog.IsOpen || Time.time < _nextRainRow) return;
+            _nextRainRow = Time.time + 0.25f;
+            float t = Time.time - DiagRunner.RaidStartTime;
+            for (int i = 0; i < RainSrc.Count; i++)
+            {
+                AudioSource s = RainSrc[i];
+                if (s == null) continue;
+                DiagLog.Row("rain2.csv", string.Join(",", DiagLog.F(t, "0.00"), i.ToString(), s.clip != null ? s.clip.name : "", s.clip != null ? s.clip.channels.ToString() : "",
+                    s.isPlaying ? "1" : "0", s.isVirtual ? "1" : "0", s.mute ? "1" : "0", i < _rainGame.Length ? DiagLog.F(_rainGame[i]) : "", DiagLog.F(RoofRainApplied),
+                    DiagLog.F(s.volume), DiagLog.F(s.spatialBlend), DiagLog.F(s.spread, "0"), s.spatialize ? "1" : "0",
+                    s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : ""));
+            }
+        }
+
         private static void RestoreRain()
         {
             if (!_rainTracking) return;
@@ -212,6 +232,7 @@ namespace RealSoundSimulation.Fixes
                     if (Time.time - _roofCandidateSince >= 0.5f) RoofRainFactor = _roofCandidate;
                 }
                 RoofRain(dt);
+                LogRain();
 
                 if (v2)
                 {

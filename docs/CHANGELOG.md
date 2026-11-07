@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.8 — 7 Nov 2026 (exit points, rain from openings, distant gunfire through openings; Meta leak fixed)
+**Run in game:** not yet (installed 11:51). User: "build .6.8 and give me a toggle for Exit points and the ambient gunfire mod through openings".
+- **Exit points:** for escaping paths while you're inside (~200 a second), where the escaping leg leaves cover (roof tests along it, refined): the window or door it went out of.
+- **`9j Rain from openings`** (on): indoors, the outdoor sound's direction points at the exit points instead of where the sound first reaches you.
+- **`9k Distant gunfire through openings`** (on, needs fix 4): when you're inside, the ambient gunfire mod's distant battles (off-map, ≥ 80 m) are moved to come through the openings that face them, at the level that gets in (√ of the probe's transmission from that direction), blended with how enclosed you are. Replaces fix 4's doorway muffling for them. distant.csv.
+- **Meta HRTF leak fixed:** in `9c` MetaHrtf mode, Meta's own reflections and reverb send are off on the moved sources (raid 27 tag 1: rain heard where the level was 0).
+- **Level floor −60 dB** (was −40).
+- **rain2.csv:** the game's indoor rain player every 0.25 s, to find the car dealer roof rain on/off (raid 27 tags 2–5).
+- 4 new self-check targets (112).
+
 ## 0.6.7 — 7 Nov 2026 (direction from where the sound arrives; roof rain traced from the roof)
 **Run in game:** raid 27 (11:25, rain). Meta HRTF leaks rain where the level is 0 (its own reverb send); car dealer roof rain on/off by tag with our factor steady; stairwell faint rain from the build-up. Fix 9 only.
 - **Raid 26 (0.6.6):** "overall an improvement", garage good, deep rooms much quieter. Still: rain a little "through the walls" deep inside (wind too), "maybe it was better when sounds from openings slid to 100%"; car dealer roof rain stopping or getting quieter suddenly; overlay "focus near" jumping 0–0.5.

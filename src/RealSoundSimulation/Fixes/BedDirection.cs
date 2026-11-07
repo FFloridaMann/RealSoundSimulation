@@ -88,6 +88,10 @@ namespace RealSoundSimulation.Fixes
                 {
                     if (!src.spatialize) src.spatialize = true;
                     src.SetSpatializerFloat(4, Mathf.Lerp(3f, 0.3f, Focus)); // Meta: volumetric radius (m)
+                    // 0.6.8 (raid 27): Meta's own reflections and reverb send bypass the outdoor volume fix 9 sets (rain was
+                    // heard where the level was 0). The probe already does the room: switch them off.
+                    src.SetSpatializerFloat(5, 1f);    // disable reflections
+                    src.SetSpatializerFloat(11, -60f); // reverb send dB
                     src.spread = 0f;
                 }
                 else

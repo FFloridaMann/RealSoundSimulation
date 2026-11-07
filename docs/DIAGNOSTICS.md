@@ -144,6 +144,12 @@ All 48 exposure directions at that moment: `ray`, `azimuthDeg` (relative to wher
 ### rain.csv (each time a rain player picks a clip)
 `environment` (Indoor/Outdoor player), `intensity`, `clip`, `targetVolume`, `gameWouldSilence` (1 = the game's own code would have faded the rain out here; fix 7), `fixOn`.
 
+### rain2.csv (0.6.8, every 0.25 s: the game's indoor rain player)
+One row per source (the player has two, for crossfades): `clip`, `channels`, `playing`, `virtual` (Unity dropped it for lack of voices), `mute`, `gameVolume` (what the game set), `ourFactor` (roof rain factor applied), `volume` (what plays), `spatialBlend`, `spread`, `spatialize`, `mixer`. Raid 27: the car dealer's roof rain went silent at some spots while our factor held.
+
+### distant.csv (0.6.8, every 0.25 s per sound, `9k`)
+Each off-map sound moved through the openings: `source` (id), `distanceM`, `trueAz` (where it really is, relative to where you face), `heardAz` (where it's placed), `transmission` (0–1, how much gets in from its direction), `gain` (√ of that, blended by enclosed), `enclosed`, `clip`. The summary has a DISTANT GUNFIRE THROUGH OPENINGS line; ACOUSTIC PROBE V2 counts exit points found and not found. paths.csv gains `exitPointAz`, `exitPointM`.
+
 ### gunsounds.csv (setting 0, 0.6.3: each time a gun switches between SPT and SEB, or can't)
 `player` (id), `firstPerson`, `gun` (the gun's Body bank as the game set it, e.g. `akm_main`), `auto` (1 = can fire full-auto), `set` (SPT/SEB), `reason` (why it stays SPT: `full-auto gun (0a off)`, `not in SEB`, `SEB loading`, `SEB load failed`, `seb_sounds not built`; empty when switched to SEB), `banksSwapped` (how many of the six banks came from SEB). One row per change, not per shot. The summary's GUN SOUNDS line counts SEB banks loaded, bundles, load failures and switches.
 

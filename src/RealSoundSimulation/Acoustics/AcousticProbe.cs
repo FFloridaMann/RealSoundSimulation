@@ -70,6 +70,11 @@ namespace RealSoundSimulation.Acoustics
     //   towards where escaping paths left the building (each escape's last contact: the glass or frame it passed through,
     //   or the last surface it came off), energy-weighted over ~3 s, never fully focused (x0.6: a diffuse field
     //   surrounds you). Arrival/Focus = the sum of both.
+    // 0.6.8 EXIT POINTS (user: "the rain would come from the window or door itself"): for escaping paths while you're
+    //   inside (up to ~200 a second), the point where the escaping leg leaves cover - roof tests along it at 0, 0.75, 1.5,
+    //   3 ... 48 m, then halved twice - i.e. the window or door it went out of. With "9j Rain from openings" the rain's
+    //   direction points at those exit points (near part and build-up) instead of the first leg. Through(s): how much
+    //   sound from horizontal direction s gets in and from where (exit points), for "9k Distant gunfire through openings".
     // 0.6.7 (raid 26): (a) the build-up's direction is where escaping paths ARRIVE from at you - their first leg, energy-
     //   weighted over ~3 s, deep escapes counted x2 (only half the paths go deep). By reciprocity that is the direction the
     //   outside's energy reaches you from (the acoustic intensity), e.g. through your room's door towards the open part of
@@ -114,6 +119,7 @@ namespace RealSoundSimulation.Acoustics
             public float PathLen;
             public float W;     // importance weight (1 = an even direction with no openings known)
             public Vector3 Exit; // escaped: direction from you to where it left the building (0.6.5)
+            public Vector3 Out, ExitPt; public bool HasExit; // 0.6.8: escaping leg's direction; exit point (window/door)
         }
 
         private struct PathState
@@ -130,6 +136,7 @@ namespace RealSoundSimulation.Acoustics
             public int Layer;
             public float Len;
             public Result Rep;
+            public Vector3 ExitPt; public bool HasExitPt;
             public Vector3 LastPt, ExitDir;
             public bool HasLast, RoofDone;
             public int LastPassId, LastPassCast;
@@ -143,12 +150,14 @@ namespace RealSoundSimulation.Acoustics
             public double OldEsc, OldLeg;               // 0.6.3's leak rate: rays, legs after 2-3 reflections (log only)
             public double DeepBase, DeepEsc, DeepRem;   // energy at the 3rd reflection, escaping in 4-8, still bouncing after
             public double ExX, ExY, ExZ, ExW, ExN;      // 0.6.7: first-leg directions of escaping paths (energy-weighted)
+            public double XxX, XxY, XxZ, XxW, XxN; // 0.6.8: directions to exit points (energy-weighted)
             public double RoofE, RoofX, RoofY, RoofZ, RoofN, Starts; // 0.6.7: energy reaching the top roof, its first legs; paths
             public void Scale(double k)
             {
                 Alpha *= k; Hits *= k; Len *= k; LenN *= k; CutLog *= k; LateEsc *= k; LateLeg *= k; LateLegN *= k;
                 OldEsc *= k; OldLeg *= k; DeepBase *= k; DeepEsc *= k; DeepRem *= k;
                 ExX *= k; ExY *= k; ExZ *= k; ExW *= k; ExN *= k;
+                XxX *= k; XxY *= k; XxZ *= k; XxW *= k; XxN *= k;
                 RoofE *= k; RoofX *= k; RoofY *= k; RoofZ *= k; RoofN *= k; Starts *= k;
             }
             public void Add(in Stats o)
@@ -157,6 +166,7 @@ namespace RealSoundSimulation.Acoustics
                 LateLeg += o.LateLeg; LateLegN += o.LateLegN; OldEsc += o.OldEsc; OldLeg += o.OldLeg;
                 DeepBase += o.DeepBase; DeepEsc += o.DeepEsc; DeepRem += o.DeepRem;
                 ExX += o.ExX; ExY += o.ExY; ExZ += o.ExZ; ExW += o.ExW; ExN += o.ExN;
+                XxX += o.XxX; XxY += o.XxY; XxZ += o.XxZ; XxW += o.XxW; XxN += o.XxN;
                 RoofE += o.RoofE; RoofX += o.RoofX; RoofY += o.RoofY; RoofZ += o.RoofZ; RoofN += o.RoofN; Starts += o.Starts;
             }
         }
@@ -206,7 +216,9 @@ namespace RealSoundSimulation.Acoustics
             Rt60 = float.NaN, RelErr, SmoothS = 0.35f, FocusEarly, FocusBuildUp, BuildUpCount, RoofLevel, RoofFocus, RoofPaths;
         public static int Escapes;
         public static Vector3 Arrival = Vector3.forward, BuildUpDir, RoofArrival = Vector3.up;
-        public static long RoofTests;
+        public static long RoofTests, ExitsFound, ExitsMissed;
+        private static float _exitBudget;
+        private const float ExitsPerSecond = 200f;
         private static readonly Dictionary<long, bool> RoofCache = new Dictionary<long, bool>();
         public static long BackfaceHits, ExitFacesSkipped, SkyRejected;
         public static MaterialType RoofMat = MaterialType.None;
@@ -227,7 +239,7 @@ namespace RealSoundSimulation.Acoustics
             for (int i = 0; i < MaxLobes; i++) Lobes[i] = default;
             _gN = 0; Openings = MaxOpenings = 0; GuidedPaths = 0; SmoothS = 0.35f; RelErr = 0f; Escapes = 0;
             BackfaceHits = ExitFacesSkipped = SkyRejected = 0; FocusEarly = FocusBuildUp = BuildUpCount = RoofLevel = RoofFocus = RoofPaths = 0f; BuildUpDir = Vector3.zero; RoofArrival = Vector3.up;
-            RoofTests = 0; RoofCache.Clear();
+            RoofTests = 0; RoofCache.Clear(); ExitsFound = ExitsMissed = 0; _exitBudget = 0f;
             KindCache.Clear(); _layer = 0; _cursor = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
             _acc = default;
@@ -259,6 +271,7 @@ namespace RealSoundSimulation.Acoustics
             if (!_cmds.IsCreated) { _cmds = new NativeArray<RaycastCommand>(MaxActive, Allocator.Persistent); _hits = new NativeArray<RaycastHit>(MaxActive, Allocator.Persistent); }
             int block = EnclosureProbe.CurrentMask();
             int mask = V2Mask(block);
+            _blockMask = block;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 0f);
             _listener = lt.position;
 
@@ -269,6 +282,7 @@ namespace RealSoundSimulation.Acoustics
             // start new paths
             ApplyQuality();
             _budget = Mathf.Min(_budget + _rate * dt, Mathf.Max(32f, _rate * 0.1f));
+            _exitBudget = Mathf.Min(_exitBudget + ExitsPerSecond * dt, 20f);
             for (int i = 0; i < MaxActive && _budget >= 1f; i++)
             {
                 if (Paths[i].Active) continue;
@@ -535,11 +549,24 @@ namespace RealSoundSimulation.Acoustics
             // came off); a straight escape: its direction
             Vector3 ex = p.D;
             if (p.HasLast) { Vector3 v = p.LastPt - _listener; if (v.sqrMagnitude > 0.25f) ex = v.normalized; }
-            p.ExitDir = ex; // logged (paths.csv); the exit points for distant sounds will build on it
+            p.ExitDir = ex; // logged (paths.csv)
             float e = p.E * p.W;
+            // 0.6.8: the exit point (where this leg leaves cover), while you're inside, within the budget
+            p.HasExitPt = false;
+            if (Enclosed > 0.2f && _exitBudget >= 1f)
+            {
+                _exitBudget -= 1f;
+                p.HasExitPt = FindExit(p.O, p.D, _blockMask, out p.ExitPt);
+                if (p.HasExitPt) ExitsFound++; else ExitsMissed++;
+            }
             // 0.6.7: the build-up's direction = where escaping paths arrive from at you (first leg), deep ones x2
             float ed = p.Reported ? e / DeepShare : e;
             s.ExX += p.First.x * ed; s.ExY += p.First.y * ed; s.ExZ += p.First.z * ed; s.ExW += ed; s.ExN++;
+            if (p.HasExitPt)
+            {
+                Vector3 xv = p.ExitPt - _listener;
+                if (xv.sqrMagnitude > 0.25f) { xv.Normalize(); s.XxX += xv.x * ed; s.XxY += xv.y * ed; s.XxZ += xv.z * ed; s.XxW += ed; s.XxN++; }
+            }
             if (!p.Reported) Report(ref p, fate);
             else s.DeepEsc += e;
             View(ref p, slot, fate);
@@ -557,6 +584,58 @@ namespace RealSoundSimulation.Acoustics
             roof = !CountedRay.Raycast(top, Vector3.down, out RaycastHit h, 40f, _mask, QueryTriggerInteraction.Ignore) || h.point.y <= pt.y + 1.5f;
             RoofCache[key] = roof;
             return roof;
+        }
+
+        private static int _blockMask;
+
+        // 0.6.8: where an escaping leg (from o, direction d) leaves cover: the first point along it with no roof above,
+        // sampled at 0, 0.75, 1.5, 3, 6, 12, 24, 48 m and refined twice. At most 10 short casts.
+        private static readonly float[] ExitSteps = { 0.75f, 1.5f, 3f, 6f, 12f, 24f, 48f };
+        private static bool FindExit(Vector3 o, Vector3 d, int block, out Vector3 pt)
+        {
+            if (!RoofAbove(o - Vector3.up * 0.5f, block)) { pt = o; return true; }
+            float prev = 0f;
+            for (int i = 0; i < ExitSteps.Length; i++)
+            {
+                float t = ExitSteps[i];
+                if (RoofAbove(o + d * t - Vector3.up * 0.5f, block)) { prev = t; continue; }
+                float lo = prev, hi = t;
+                for (int k = 0; k < 2; k++) { float mid = 0.5f * (lo + hi); if (RoofAbove(o + d * mid - Vector3.up * 0.5f, block)) lo = mid; else hi = mid; }
+                pt = o + d * hi;
+                return true;
+            }
+            pt = default;
+            return false;
+        }
+
+        // 0.6.8, "9k": how much sound from horizontal direction s (unit, from you) gets in, 0..1 (open air ~1), and from
+        // where: escaping paths whose last leg heads that way (cos^2 of the horizontal part), energy-weighted, x6 (the open-air
+        // average of that lobe is 1/6), towards their exit points (else first legs); plus the build-up, leaning the way
+        // the building's sound arrives.
+        public static float Through(Vector3 s, out Vector3 dir)
+        {
+            float l = 0f; Vector3 acc = Vector3.zero; int n = 0;
+            for (int i = 0; i < Results.Length; i++)
+            {
+                ref Result r = ref Results[i];
+                if (r.Fate == Fate.None) continue;
+                n++;
+                float e = (r.Direct + r.Reflected) * r.W;
+                if (e <= 0f) continue;
+                float c = r.Out.x * s.x + r.Out.z * s.z;
+                if (c <= 0f) continue;
+                float g = e * c * c;
+                l += g;
+                Vector3 d = r.First;
+                if (r.HasExit) { Vector3 v = r.ExitPt - _listener; if (v.sqrMagnitude > 0.25f) d = v.normalized; }
+                acc += d * g;
+            }
+            if (n == 0 || !Valid) { dir = Arrival; return float.IsNaN(Level) ? 1f : Level; }
+            float ld = Mathf.Clamp01(6f * l / n);
+            float t = Mathf.Clamp01(ld + Tail);
+            Vector3 v2 = (acc.sqrMagnitude > 1e-12f ? acc.normalized * ld : Vector3.zero) + Arrival * (Tail * 0.5f);
+            dir = v2.sqrMagnitude > 1e-10f ? v2.normalized : Arrival;
+            return t;
         }
 
         private static bool RoofAbove(Vector3 end, int block)
@@ -588,7 +667,7 @@ namespace RealSoundSimulation.Acoustics
             else r.Remaining = p.E;
             r.Geo = escaped && p.GeoBounces <= 1 ? p.G : 0f;
             r.PathLen = p.Len;
-            if (escaped) r.Exit = p.ExitDir;
+            if (escaped) { r.Exit = p.ExitDir; r.Out = p.D; r.HasExit = p.HasExitPt; r.ExitPt = p.ExitPt; }
             Results[(p.Layer < Sweeps ? p.Layer : 0) * M + p.Dir] = r; // a path started before a quality change
             p.Rep = r;
             PathsDone++;
@@ -732,6 +811,7 @@ namespace RealSoundSimulation.Acoustics
 
         private static void Aggregate()
         {
+            bool exitsMode = Plugin.RainFromOpenings.Value; // 0.6.8 "9j"
             float direct = 0f, refl = 0f, rem = 0f, geo = 0f, eW = 0f, pW = 0f, c2 = 0f; double cutLog = 0; Vector3 arr = Vector3.zero;
             int n = 0, up = 0, upHit = 0, esc = 0;
             Array.Clear(RoofCount, 0, RoofCount.Length);
@@ -749,7 +829,9 @@ namespace RealSoundSimulation.Acoustics
                     eW += e; cutLog += e * Math.Log(Mathf.Max(r.Cut, 100f));
                     // precedence: you place a sound where its EARLIEST arrival comes from, so short paths decide the direction
                     float pw = e * Mathf.Exp(-r.PathLen / PrecedenceM);
-                    arr += r.First * pw; pW += pw;
+                    Vector3 fd = r.First;
+                    if (exitsMode && r.HasExit) { Vector3 xv = r.ExitPt - _listener; if (xv.sqrMagnitude > 0.25f) fd = xv.normalized; }
+                    arr += fd * pw; pW += pw;
                 }
                 if (!r.Guided && r.First.y > 0.6f) // coverage counts directions, so only the even ones
                 {
@@ -795,9 +877,11 @@ namespace RealSoundSimulation.Acoustics
             float essE = c2 > 1e-12f ? eW * eW / c2 : 0f;
             FocusEarly = pW > 1e-8f ? Mathf.Clamp01(arr.magnitude / pW) * essE / (essE + 3f) : 0f;
             Vector3 aE = arr.sqrMagnitude > 1e-12f ? arr.normalized : Vector3.zero;
-            Vector3 ex = new Vector3((float)_acc.ExX, (float)_acc.ExY, (float)_acc.ExZ);
-            BuildUpCount = (float)_acc.ExN;
-            FocusBuildUp = _acc.ExW > 1e-9 ? Mathf.Clamp01(ex.magnitude / (float)_acc.ExW) * BuildUpCount / (BuildUpCount + 5f) : 0f;
+            bool useX = exitsMode && _acc.XxN > 2;
+            Vector3 ex = useX ? new Vector3((float)_acc.XxX, (float)_acc.XxY, (float)_acc.XxZ) : new Vector3((float)_acc.ExX, (float)_acc.ExY, (float)_acc.ExZ);
+            BuildUpCount = (float)(useX ? _acc.XxN : _acc.ExN);
+            double exW = useX ? _acc.XxW : _acc.ExW;
+            FocusBuildUp = exW > 1e-9 ? Mathf.Clamp01(ex.magnitude / (float)exW) * BuildUpCount / (BuildUpCount + 5f) : 0f;
             BuildUpDir = ex.sqrMagnitude > 1e-12f ? ex.normalized : Vector3.zero;
             float wE = 1f - DiffuseShare;
             Vector3 dir = aE * (FocusEarly * wE) + BuildUpDir * (FocusBuildUp * DiffuseShare * DiffuseFocus);
@@ -924,7 +1008,7 @@ namespace RealSoundSimulation.Acoustics
             return f.sqrMagnitude > 1e-4f && d.sqrMagnitude > 1e-6f ? Vector3.SignedAngle(f, d, Vector3.up) : float.NaN;
         }
 
-        public const string PathsHeader = "t,mark,dir,azimuthDeg,elevationDeg,fate,casts,direct,reflected,remaining,geo,cutoffHz,viaGlass,guided,weight,finalFate,exitAz,exitEl,hits";
+        public const string PathsHeader = "t,mark,dir,azimuthDeg,elevationDeg,fate,casts,direct,reflected,remaining,geo,cutoffHz,viaGlass,guided,weight,finalFate,exitAz,exitEl,exitPointAz,exitPointM,hits";
 
         // F10: every slot's latest path (paths.csv)
         public static void DumpPaths(int mark, float t)
@@ -948,6 +1032,7 @@ namespace RealSoundSimulation.Acoustics
                     DiagLog.F(r.Direct), DiagLog.F(r.Reflected), DiagLog.F(r.Remaining), DiagLog.F(r.Geo), DiagLog.F(r.Cut, "0"), r.ViaGlass ? "1" : "0",
                     r.Guided ? "1" : "0", DiagLog.F(r.W), r.Final.ToString(),
                     r.Exit.sqrMagnitude > 0f ? DiagLog.F(RelAz(lt, r.Exit), "0") : "", r.Exit.sqrMagnitude > 0f ? DiagLog.F(Mathf.Asin(Mathf.Clamp(r.Exit.y, -1f, 1f)) * Mathf.Rad2Deg, "0") : "",
+                    r.HasExit ? DiagLog.F(RelAz(lt, r.ExitPt - lt.position), "0") : "", r.HasExit ? DiagLog.F((r.ExitPt - lt.position).magnitude, "0.0") : "",
                     sb.ToString().Replace(',', ';').Trim()));
             }
         }
@@ -969,6 +1054,7 @@ namespace RealSoundSimulation.Acoustics
             sb.AppendLine($"  rays cast {RaysCast}, paths completed {PathsDone}, guided paths aimed at openings {GuidedPaths}, most openings remembered at once {MaxOpenings}");
             sb.AppendLine($"  back faces hit (reflected as surfaces) {BackfaceHits}, far sides of passed objects skipped {ExitFacesSkipped}, upward escapes rejected by the roof test {SkyRejected}   <- 0.6.5 leak fix (raid 25: paths came up through floors)");
             sb.AppendLine($"  roof tests (0.6.7 roof rain, cached per collider and 1 m cell) {RoofTests}, roof rain from the probe {(Plugin.RoofRainFromProbe.Value ? "ON" : "off")}, direction strength x{Plugin.DirectionStrength.Value:0.00}");
+            sb.AppendLine($"  exit points (0.6.8) found {ExitsFound}, not found within 48 m {ExitsMissed}; rain from openings (9j) {(Plugin.RainFromOpenings.Value ? "ON" : "off")}");
             return sb.ToString();
         }
     }
