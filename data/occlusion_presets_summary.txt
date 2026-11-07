@@ -1,0 +1,212 @@
+['AudioGroupPresets', 'EnvironmentSettings', 'HeadphonesSettings', 'MetaXRAudioPluginSettings', 'OcclusionSettings', 'PlayerSettings']
+## PlayerSettings {"BaseMaxMovementRolloff": 90, "EnabledOcclusionDynamicRolloff": true, "IndoorRolloffMult": 1, "MinStepSoundRolloffMult": 0.5, "MinStepSoundVolumeMult": 0.2, "MovementRolloffMultipliers": [{"MovementState": "None", "RolloffMultiplier": 1}, {"MovementState": "Run", "RolloffMultiplier": 0.85}, {"MovementState": "Sprint", "RolloffMultiplier": 0.95}, {"MovementState": "Stop", "RolloffMultiplier": 0.85}, {"MovementState": "Land", "RolloffMultiplier": 1}, {"MovementState": "Turn", "RolloffMultiplier": 0.8}, {"MovementState": "Duck", "RolloffMultiplier": 0.4}, {"MovementState": "Prone", "RolloffMultiplier": 0.5}, {"MovementState": "Drop", "RolloffMultiplier": 0.95}, {"MovementState": "Jump", "RolloffMultiplier": 0.5}, {"MovementState": "Gear", "RolloffMultiplier": 0.5}, {"MovementState": "VaultLand", "RolloffMultiplier": 0.85}, {"MovementState": "VaultGeneric", "RolloffMultiplier": 0.5}, {"MovementState": "Search", "RolloffMultiplier": 0.2}], "OutdoorRolloffMult": 0.98, "SearchSoundVolume": {"FpVolume": 0.6, "TpVolume": 0.45}}
+## location {"commonSettings": {"diffractionThreshold": 0.5, "effectChangeThreshold": 0.05, "floorHeight": 2.7, "maxDistance": 250, "playerObstructionYOffset": 0.5, "positionChangeThreshold": [{"audioQuality": "High", "value": 0.25}, {"audioQuality": "Medium", "value": 0.35}, {"audioQuality": "Low", "value": 0.4}], "smoothingFactor": 20, "transmissionThreshold": 0.6}, "diffractionSettings": {"edgeSearchRayCount": [{"audioQuality": "High", "value": 16}, {"audioQuality": "Medium", "value": 12}, {"audioQuality": "Low", "value": 8}], "edgeSearchRayLength": 0.5, "edgeValidationRayOffset": 0.01, "maxEdgeDist": 0.15, "maxPathFactor": 3}, "propagationSettings": {"absoluteHeightWeight": 0.35, "diffractionExponent": 1.1, "distanceWeight": 0.35, "heightExponent": 0.8, "maxSegmentLength": 10, "minPortalCostPercent": 0.1, "relaxationIterations": 2, "routesCompressionFactorByQuality": [{"audioQuality": "High", "value": 1}, {"audioQuality": "Medium", "value": 0.75}, {"audioQuality": "Low", "value": 0.65}], "segmentHeightWeightDown": 0.1, "segmentHeightWeightUp": 0.1, "typicalRoomHeight": 2.7}, "reflectionSettings": {"energyLossFactorPerReflection": 0.7, "initialRaysCount": [{"audioQuality": "High", "value": 24}, {"audioQuality": "Medium", "value": 20}, {"audioQuality": "Low", "value": 16}], "maxReflections": 3, "minEnergyAtMaxDistance": 0.1}, "transmissionSettings": {"absorptionPerUnit": 0.3, "initialRaysCount": [{"audioQuality": "High", "value": 12}, {"audioQuality": "Medium", "value": 10}, {"audioQuality": "Low", "value": 8}], "listenerHeightSamplingOffset": 0.2, "minClearPathScore": 0.5, "minEnergyThreshold": 0.05, "obstacleMaxThickness": 4.5, "obstacleMinThickness": 0.1, "raysWideningRadius": 0.6, "sourceHeightSamplingOffset": 0.2, "useRaycast": true}}
+
+###  Gunshots {'indoorToOutdoorFactor': 1.100000023841858, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.100000023841858, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.65:0.78 1:0.6] height [0:1 1:1 2:0.85 2.99:0.8 4:0.75 5:0.7 6:0.65 7:0.6 10:0.55]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.6:14909.9 1:10000] pos {'aboveFreq': 6000, 'behindFreq': 7500, 'belowFreq': 4500, 'levelFreq': 8000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 120, 'behindFreq': 60, 'belowFreq': 80, 'levelFreq': 60}
+   propagationEQPreset distCoef 0.5 rot 0 vol [-0:1 0.58:0.8 1:0] height [0:1 1:1 2:0.7 3:0.55 4:0.4 5:0.15]
+     envVol {'baseValue': 0.25, 'diffEnvironmentIsolated': 0.014999999664723873, 'diffRoomsTypeIsolated': 0.07999999821186066, 'indoorIsolated': 0.10000000149011612, 'indoorToOutdoor': 0.15000000596046448, 'outdoorToIndoor': 0.15000000596046448}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.6:14909.9 1:10000] pos {'aboveFreq': 2000, 'behindFreq': 2600, 'belowFreq': 1800, 'levelFreq': 2800}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 160, 'behindFreq': 120, 'belowFreq': 80, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.4 6:0.4]
+
+###  Weaponry {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.55] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.28:0.49 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.15000000596046448, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.07999999821186066, 'outdoorToIndoor': 0.07999999821186066}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Impacts {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 0.5, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.39:0.58 1:0.2] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.37:0.36 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0.05]
+
+###  Character {'indoorToOutdoorFactor': 1.850000023841858, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 2, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.55:0.67 1:0.5] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:4961.07 1:1000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.10000000149011612, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:4961.07 1:1000] pos {'aboveFreq': 700, 'behindFreq': 1300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 500, 'behindFreq': 60, 'belowFreq': 200, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Environment {'indoorToOutdoorFactor': 1.7999999523162842, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.7999999523162842, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.55] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.16:0.45 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 0.33:6895.7 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 500, 'behindFreq': 100, 'belowFreq': 80, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Collisions {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 0.5, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.51:0.65 1:0.5] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.56:0.26 1:0] height [0:1 1:1 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Speech {'indoorToOutdoorFactor': 1.850000023841858, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 2, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.59:0.67 1:0.5] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:4961.07 1:1000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0.01:1 0.2:0.6 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 0.25:11033.8 1:60] dist [0:22000 0.5:4961.07 1:1000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 400, 'behindFreq': 180, 'belowFreq': 200, 'levelFreq': 350}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Distant {'indoorToOutdoorFactor': 1.2000000476837158, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.2000000476837158, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.31] height [0:1 1:1 2:0.85 2.99:0.8 4:0.75 5:0.7 6:0.65 7:0.6 10:0.55]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 6000, 'behindFreq': 7500, 'belowFreq': 4500, 'levelFreq': 8000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 120, 'behindFreq': 60, 'belowFreq': 80, 'levelFreq': 60}
+   propagationEQPreset distCoef 0.5 rot 0 vol [-0:1 0.46:0.35 1:0] height [0:1 1:1 2:0.7 3:0.55 4:0.4 5:0.15]
+     envVol {'baseValue': 0.20000000298023224, 'diffEnvironmentIsolated': 0.014999999664723873, 'diffRoomsTypeIsolated': 0.07999999821186066, 'indoorIsolated': 0.10000000149011612, 'indoorToOutdoor': 0.10000000149011612, 'outdoorToIndoor': 0.10000000149011612}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 1200, 'behindFreq': 3000, 'belowFreq': 800, 'levelFreq': 3400}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 160, 'behindFreq': 120, 'belowFreq': 80, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.4 6:0.4]
+
+###  NonspatialBypass {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': False, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.31] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.5:0.35 1:0.2] height [0:1 1:1 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Nonspatial {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': False, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.31] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.5:0.35 1:0.2] height [0:1 1:1 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Voip {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.56:0.66 1:0.4] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:10000 0.3:4024.59 1:1000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0.01:1 0.3:0.5 1:0.1] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:10000 0.3:4024.59 1:1000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:50 0.2:301.96 1:550] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Grenades {'indoorToOutdoorFactor': 1.2000000476837158, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.2000000476837158, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.56:0.87 1:0.8] height [0:1 1:1 2:0.85 2.99:0.8 4:0.75 5:0.7 6:0.65 7:0.6 10:0.55]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:12000 1:10000] pos {'aboveFreq': 6000, 'behindFreq': 7500, 'belowFreq': 4500, 'levelFreq': 8000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 120, 'behindFreq': 60, 'belowFreq': 80, 'levelFreq': 60}
+   propagationEQPreset distCoef 0.5 rot 0 vol [-0:1 0.58:0.8 1:0] height [0:1 1:1 2:0.7 3:0.55 4:0.4 5:0.15]
+     envVol {'baseValue': 0.25, 'diffEnvironmentIsolated': 0.014999999664723873, 'diffRoomsTypeIsolated': 0.07999999821186066, 'indoorIsolated': 0.10000000149011612, 'indoorToOutdoor': 0.15000000596046448, 'outdoorToIndoor': 0.15000000596046448}
+     lpfSettings freq [0:21971.7 1:60] dist [0:22000 0.5:12000 1:10000] pos {'aboveFreq': 2800, 'behindFreq': 3200, 'belowFreq': 2600, 'levelFreq': 3500}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 80, 'behindFreq': 20, 'belowFreq': 60, 'levelFreq': 30}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.5 6:0.5]
+
+###  Windows {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.51:0.65 1:0.3] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.5:0.35 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  VehicleInSpeech {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 0, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [0:1 1:1] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 1:22000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.25:0.7 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.5 5:0.5]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 1:22000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  Lamp {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 0.5, 'occlusionEnabled': True, 'occlusionIntensity': 0, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.52:0.81 1:0.7] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.5:0.35 1:0.2] height [0:1 1:0.8 2:0.6 3:0.5 4:0.5 5:0.5]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 1500, 'behindFreq': 600, 'belowFreq': 900, 'levelFreq': 3200}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 500, 'behindFreq': 360, 'belowFreq': 240, 'levelFreq': 600}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  InteractiveObjects {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 0, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.55:0.95 1:0.9] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.35:150.7 1:250] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.56:0.26 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:31.73] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.35:150.7 1:250] pos {'aboveFreq': 350, 'behindFreq': 80, 'belowFreq': 80, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  OutEnvironment {'indoorToOutdoorFactor': 1.7999999523162842, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 1, 'outdoorToIndoorFactor': 1.7999999523162842, 'rolloffScale': 0.8999999761581421, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [-0:1 0.58:0.8 1:0.55] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.16:0.45 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.4 5:0]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 0.33:6895.7 1:60] dist [0:22000 0.5:9372.22 1:5000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 0.49:79.89 1:120] pos {'aboveFreq': 500, 'behindFreq': 100, 'belowFreq': 80, 'levelFreq': 120}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  PropagatedExclusive {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 0, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': True}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [0:1 1:1] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 1:22000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0 rot 0 vol [-0:1 0.25:0.7 1:0] height [0:1 1:0.85 2:0.75 3:0.6 4:0.5 5:0.4]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.009999999776482582, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 1:22000] pos {'aboveFreq': 2200, 'behindFreq': 2500, 'belowFreq': 1950, 'levelFreq': 2800}
+     hpfSettings freq [0:80 1:500] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]
+
+###  LightOcclusion {'indoorToOutdoorFactor': 1.5, 'maxQualityFactor': 1, 'occlusionEnabled': True, 'occlusionIntensity': 0, 'outdoorToIndoorFactor': 1.5, 'rolloffScale': 1, 'useQualityCompression': False}
+   obstructionEQPreset distCoef 0.3499999940395355 rot 0.20000000298023224 vol [0:1 1:1] height [0:1 1:1 2:0.8 2.99:0.7 4:0.65 5:0.6 6:0.55 7:0.5 8:0.45 9:0.4 10:0.35]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.014999999664723873, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:18000 1:1600] dist [0:22000 1:22000] pos {'aboveFreq': 3200, 'behindFreq': 3500, 'belowFreq': 2800, 'levelFreq': 4000}
+     hpfSettings freq [0:80 1:350] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   propagationEQPreset distCoef 0.5 rot 0.20000000298023224 vol [-0:1 0.25:0.7 1:0] height [0:1 1:0.8 2:0.6 3:0.5 4:0.5 5:0.5]
+     envVol {'baseValue': 0.10000000149011612, 'diffEnvironmentIsolated': 0, 'diffRoomsTypeIsolated': 0.014999999664723873, 'indoorIsolated': 0.029999999329447746, 'indoorToOutdoor': 0.05000000074505806, 'outdoorToIndoor': 0.05000000074505806}
+     lpfSettings freq [0:22000 1:60] dist [0:22000 1:22000] pos {'aboveFreq': 750, 'behindFreq': 300, 'belowFreq': 450, 'levelFreq': 1600}
+     hpfSettings freq [0:80 1:500] dist [0:0 1:0] pos {'aboveFreq': 250, 'behindFreq': 180, 'belowFreq': 120, 'levelFreq': 300}
+   stairs [0:1 1:1 2:0.8 2.99:0.8 4:0.65 5:0.3 6:0]

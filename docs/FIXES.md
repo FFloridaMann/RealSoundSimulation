@@ -1,0 +1,372 @@
+# The fixes
+
+Each fix: the problem in the game, the evidence from our raid logs, exactly what the fix changes, its settings, and how to check it works. All are in F12 → Real Sound Simulation → **"2. Fixes (all off means vanilla audio)"**, start **off**, and switch live in raid.
+
+Status key: **Built** = in the plugin, not yet heard in game. **Heard** = heard in game, logs show it acting, but not fully confirmed. **Verified** = heard in game and confirmed in logs.
+
+| # | Fix | Status | Since | Notes |
+|---|---|---|---|---|
+| 1 | Gun mixer hysteresis | Built | 0.2.0 | Raid 4 had no AI, so it has had nothing to act on yet |
+| 2 | Obstruction score | Built | 0.2.0 | Left on Game in raid 4 |
+| 3 | Smooth doorways | Heard | 0.2.0, reworked 0.2.1, 0.2.2 | Raids 4–5: "improved". 0.2.1 removed the startup error and most of the jump. Raid 6 (0.2.2, sticky doorway): no doorway swaps, no jumps |
+| 3c | Blend own gunshots (doorway or enclosure) | Heard (both modes) | 0.2.1, Enclosure mode 0.2.2, ground fix 0.3.0, room measure 0.3.1, roof-above test 0.3.2, muzzle + hard rooms 0.3.3 | Raid 5: Doorway mode "improved again". Raid 6: open ground got indoor recording (ground counted; fixed 0.3.0). Raid 7: a roof-only bench (0.5–0.6 indoor) and a small glass office (0.84–1.0) too indoor; 0.3.1 changes the measure |
+| 5 | Own gun room reverb boost (experiment) | Heard (5a, hard rooms) | 0.2.2, 5a 0.3.3 | Not tried yet. Raid 6 confirmed Meta's acoustic map is running (1 map, 35 geometry), so it has something to act on |
+| 6 | Own gun echoes | Heard | 0.3.0 | Raid 7: "sounds much much better", "overall huge improvement". 4.0 echoes per sample, surfaces tagged on nearly every hit |
+| 7 | Fix rain cutting out between rooms | Built (on in raid 14; the bug wasn't triggered: 0 of 10 picks) | 0.4.0 | Game bug found in step 4b; see below and AMBIENCE.md |
+| 8 | Outdoor sound indoors from openings | Heard | 0.4.2 | Raid 13: "works pretty well", no swings. Raid 14 (rain): two misses. The Nakatani exit hallway's open windows were barely found (exposure 0.07). Roof rain stayed at 30% down the underground exit stairs. Needs fix 3 |
+| 4 | Off-map sounds as outdoor | Heard | 0.2.0 | Raids 4–5: acted about 10,000 times per raid |
+
+Background terms used below:
+- **Occlusion** (0–1): how blocked a sound is. 0 = clear, 1 = fully blocked. The game builds it from *obstruction* (walls between you, same space) and *propagation* (sound travelling through doorways between rooms).
+- **Snapshot**: a saved state of the game's audio mixer (reverb, EQ, volumes). The game has two: Outdoor and Indoor.
+- **Portal / doorway**: an opening between baked audio rooms (doors, windows, gaps).
+
+---
+
+## Fix 1: Gun mixer hysteresis
+
+**Problem.** Every remote gun has two possible mixer channels: normal, and "Occluded" (heavily muffled). On every shot, the game picks Occluded if occlusion is above 0.55, otherwise normal (`WeaponSoundPlayer.UpdateMixerGroup` → `AudioWeaponUtils.GetGunshotOcclusionMixerGroup`). The occlusion value jumps around between updates, so a fight right at the line flips between muffled and clear.
+
+**Evidence.** Raid 2: one bot 40 m away flipped 5 times in 27 s, its occlusion swinging 0.97 → 0.41 → 0. Raid 3: 7 flips.
+
+**What changes.** `GunMixerFix` replaces `UpdateMixerGroup` (same safety checks as the original):
+- Going muffled needs occlusion **above 0.60**; coming back needs it **below 0.45**. Between the two, the gun stays as it is.
+- A change must persist for **0.5 s** of shots before it is applied.
+- **The first shot after 2 s of quiet** from that gun uses the game's 0.55 rule straight away, so a new fight is never late to sound right.
+
+**Settings.** `1 Gun mixer hysteresis` (on/off), `1a Muffle above` 0.60, `1b Unmuffle below` 0.45, `1c Hold s` 0.5.
+
+**Check.** A bot firing bursts behind cover 30–60 m away should stay one way, not flicker. Logs: `summary.txt` "gun mixer group changes during fire" drops; "fix 1 held back N" counts the flips it prevented.
+
+**Limits.** It does not change *how* muffled the Occluded channel is, only when it's chosen. The underlying occlusion swings are still there (fix 2 reduces some of them).
+
+---
+
+## Fix 2: Obstruction score
+
+**Problem.** When you and a sound are in the same space with something between you, the game runs up to three checks (`SpatialAudioOcclusionCombinedCalculator`): **transmission** (through the obstacle), **diffraction** (around its edges) and **reflection** (bouncing off surfaces). Each gives 0 (clear) to 1 (blocked), and the game takes the **average**. But a check that *fails to find a path* returns 1.0, so a thin wall (0.2) plus a failed corner search (1.0) averages to 0.6, which is over the 0.55 muffle line.
+
+**Evidence.** Raid 2: diffraction ran 389 times, and 64% of the time it returned 1.0 (no path). The median result was 1.0.
+
+**What changes.** `ObstructionScoreFix` recombines the scores after the game computes them. Three modes:
+
+| Mode | Result | Example: T 0.2, D failed (1.0) |
+|---|---|---|
+| Game | average of the checks that ran | 0.6 (muffled) |
+| IgnoreFailedPaths | average of the checks that found a path; if all failed, the game's value | 0.2 |
+| ParallelPaths | sound is blocked only if every path is: T × D × R | 0.2 |
+
+ParallelPaths is the more physical one (sound reaches you by whichever path is open). IgnoreFailedPaths is the more conservative change. Compare both by ear.
+
+**Settings.** `2 Obstruction score`: Game / IgnoreFailedPaths / ParallelPaths.
+
+**Check.** Gunfire and footsteps behind thin cover should be less muffled. Logs: "fix 2 changed N scores by >0.05" in `summary.txt`; fewer rows over 0.55 in `containers.csv`.
+
+**Limits.** Only affects sounds whose obstruction check ran. Past a sound's range the game marks it "OutOfRange" and runs no checks at all (raid 3: shots beyond about 250 m had obstruction 0). That needs a separate fix.
+
+---
+
+## Fix 3: Smooth doorways
+
+**Problem.** Two separate game systems decide whether you're inside, and both switch abruptly:
+1. **Mixer snapshot.** Trigger volumes (`EnvironmentManager`) call `BetterAudio.TransitToEnvironment`, which switches the whole mix between the Outdoor and Indoor snapshots in **0.1 s going in** and **0.5 s going out**.
+2. **Ambience.** The baked audio rooms drive `EnvironmentSoundBlendSystem`. Inside, it is meant to fade the outdoor ambience by your distance to the doorway; on stepping out, `BlendToOutdoor` snaps it to full in 0.3 s.
+
+**Evidence.**
+- Raid 2: standing in the doorway, the outdoor ambience value was **0**, then jumped to **1** in one sample as you stepped out. So the distance fade never happened at that building.
+- The two systems mostly switch within 0.15 s and 0.4 m of each other, but raid 3 had one spot 12 m and 4.7 s apart, and 4 snapshot switches with no matching room switch. In those places you get two separate jumps.
+
+**What changes.** `DoorwayBlend` works out one value every frame, **outdoorness**: 0 deep inside, 0.5 in the doorway, 1 outside. How it's measured (since 0.2.1):
+- Find the nearest open doorway that leads outdoors. Inside, only doorways of the room you're standing in count, so a neighbouring building's door through a wall doesn't. Closed doors don't count.
+- Measure how far you are **through the doorway's plane**: negative inside, positive outside. That gives 0.5 on the plane, falling to 0 at **1.5 m** inside and rising to 1 at **1.0 m** outside.
+- Also measure how far you are **to the side** of the doorway's centre. Within 0.75 m it's fully the doorway's value. Between 0.75 and 1.75 m it fades to the baked room's own answer (0 inside, 1 outside). So walking along an outside wall past a door stays outdoors.
+- Which way is "outside" for each doorway is worked out once from the game's room data: the side away from the centre of the indoor room it belongs to. If that can't be determined for a doorway, it falls back to plain distance from the doorway's centre (the 0.2.0 method).
+- **Sticky doorway (0.2.2):** the doorway used last frame stays in the running on both sides of the crossing, even though inside only the current room's doorways normally count. Another doorway has to be at least 1 m closer to take over. It's dropped once you're more than about 3 m away.
+- The value is smoothed over about 0.12 s.
+
+Why the change: 0.2.0 used distance from the doorway's *centre*. The game's room boundary sits about a metre from that centre, so the value jumped as you crossed it. In raid 4 it went from 0.24 to 1.0 in one step, which the smoothing turned into a quick ~0.3 s change, and you could hear it. Measuring through the plane passes smoothly through 0.5 wherever the room boundary is.
+
+It then drives:
+- **Mix:** both snapshots at once, Outdoor weighted by outdoorness and Indoor by the rest (`AudioMixer.TransitionToSnapshots`). In the doorway it's half and half.
+- **Outdoor ambience:** from the room's own designed level (deep inside) up to full by the time you reach the doorway.
+- **Room tone:** full until the doorway, faded out by the time you're 1 m outside.
+
+While it's on, the game's own snapshot switch and ambience fades are skipped. Turning it off hands control back to the game immediately.
+
+**Settings.** `3 Smooth doorways` (on/off), `3a Blend inside m` 1.5, `3b Blend outside m` 1.0.
+
+**Bug fixed in 0.2.1.** The game sets up its ambience blenders about 30 s into a raid. Before that, setting them threw an error every frame (raid 4, `errors.txt`), and the ambience part did nothing until the blenders were ready. It now waits until they're set up.
+
+**Check.** Walk slowly in and out of a building with it off, then on: no pop, and the change happens over about two steps. Logs: `ambience.csv` columns `doorwayTarget` and `doorwayApplied` ramp smoothly through 0.5 at the doorway. `transitions.csv` still shows the game's switch attempts, but they're skipped.
+
+**Limits / not handled yet.**
+- Wind, rain, footstep-surface layers and room-tone emitters have their own switches and still change at the boundary.
+- **Other people's gunshots** still change when *you* cross a threshold. Their muffling switches from "same room, blocked by walls" to "different room, heard through doorways", which are two different calculations. Not fixed yet.
+- Windows count as doorways.
+
+---
+
+## Fix 3c: Blend own gunshots (Doorway or Enclosure)
+
+**Problem.** Every gun has two sets of recordings: Outdoor and Indoor, for the shot itself and for the tail at the end of a burst. For your own gun, the game picks one set from the indoor trigger volumes. So your gunshot swaps from one recording to the other the instant you cross a threshold, and it never depends on which way you're aiming or what's around you.
+
+**Evidence.** Your report after raid 4: "the sound of gun shots changes sort of abruptly when crossing the threshold". That raid had no AI, so those were your own shots.
+
+**What changes.** The game's gun player can already play two clips at once with a volume balance between them (slot 1 at `balance`, slot 2 at `1 − balance`). It normally uses this to crossfade near and far recordings for remote shots. Your own shots are at distance 0 and only ever use one clip, so the second slot is free. Near a doorway (outdoorness between 0.02 and 0.98), `GunEnvironmentBlend`:
+- picks an Indoor and an Outdoor recording from the same distance tier the game chose;
+- plays the Indoor one in slot 1 at `1 − outdoorness`, and the Outdoor one in slot 2 at `outdoorness`.
+
+It applies to the shot (`FireBullet`) and to the burst tail (`StopFiringLoop`). It only touches **your own** first-person shots: remote shooters keep their own environment.
+
+**Where the indoor weight comes from** (setting `3d Own gunshot blend source`):
+- **Doorway** (0.2.1): 1 − the doorway value from fix 3. It only acts near doorways (weight between 0.02 and 0.98); everywhere else the game's pick stands.
+- **Enclosure** (0.2.2, reworked 0.3.1): from the [enclosure probe](#enclosure-probe-022). It acts everywhere; at either extreme it plays just one recording. Since 0.3.1 it works in four steps:
+  1. **Room** = wall closure × roof closure (see the probe section). Since 0.3.2 the roof only counts if there's one right above your head. Mapped 0.15 → fully open, 0.65 → fully indoor. A roof alone (a bench shelter, a canopy) is no longer a room, and walls without a roof aren't either. Those spaces get their character from the echoes (fix 6), not from the indoor recording.
+  2. **Aim:** the closure of the 9-ray cone along your shot, mapped 0.25 → 0 and 0.85 → 1. It's blended in by `3e Aim weight` × roof closure, so firing into or out of a room still leans the mix, but firing at a wall in the open doesn't make the shot "indoor".
+  3. **Size:** × the size factor. It's 0.5 when the walls average 2 m away and 1 from 6 m. The game's indoor recordings carry a long room tail, which suits a normal room or hall but not a tiny furnished space. There the echoes give the short, dense sound.
+  4. **At the muzzle too (0.3.3).** When you fire, the room, roof and size are also measured at the muzzle (the same 37 rays, reused while the muzzle stays within 0.15 m for 0.1 s). Each is a mix: head × (1 − `3g`) + muzzle × `3g` (0.7). The muzzle is what fills a room with sound. Raid 9: on a threshold, looking in from outside sounded outdoor and looking out from inside sounded indoor.
+  5. **Hard rooms (0.3.3).** The size cut fades out as the room gets hard and closed (hard room = how closed × share of bare concrete, stone, tile or thick metal). A bare concrete stairwell keeps the full indoor recording, while a small furnished or glass space still gets less. Raid 9: the Nakatani basement stairs were cut to about 55% indoor.
+  6. Before 0.3.1 the measure was the plain enclosure value mixed with the aim enclosure. Raid 7 showed a covered bench at 0.5–0.6 indoor (roof only) and a small glass office at 0.84–1.0.
+
+**Settings.** `3c Blend own gunshots at doorways` (on/off), `3d Own gunshot blend source` (Doorway / Enclosure), `3e Aim weight` 0.4, `3g Muzzle weight` 0.7, `3i Small space rule` Current / Soft (≥ 85%) / Off (0.5.4), `3f Thin and glass surfaces count` 0.5 (Enclosure mode: how much glass, thin wood planks, cardboard and fabric count as walls; chain fences and grates always count as nearly open). Doorway mode uses fix 3's doorway value, so it works with fix 3 on or off. It sounds best with fix 3 on, though, because then the reverb blends too.
+
+**Check.** Doorway mode: fire while standing in a doorway and while stepping through one; there should be no sudden swap. Enclosure mode: open air against a spot covered on three sides, and firing into a room against firing out of it. Logs: "fix 3c blended N" in `summary.txt`; `ownshots.csv` has one row per own shot or tail, with every measurement and the weight that was used.
+
+**Limits.**
+- The two recordings are mixed by straight volume, so exactly halfway can be up to about 3 dB quieter than either side.
+- Full-auto picks the recording at the start of a burst. A burst you start outside and carry inside keeps its starting mix until the tail, which is picked fresh.
+
+---
+
+## Enclosure probe (0.2.2)
+
+Not a fix by itself: it measures, and fix 3c (Enclosure mode) uses it. The planned echoes will too. Setting: `1. Diagnostics → Enclosure probe` (on by default). It changes no sound unless something uses it.
+
+Every 0.1 s it casts 32 rays, spread evenly over a sphere, from your head out to 40 m. They test the same collision layers the game's occlusion uses: buildings and terrain, not players or small props. A hit counts fully within 3 m and less with distance, down to nothing at 40 m. Rays pointing more than 10° down are left out of the scores, because the ground is always there, but their hits are kept for the echoes.
+
+**Room measure (0.3.1).** Used by fix 3c's Enclosure mode:
+
+| Value | Meaning |
+|---|---|
+| wall closure | rays within 30° of level: each hit counts 1 up to 10 m away, falling to 0 at 40 m, times its surface's closure |
+| roof closure | the same, for rays more than 30° up; since 0.3.2 capped by the zenith closure |
+| zenith closure | 0.3.2: 5 rays, straight up and 20° off vertical. Raid 8: about 1 m outside a small space's door, the angled upward rays still hit its roof edge (0.58–0.84), so shots visibly outside got about 40% indoor recording. Capping by the zenith test fades the roof out over about 1 m past the roofline |
+| room | wall closure × roof closure |
+| size factor | 0.5 when the hits average 2 m away, rising to 1 at 6 m |
+| thin share | how much of the closure was lost to thin or see-through surfaces (for the logs) |
+| aim closure | the same closure, over the 9-ray aim cone |
+
+Surface closure: 1 for solid surfaces (concrete, metal, thick wood, untagged); setting `3f` (0.5) for glass, thin wood, cardboard and fabric; 0.1 for chain fences, grates and shattered glass.
+
+**Windows (0.3.1).** A window blocks rays with a separate collider that carries no material tag, so windows used to read as the concrete around them (raid 7: 8 glass echoes in a whole raid, much of it in a glass office). At the first lookup each raid, every window's colliders are registered as Glass. A broken window's blocking collider is switched off by the game, so rays then pass through.
+
+**Ground (0.3.0).** A hit on a floor-like surface (its normal points more than about 45° upward: ground, floors, gentle slopes) counts as open, in the sweep and in the aim cone. Raid 6 showed why: rays just below level hit the ground a few metres away and counted as walls, so open ground read 0.2–0.4 instead of near 0, and firing into open air read an aim enclosure of about 0.37. Steep slopes and hillsides still count.
+
+| Value | Meaning |
+|---|---|
+| Enclosure | 0–1, weighted share of level-and-upward rays that hit (open field about 0, small room near 1) |
+| Horizontal | same, rays within 30° of level (walls) |
+| Overhead | same, rays more than 45° up (roof or overhang) |
+| MeanHit | average distance of the rays that hit |
+
+Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
+
+---
+
+## Fix 5: Own gun room reverb boost (experiment)
+
+**Background.** Earlier I said your own shots get no room acoustics. That was wrong. The game's gun sources (`ReverbSuperSource`) play a hidden, **reverb-only copy** of your own (stereo) shot through Meta XR's room acoustics, at your position. Meta's acoustics are built from each map's geometry. The copy uses the server's "stereo" settings: for gunshots, 0 dB reverb and 0 dB early reflections. What it can't know is which way you're aiming.
+
+**What it does.** It adds the setting's value to both of those sends on your gun's sources, after each shot is set up. At 0 it puts back the game's own values.
+
+**Settings.** `5 Own gun room reverb boost dB` (−12 to +12, 0 = game). `5a Hard room reverb boost dB` (+6, 0.3.3): added on top in hard, closed rooms, scaled by how hard and closed they are (0 in the open, the full amount in a bare concrete stairwell).
+
+**Check.** Indoors and outdoors, compare 0, +6 and +12 dB. `summary.txt` has a "META XR ACOUSTICS" section showing whether Meta's acoustic map is actually loaded in that raid. If it isn't, this setting can't do anything.
+
+---
+
+## Fix 6: Own gun echoes (roadmap step 4)
+
+**Problem.** Your own shot is a stereo recording, the indoor or the outdoor set (fix 3c can mix them), plus the game's hidden Meta reverb copy (fix 5). None of that knows where the walls actually are or which way you fired. So it picks how "inside" you are, but it isn't *dynamic*: a wall 2 m to your right, a building face 40 m ahead, and firing into a room against firing out of it all sound alike (raid 6 feedback).
+
+**What it does.** For each of your shots, it plays up to 4 echoes. Each echo is a delayed, quieter, duller copy of the shot, played from the surface it bounced off.
+
+1. **Find the reflecting surfaces** (when you fire; `Acoustics/OwnEchoes.cs`):
+
+   | Kind | Where it comes from |
+   |---|---|
+   | mirror (`Spec`) | Each wall or ceiling the enclosure probe hit: the point on it straight out from you, checked with one extra ray. Path = 2 × your distance to the wall. This is the classic slapback. |
+   | scattered (`Diff`) | A probe hit on a surface with no mirror point in reach (corners, clutter). Weaker and duller. |
+   | aim (`Aim`) | The 9-ray cone along your shot. What you fire *at* scatters energy back, so firing into a room is loud and close, and firing out of it isn't. |
+   | far (`Far`) | 16 level rays out to 250 m, re-scanned when you move 5 m or after 5 s: building faces, cliffs, hills. Distinct late echoes outdoors, from 30 m away. |
+
+   Ground and floors are ignored, because the recordings already contain the ground bounce. Paths under 3 m (under about 9 ms) are left to Meta's own early reflections.
+
+2. **Level** of each echo, relative to the shot:
+   - **Distance:** −20·log10(path / 2 m). So a 4 m path is −6 dB, 20 m is −20 dB and 100 m is −34 dB.
+   - **Muzzle directivity:** a gun is much louder in front of the muzzle. The echo loses 0 dB toward where you aim, rising to the full "6c" value (10 dB) straight behind.
+   - **Surface,** from Tarkov's own bullet material tags:
+
+     | Surfaces | Loss | Brightness (low-pass) |
+     |---|---|---|
+     | concrete, stone, asphalt, tile, thick metal, water, untagged hard | −0.5 dB | full |
+     | glass, thin metal | −1 dB | full / 16 kHz |
+     | thick wood | −1.5 dB | 9 kHz |
+     | thin wood, gravel | −3 dB | 6 kHz |
+     | soil, grass, mud, snow | −4 dB | 4 kHz |
+     | fabric and other soft surfaces | −8 dB | 2.5 kHz |
+     | chain fence, grate | −10 dB | 6 kHz (mostly see-through) |
+
+   - **Scattered, aim and far echoes:** −3 dB, times the cosine of the angle they hit at, times their share of the ray set.
+   - **Your trim:** setting "6a Echo level dB".
+
+   Echoes arriving within 4 ms and 30° of each other are merged. The loudest N (setting "6b") are played, each capped at −3 dB. Hard closed rooms (stairwells) get up to 3 more (0.3.3: 2; 0.4.1: 3). Since 0.4.1 all their echoes are also raised by `6e Hard room echo boost dB` (+4) × how hard and closed the room is, because a real stairwell is loud from the sound building up. Raid 11: stairwell shots were quieter than a stairwell should be.
+
+3. **Colour.** A low-pass filter at the lowest of these:
+   - **Air absorption** for the path. This is section 2.5 of the solutions doc, applied here first: about 9 kHz at 40 m, 5 kHz at 100 m and 2.2 kHz at 300 m.
+   - **The surface's** brightness from the table above.
+   - **Scattered** echoes are further dulled to 75%.
+   - **Head shadow:** an echo arriving from straight behind you is dulled to 55%. Echoes use plain stereo panning, not HRTF, so this is the front/back cue.
+
+4. **Timing.** The fix hooks the gun's own sound queue (`SuperBetterAudioQueue.Enqueue`), so every sample the game schedules for your gun gets echoes:
+   - single shots;
+   - the full-auto firing loop;
+   - the tail at the end of a burst.
+
+   Each echo starts at the sample's start time plus path ÷ 343 m/s. A firing loop's echoes stop where the game stops the loop (when the tail starts), each shifted by its own delay.
+
+5. **Output.** A pool of 24 plain AudioSources on the game's "Guns/Gunshots" mixer group, so game volume and the in-game headset treat echoes like the shot itself. If all 24 are busy, the oldest is stopped; `summary.txt` counts these.
+
+**Which recording.** Echoes play the *outdoor* recording from the same distance tier. It's the driest version of the shot, since the indoor set already has a room baked into it. Silenced weapons echo their silenced recording.
+
+**Settings.**
+- `6 Own gun echoes` (on/off).
+- `6a Echo level dB`: 0, range −18 to +12.
+- `6b Max echoes per shot`: 4, range 1–8.
+- `6c Muzzle directivity dB`: 10, range 0–20.
+- `6d Far echoes` (on/off).
+- `6e Hard room echo boost dB`: +4, range 0–12 (0.4.1).
+
+**Glass facades and window bars (0.4.2).** The aim cone also casts against the glass and bar layers, which the sound-blocking rays pass through. Intact glass gives glass reflections and bars give weak, dull ones (grate). Shards and other obstructions are ignored.
+
+**Check.** Steps are in [ROADMAP.md](ROADMAP.md#testing-step-4-next-raid-no-ai-needed). Logs:
+- `echoes.csv`: one row per echo played, with kind, surface, path, delay, level, directivity, filter, and direction relative to where you face.
+- `summary.txt`, OWN GUN ECHOES section: echoes per sample, by kind, mean level and path, voices used and stolen, and which surfaces were hit. "None" means no bullet material tag was found on that collider.
+
+**Cost.** Per shot: one cached sweep (or a fresh one if older than 0.15 s), up to 12 check rays, the 9-ray aim cone (shared with fix 3c), and 16 far rays only after you move 5 m. Echo voices: up to 4 per sample, from a separate pool of 24. The game itself uses about 50 of its 196 voices.
+
+**Limits.**
+- No HRTF on the echoes: left/right panning plus a duller sound from behind, so above and below aren't placed. Routing echoes through Meta's spatializer is a possible next step.
+- Only first-order reflections. The longer reverb is still the recording plus Meta's reverb copy.
+- 32 probe rays and 16 far rays can miss a narrow building.
+- The levels are a physical estimate. Tuning by ear ("6a", "6c") is expected.
+- Bot gunshots get no echoes yet (roadmap step 6).
+
+---
+
+## Fix 3h: Ambience through glass (0.3.3)
+
+**Problem.** Raid 9: glass buildings let too little rain and wind in. The game sets each indoor room's outdoor-ambience level from baked data, regardless of whether its walls are concrete or glass.
+
+**What changes.** While fix 3 is driving the ambience, the room's level is raised toward full by: the glass share of the surfaces around you (from the probe, with windows registered as glass) × 2 × `3h`. With all-glass walls at 0.5, that gives the full outdoor level; with half-glass walls, halfway. The indoor tone filter still applies, so the weather is muffled, as through a window. The change is smoothed over 0.3 s.
+
+**Settings.** `3h Ambience through glass` (0.5; 0 = the game's level). Needs fix 3 on.
+
+**Check.** Inside a glass building in rain or wind. `ambience.csv` `glassLeak` (0–1) is how far the level was raised.
+
+**Smoothing (0.4.1).** Raid 11: deep inside the Nakatani tower, the outdoor ambience cut on and off. One or two of the 32 probe rays hitting a window or not flipped the raise between 0 and 0.12 every second. It's now smoothed over about 2 s.
+
+**Limit (raid 10).** Big facade glass doesn't block our rays, so it reads as open air, not glass, and this fix barely acts there (glass share about 0.06). It only works where windows are real `WindowBreaker` windows. To be replaced by the exposure measure in roadmap step 4b.
+
+**Broken glass.** When a window is shot out, the game switches off the collider that blocks rays, so the probe reads the hole as air (an opening). Shards left in the frame aren't on the ray layers either, so they count as air too. They're registered as glass only if a ray hits one.
+
+---
+
+## Fix 7: Rain cutting out between rooms (0.4.0)
+
+**Problem (a game bug).** Indoors, each baked room can play its own "rain on the roof" clip. The game's rain player (`PrecipitationAmbientBlender`) crossfades to a fresh copy of that clip whenever you change room. It does the same whenever, in rooms where roof rain follows your height, the volume target moves by more than 0.05. It picks the clip in `SetClip`. But its check returns "nothing new" when the clip is the *same* one as last time, and `SetClip` then sets **no clip**, so the crossfade fades the rain to silence. The next crossfade brings it back. Raid 10: "it cuts in and out a bit".
+
+**What changes.** `SetClip` is replaced with what it was meant to do: while it's raining, always pick the room's clip, or the default for that environment, even if it's the same clip. The crossfade then goes from rain to rain.
+
+**Settings.** `7 Fix rain cutting out between rooms` (on/off).
+
+**Check.** Walk between rooms and up and down stairs in rain. Logs:
+- `rain.csv`: one row per clip pick: which player (indoor/outdoor), intensity, clip, target volume, and `gameWouldSilence`.
+- `summary.txt`, RAIN section: how often the game would have silenced the rain, and how often this prevented it.
+
+---
+
+## Fix 8: Outdoor sound indoors from openings (step 4b phase 2, 0.4.2)
+
+Background and design: [AMBIENCE.md](AMBIENCE.md). **Needs fix 3 on**, because fix 3 is what takes the ambience over from the game.
+
+**Problem.** Indoors, the game sets the outdoor ambience from a fixed per-room value set by hand, plus one opening. Fix 3 replaced that with a doorway fade. Raids 10–12 showed what went wrong:
+- glass buildings with broken windows were silent (room value 0);
+- stepping sideways just inside a wide entrance swung the outside between 6% and 95%;
+- the outside never had a direction.
+
+**What changes:**
+- **Level.** The outdoor value, which sets the outdoor beds' volume and muffling through the game's own curves, comes from the exposure probe, smoothed over about 1 s, and never below the room's baked floor:
+  - open directions and broken windows count fully;
+  - intact glass counts by `8c`;
+  - bars count 80%, other obstructions 50%;
+  - near openings count far more than far ones.
+
+  The doorway blend still drives the reverb snapshot at thresholds.
+- **Indoor layers** (room tone, indoor wind and rain) are multiplied by 1 − `8d` × exposure.
+- **Roof rain:** the indoor rain player's volume is multiplied by `8b` when the probe finds floors above you. Only with fix 7 on.
+- **Direction cue (until phase 4):** indoors, the outdoor beds are panned toward the open side (× `8a` × how one-sided it is), and get a high-cut down to 5 kHz as the open side moves behind you. Our own filter is added to each bed source; it's off when not needed.
+
+- **Sound from openings (phase 4, 0.5.0; fixed sectors 0.5.2).** Indoors, the exposure directions are summed into 6 fixed world sectors (60° each): weight, weighted direction and glass share. Each sector has a 3D copy of every outdoor bed that's playing, 4 m out in its weighted direction (it only moves within its sector), 120° wide so neighbouring sectors overlap, on the bed's own mixer channel. (0.5.0–0.5.1 used up to 3 re-assigned "openings", which swept across the listener; raid 16.)
+  - **What counts as outside (0.5.3, 0.5.4):** the room map must say outdoor. If the point has a roof above it, it counts as "covered outside" at half weight, unless that roof is the same ceiling you're standing under (interior patches the room map wrongly calls outdoor). 0.5.3 required open sky outright, which also rejected real outside under canopies. Distance weight per direction: 1 / (1 + d / 15 m) (0.5.4). The game's room map calls some lobbies, entrance areas and big interior patches outdoor (raids 16–17). Such points don't count, and the direction keeps looking further out. (0.5.2 only weakened those directions to 35%, and only for the 3D sources.)
+  - The share moved to the openings is `8e` (0.7); the flat bed keeps the rest. Openings split it by power (√ of their strength share), so total loudness stays the same.
+  - Glass openings get a high-cut, down to 2.5 kHz when all-glass. Without HRTF (`8f`), openings behind you are also duller, the ear-shadow cue. Spread follows the opening's width.
+  - The bed volumes the game writes (crossfades, day/night balance) are captured each frame after the game's own updates, and written back × (1 − share). When you go outdoors or switch it off, they're given back in full.
+- **Roof rain (0.5.0, direct since 0.5.6):** full with only the roof above you; × `8b` with one floor above; off with two or more. A new level must hold 0.5 s, then it's applied smoothly to the game's indoor rain player's own volume (no crossfade requests, so it no longer needs fix 7).
+- **Continuous measuring (0.5.7):** the exposure directions are re-measured a couple per frame (round robin, ~290 rays/s), each nudged randomly by up to half the ray spacing, so the value changes one direction at a time. It used to change all 48 at once.
+- **Indoor layers (0.5.7):** with fix 8 on, the indoor channel follows enclosure (1 when enclosed, 0 in open air; 8d sets how early openings fade it), not the room map. Covered outdoor spots get roof rain.
+- **One speed (0.5.6):** exposure is measured indoors and outdoors (8/s). The outdoor level, the opening sounds' share (× how enclosed you are), the direction cue, the indoor fade and the roof rain all follow it with the same ~0.35 s smoothing.
+
+**Settings.** `8 Outdoor sound indoors from openings` (on/off), `8a Direction cue strength` 0.6, `8b Roof rain under floors` 0.3 (one floor above), `8c Through glass` 0.45, `8d Indoor sound fade near openings` 0.6, `8e Sound from openings` 0.7, `8f HRTF on opening sounds` off.
+
+**Check.**
+- Glass building with broken windows: outdoor sound in, louder near the windows.
+- Wide entrances: no swings when stepping sideways.
+- Facing away from an open side: duller, panned toward it.
+- Deep interior: unchanged.
+- Lower floors of a tall building in rain: quieter roof rain (with fix 7).
+
+Logs: `ambience.csv` (exposureApplied, indoorFade, bedPan, bedCutoffHz, roofRainFactor), `exposure.csv` (openSideAz, oneSided), and the summary's AMBIENCE MIX section.
+
+---
+
+## Fix 4: Off-map sounds as outdoor
+
+**Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.
+
+**Evidence.** Raid 1: all 87 battle sounds (450–600 m) were in an invalid room with propagation 1.0, so they were fully muffled wherever you stood.
+
+**What changes.** `OffMapFix`, for sources in an invalid room only:
+- While you're outside: no propagation loss (0).
+- While you're inside: the loss follows the doorway value, 0 at the doorway rising to 1 deep inside. This uses fix 3's outdoorness, which is calculated even when fix 3 is off.
+
+**Settings.** `4 Off-map sounds as outdoor` (on/off).
+
+**Check.** Distant ambient battles sound clearer while you're outside, and still fade when you go deep inside. Logs: "fix 4 applied N times" in `summary.txt`; `containers.csv` rows with room `invalid` show `prop` 0 while you're outside.
+
+**Limits.** It affects any source off the baked map, not only SPTBattleAmbience. That includes a bot standing outside the baked area, which is also treated as outdoors (more correct than fully blocked).
+
+---
+
+## Planned (not built)
+
+Order and status: [ROADMAP.md](ROADMAP.md).
+
+- **Remote gunshots at your threshold:** smooth the switch between the "same room" and "different room" occlusion calculations when you cross a doorway.
+
+From [../02_Solutions_and_Feasibility.md](../02_Solutions_and_Feasibility.md) and the raid findings, in rough order:
+- **Distant obstruction:** run at least a cheap terrain/building check for sounds beyond their occlusion range (raid 3: nothing past about 250 m is ever obstructed).
+- **Portal positioning (2.1):** sounds heard through a doorway should come *from the doorway*, not through the wall.
+- **Air absorption (2.5):** high frequencies fade with distance; the game computes this but never applies it. (Fix 6 applies it to its own echoes; other sounds still lack it.)
+- **Server settings (phase 1):** occlusion range, absorption, binaural toggles.
+- **Headset DSP:** hook `RealSoundSimulation.Dsp` onto the listener, replacing the game's headset effect.

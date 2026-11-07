@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure DSP: no Unity, no game references, so the offline bench and the in-game plugin run the same code. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>RealSoundSimulation.Dsp</AssemblyName>
+    <RootNamespace>RealSoundSimulation.Dsp</RootNamespace>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

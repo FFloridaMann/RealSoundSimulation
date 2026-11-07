@@ -1,0 +1,10 @@
+<Project>
+  <!-- Shared paths. Change SptDir if the game moves. -->
+  <PropertyGroup>
+    <SptDir>G:\SPT</SptDir>
+    <Managed>$(SptDir)\EscapeFromTarkov_Data\Managed</Managed>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>

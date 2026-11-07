@@ -1,0 +1,667 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Audio.SpatialSystem;
+using RealSoundSimulation.Diagnostics;
+using EFT;
+using EFT.Ballistics;
+using HarmonyLib;
+using UnityEngine;
+
+namespace RealSoundSimulation.Acoustics
+{
+    // Fix 6 (roadmap step 4, 0.3.0): synthesised early reflections ("echoes") for your own gunshots.
+    //
+    // The game plays your own shot as a stereo recording (indoor or outdoor set) plus a hidden Meta reverb copy. Neither
+    // knows where the walls actually are or which way you fired. This adds up to N short echoes per shot, each a delayed,
+    // quieter, duller copy of the shot played from the surface it bounced off:
+    //
+    //   1. Find reflecting surfaces (when you fire):
+    //      spec    mirror reflections. For each wall the enclosure probe hit, the point on that wall straight out from you
+    //              (checked with one ray). Path = 2 x perpendicular distance. The classic slapback.
+    //      diff    a probe hit whose wall has no mirror point in reach (corners, clutter): scattered, weaker, duller.
+    //      aim     the 9-ray cone along your shot: surfaces you fire *at* scatter energy back, so firing into a room is
+    //              loud and close, firing out of one is not.
+    //      far     16 level rays out to 250 m (re-scanned every 5 m / 5 s): building faces, cliffs, hills. Distinct
+    //              late echoes outdoors.
+    //      Ground hits are ignored (the recordings already contain the ground bounce).
+    //   2. Level of each echo, relative to the shot:
+    //        spreading   -20 log10(path / 2 m)
+    //        muzzle      the blast is louder forward: 0 dB toward where you aim, -"6c" dB straight behind
+    //        surface     material loss (EFT bullet material tags: concrete ~0, wood -1.5..-3, soil -4, fabric -8 dB)
+    //        scatter     diffuse/aim/far only: -3 dB and x cos(incidence) and the share of the ray set
+    //        + setting "6a Echo level dB". Echoes within 4 ms and 30 deg are merged; the loudest N are played.
+    //   3. Colour: a low-pass at the lowest of: air absorption for the path length (ISO 9613-1 fit: 40 m ~9 kHz,
+    //      100 m ~5 kHz, 300 m ~2.2 kHz), the surface's cutoff, x0.75 for scattered, and x0.55 when it arrives from
+    //      straight behind you (head shadow; the echoes use plain stereo panning, not HRTF).
+    //   4. Timing: hooked on the gun's own sound queue (SuperBetterAudioQueue.Enqueue), so every sample the game
+    //      schedules for your gun (single shot, full-auto firing loop, burst tail) gets the same echoes, scheduled at
+    //      the sample's start + path / 343 m/s. A looping full-auto sample's echoes stop when the tail starts (+ delay).
+    //   5. Output: own pool of 24 AudioSources on the game's "Guns/Gunshots" mixer group, so game volume and the
+    //      in-game headset treat them like the shot. When all are busy the oldest is stopped (counted in the summary).
+    internal static class OwnEchoes
+    {
+        // ---- state for the call in progress (FireBullet / StopFiringLoop on your own gun) ----
+        [ThreadStatic] private static bool _own;
+        [ThreadStatic] private static bool _tail;
+        [ThreadStatic] private static AudioClip _echoClip;
+        private static Vector3 _aim = Vector3.forward;
+        private static int _callId, _tapsForCall = -1;
+
+        private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
+            AccessTools.FieldRefAccess<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge>("playersBridge");
+
+        // ---- model constants ----
+        public const float SpeedOfSound = 343f;
+        private const float RefPath = 2f;          // path at which an echo is as loud as the shot (before losses)
+        private const float MinPath = 3f;          // shorter (under ~9 ms) is left to Meta's early reflections
+        private const float MinLevelDb = -48f;
+        private const float MaxLevelDb = -3f;
+        private const float ScatterDb = -3f;
+        private const float MergeDelayS = 0.004f;
+        private const float MergeCos = 0.866f;     // 30 deg
+        private const float FarRange = 250f;
+        private const int FarRays = 16;
+        private const float FarElevationDeg = 2f;
+        private const float FarMinPath = 60f;      // nearer than 30 m is covered by the probe
+        private const int MaxValidations = 12;
+
+        internal enum Kind : byte { Spec, Diff, Aim, Far }
+
+        internal struct Tap
+        {
+            public Vector3 Pos, OutDir;
+            public float Path, LevelDb, DirDb, Cutoff;
+            public MaterialType Mat;
+            public Kind Kind;
+            public float Energy; // linear power, for merging
+        }
+
+        private static readonly Tap[] Cands = new Tap[96];
+        private static int _candN;
+        internal static readonly Tap[] Taps = new Tap[8];
+        internal static int TapN;
+
+        // far ring cache
+        private static readonly Vector3[] FarPoint = new Vector3[FarRays];
+        private static readonly Vector3[] FarNormal = new Vector3[FarRays];
+        private static readonly Vector3[] FarDir = new Vector3[FarRays];
+        private static readonly float[] FarDist = new float[FarRays];
+        private static readonly Collider[] FarCol = new Collider[FarRays];
+        private static Vector3 _farOrigin = new Vector3(1e9f, 0, 0);
+        private static float _farTime = -100f;
+
+        // planes already used this computation (dedupe the many probe hits on one wall)
+        private static readonly Vector3[] PlaneN = new Vector3[32];
+        private static readonly float[] PlaneH = new float[32];
+
+        // ---- stats (summary.txt) ----
+        public static int SamplesEchoed, TapsPlayed, Stolen, MaxBusy;
+        public static float LastHardBoost;
+        public static int GlassBarsTaps;
+        private static int _glassMask = -1;
+        public static readonly int[] TapsByKind = new int[4];
+        public static readonly Dictionary<MaterialType, int> TapsByMaterial = new Dictionary<MaterialType, int>();
+        private static float _levelSum, _pathSum;
+
+        public static void Apply(Harmony h)
+        {
+            h.Patch(AccessTools.Method(typeof(WeaponSoundPlayer), nameof(WeaponSoundPlayer.FireBullet)),
+                prefix: new HarmonyMethod(typeof(OwnEchoes), nameof(FirePrefix)),
+                finalizer: new HarmonyMethod(typeof(OwnEchoes), nameof(ClearFinalizer)));
+            h.Patch(AccessTools.Method(typeof(WeaponSoundPlayer), nameof(WeaponSoundPlayer.StopFiringLoop)),
+                prefix: new HarmonyMethod(typeof(OwnEchoes), nameof(TailPrefix)),
+                finalizer: new HarmonyMethod(typeof(OwnEchoes), nameof(ClearFinalizer)));
+            h.Patch(AccessTools.Method(typeof(SoundBank), nameof(SoundBank.PickClipsByDistance)),
+                postfix: new HarmonyMethod(typeof(OwnEchoes), nameof(PickPostfix)));
+            h.Patch(AccessTools.Method(typeof(SuperBetterAudioQueue), nameof(SuperBetterAudioQueue.Enqueue)),
+                postfix: new HarmonyMethod(typeof(OwnEchoes), nameof(EnqueuePostfix)));
+        }
+
+        public static void Reset()
+        {
+            SamplesEchoed = TapsPlayed = Stolen = MaxBusy = 0;
+            Array.Clear(TapsByKind, 0, TapsByKind.Length);
+            TapsByMaterial.Clear();
+            Surfaces.Reset();
+            Loudness.Reset();
+            GlassBarsTaps = 0; _glassMask = -1;
+            _levelSum = _pathSum = 0f;
+            _farTime = -100f;
+            EchoVoices.StopAll();
+        }
+
+        private static bool IsOwn(WeaponSoundPlayer wsp)
+        {
+            BaseSoundPlayer.IObserverToPlayerBridge b = BridgeRef(wsp);
+            return b != null && b.PointOfView == EPointOfView.FirstPerson;
+        }
+
+        private static void FirePrefix(WeaponSoundPlayer __instance, Vector3 shotDirection)
+        {
+            _own = false; _tail = false; _echoClip = null;
+            try
+            {
+                if (!Plugin.EchoOn.Value || !IsOwn(__instance)) return;
+                _own = true;
+                _callId++;
+                if (shotDirection.sqrMagnitude > 1e-6f) _aim = shotDirection.normalized;
+            }
+            catch (Exception e) { _own = false; DiagRunner.ReportOnce("6 own gun echoes (fire)", e); }
+        }
+
+        private static void TailPrefix(WeaponSoundPlayer __instance)
+        {
+            _own = false; _tail = true; _echoClip = null;
+            try
+            {
+                if (!Plugin.EchoOn.Value || !IsOwn(__instance)) return;
+                _own = true;
+                _callId++;
+            }
+            catch (Exception e) { _own = false; DiagRunner.ReportOnce("6 own gun echoes (tail)", e); }
+        }
+
+        private static Exception ClearFinalizer(Exception __exception)
+        {
+            _own = false; _tail = false; _echoClip = null;
+            return __exception;
+        }
+
+        // The echoes use the *outdoor* recording of the same distance tier: the driest version of the shot (the indoor set
+        // already has a room baked in). Runs for every own pick; order against fix 3c's blend doesn't matter.
+        private static void PickPostfix(SoundBank __instance, ref AudioClip clip1)
+        {
+            if (!_own || clip1 == null) return;
+            try
+            {
+                _echoClip = clip1;
+                if (!__instance.HasEnvironment || __instance.Environments == null || __instance.Environments.Length < 2) return;
+                for (int env = 0; env < 2; env++)
+                {
+                    EnvironmentVariety ev = __instance.Environments[env];
+                    if (ev == null) continue;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        DistanceVarity dv = ev[k];
+                        if (dv?.Clips == null || Array.IndexOf(dv.Clips, clip1) < 0) continue;
+                        Loudness.Measure(__instance, k);
+                        AudioClip outdoor = null;
+                        __instance.SelectRandomClip(__instance.Environments[0][k], ref outdoor);
+                        if (outdoor != null) _echoClip = outdoor;
+                        return;
+                    }
+                }
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("6 own gun echoes (clip)", e); }
+        }
+
+        private static void EnqueuePostfix(SuperBetterAudioQueue __instance, AudioClip clip1, AudioClip clip2, double startTime, float clipTime, float volume, float pitch)
+        {
+            if (!_own) return;
+            try
+            {
+                // Any echo of this queue's looping sample ends where this sample starts (the game cuts the loop there).
+                EchoVoices.CloseLoops(__instance, startTime);
+
+                AudioClip clip = _echoClip != null ? _echoClip : (clip2 != null ? clip2 : clip1);
+                if (clip == null) return;
+                if (!TryGetListener(out Vector3 o, out Vector3 fwd)) return;
+                if (_tapsForCall != _callId)
+                {
+                    ComputeTaps(o, _aim);
+                    _tapsForCall = _callId;
+                }
+                bool loop = clipTime <= 0f;
+                string sample = _tail ? "tail" : (loop ? "loop" : "shot");
+                SamplesEchoed++;
+                float trim = Plugin.EchoLevelDb.Value;
+                for (int i = 0; i < TapN; i++)
+                {
+                    ref Tap t = ref Taps[i];
+                    float delay = t.Path / SpeedOfSound;
+                    float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
+                    float cutoff = t.Cutoff * HeadShadow(o, fwd, t.Pos);
+                    bool stole = EchoVoices.Play(__instance, clip, t.Pos, startTime + delay, loop ? 0.0 : clipTime, loop, volume * DbToLin(lvl), pitch, cutoff, delay);
+                    TapsPlayed++;
+                    TapsByKind[(int)t.Kind]++;
+                    TapsByMaterial.TryGetValue(t.Mat, out int c); TapsByMaterial[t.Mat] = c + 1;
+                    _levelSum += lvl; _pathSum += t.Path;
+                    if (stole) Stolen++;
+                    LogTap(sample, i, ref t, delay, lvl, cutoff, o, fwd, stole);
+                }
+                if (TapN == 0) LogNone(sample);
+                if (EchoVoices.Busy > MaxBusy) MaxBusy = EchoVoices.Busy;
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("6 own gun echoes (play)", e); }
+        }
+
+        private static bool TryGetListener(out Vector3 pos, out Vector3 fwd)
+        {
+            pos = Vector3.zero; fwd = Vector3.forward;
+            if (!MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return false;
+            Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+            if (lt == null) return false;
+            pos = lt.position; fwd = lt.forward;
+            return true;
+        }
+
+        // ---------------- finding the reflections ----------------
+
+        internal static void ComputeTaps(Vector3 o, Vector3 aim)
+        {
+            Diagnostics.Perf.Begin();
+            try { ComputeTapsCore(o, aim); }
+            finally { Diagnostics.Perf.End(Diagnostics.Perf.Part.EchoSearch); }
+        }
+
+        private static void ComputeTapsCore(Vector3 o, Vector3 aim)
+        {
+            _candN = 0; TapN = 0;
+            int mask = EnclosureProbe.CurrentMask();
+            if (!EnclosureProbe.Valid || Time.time - EnclosureProbe.LastSweepTime > 0.15f || (EnclosureProbe.LastOrigin - o).sqrMagnitude > 0.25f)
+                EnclosureProbe.SweepNow();
+            float dirMax = Plugin.EchoDirectivityDb.Value;
+
+            // 1. mirror reflections from the probe's walls (+ scattered fallback)
+            if (EnclosureProbe.Valid)
+            {
+                int planes = 0, validations = 0;
+                for (int i = 0; i < EnclosureProbe.RayCount; i++)
+                {
+                    float d = EnclosureProbe.HitDist[i];
+                    if (float.IsInfinity(d)) continue;
+                    Vector3 n = EnclosureProbe.HitNormal[i];
+                    if (EnclosureProbe.IsGround(n)) continue;
+                    Vector3 p = EnclosureProbe.HitPoint[i];
+                    float h = Vector3.Dot(o - p, n);
+                    bool dup = false;
+                    for (int k = 0; k < planes && !dup; k++)
+                        dup = Vector3.Dot(PlaneN[k], n) > 0.9f && Mathf.Abs(PlaneH[k] - h) < 0.75f;
+                    if (dup) continue;
+                    if (planes < PlaneN.Length) { PlaneN[planes] = n; PlaneH[planes] = h; planes++; }
+
+                    bool spec = false;
+                    if (h * 2f >= MinPath && validations < MaxValidations)
+                    {
+                        validations++;
+                        if (CountedRay.Raycast(o, -n, out RaycastHit vh, h + 1f, mask, QueryTriggerInteraction.Ignore)
+                            && Mathf.Abs(vh.distance - h) < 0.6f && Vector3.Dot(vh.normal, n) > 0.9f)
+                        {
+                            spec = true;
+                            AddCand(Kind.Spec, vh.point, -n, vh.distance * 2f, Material(vh.collider), 1f, 1f, aim, dirMax);
+                        }
+                    }
+                    if (!spec && d * 2f >= MinPath)
+                    {
+                        Vector3 dir = EnclosureProbe.Dirs[i];
+                        float cos = Mathf.Max(0.05f, Vector3.Dot(-dir, n));
+                        AddCand(Kind.Diff, p, dir, d * 2f, Material(EnclosureProbe.HitCollider[i]), 0.25f * cos, ScatterDb, aim, dirMax);
+                    }
+                }
+            }
+
+            // 2. what you're firing at
+            if (EnclosureProbe.MeasureAim(o, aim, mask, out _, out _))
+            {
+                for (int i = 0; i < EnclosureProbe.AimCone; i++)
+                {
+                    float d = EnclosureProbe.AimHitDist[i];
+                    if (float.IsInfinity(d) || d * 2f < MinPath) continue;
+                    Vector3 n = EnclosureProbe.AimHitNormal[i];
+                    if (EnclosureProbe.IsGround(n)) continue;
+                    Vector3 dir = EnclosureProbe.AimDirs[i];
+                    float cos = Mathf.Max(0.05f, Vector3.Dot(-dir, n));
+                    AddCand(Kind.Aim, EnclosureProbe.AimHitPoint[i], dir, d * 2f, Material(EnclosureProbe.AimHitCollider[i]), cos / EnclosureProbe.AimCone, ScatterDb, aim, dirMax);
+                }
+            }
+
+            // 2b. (0.4.2) glass facades and window bars along the aim cone. They aren't on the sound-blocking layers, so the
+            //     rays above pass through them. Intact glass reflects like glass; bars are a weak, dull reflector (grate).
+            if (_glassMask == -1) _glassMask = LayerMask.GetMask("LowPolyCollider", "TransparentCollider") & ~mask;
+            if (_glassMask != 0)
+            {
+                for (int i = 0; i < EnclosureProbe.AimCone; i++)
+                {
+                    float dOcc = EnclosureProbe.AimHitDist[i];
+                    float maxD = float.IsInfinity(dOcc) ? EnclosureProbe.MaxRange : dOcc;
+                    Vector3 dir = EnclosureProbe.AimDirs[i];
+                    if (!CountedRay.Raycast(o, dir, out RaycastHit gh, maxD, _glassMask, QueryTriggerInteraction.Ignore) || gh.distance * 2f < MinPath) continue;
+                    OutdoorExposure.Path gp = OutdoorExposure.Classify(gh.collider);
+                    if (gp != OutdoorExposure.Path.Glass && gp != OutdoorExposure.Path.Bars) continue;
+                    float cos = Mathf.Max(0.05f, Vector3.Dot(-dir, gh.normal));
+                    AddCand(Kind.Aim, gh.point, dir, gh.distance * 2f, gp == OutdoorExposure.Path.Glass ? MaterialType.Glass : MaterialType.Grate,
+                        cos / EnclosureProbe.AimCone, ScatterDb, aim, dirMax);
+                    GlassBarsTaps++;
+                }
+            }
+
+            // 3. far reflectors
+            if (Plugin.EchoFar.Value)
+            {
+                ScanFar(o, mask);
+                for (int i = 0; i < FarRays; i++)
+                {
+                    float d = FarDist[i];
+                    if (float.IsInfinity(d) || d * 2f < FarMinPath) continue;
+                    Vector3 n = FarNormal[i];
+                    if (EnclosureProbe.IsGround(n)) continue;
+                    float cos = Vector3.Dot(-FarDir[i], n);
+                    if (cos < 0.3f) continue;
+                    AddCand(Kind.Far, FarPoint[i], FarDir[i], d * 2f, Material(FarCol[i]), 0.5f * cos, ScatterDb, aim, dirMax);
+                }
+            }
+
+            // 4. merge near-identical arrivals, keep the loudest N
+            SortCandsByEnergy();
+            // 0.3.3: hard closed rooms (stairwells, bare concrete) get up to 2 extra reflections.
+            float hardRoom = float.IsNaN(EnclosureProbe.HardRoom) ? 0f : EnclosureProbe.HardRoom;
+            // 0.4.1: up to 3 extra, and all echoes + "6e Hard room echo boost dB" x hardRoom (raid 11: stairwell shots
+            // quieter than a stairwell should be; a hard closed room is loud because the sound builds up).
+            int max = Mathf.Clamp(Plugin.EchoMaxTaps.Value + Mathf.RoundToInt(3f * hardRoom), 1, Taps.Length);
+            for (int c = 0; c < _candN; c++)
+            {
+                ref Tap cand = ref Cands[c];
+                bool merged = false;
+                for (int t = 0; t < TapN && !merged; t++)
+                {
+                    if (Mathf.Abs(Taps[t].Path - cand.Path) / SpeedOfSound < MergeDelayS
+                        && Vector3.Dot((Taps[t].Pos - o).normalized, (cand.Pos - o).normalized) > MergeCos)
+                    {
+                        Taps[t].Energy += cand.Energy;
+                        Taps[t].LevelDb = 10f * Mathf.Log10(Taps[t].Energy);
+                        merged = true;
+                    }
+                }
+                if (merged || TapN >= max || cand.LevelDb < MinLevelDb) continue;
+                Taps[TapN++] = cand;
+            }
+            float hardBoost = Plugin.EchoHardRoomDb.Value * hardRoom;
+            LastHardBoost = hardBoost;
+            for (int t = 0; t < TapN; t++) Taps[t].LevelDb = Mathf.Min(Taps[t].LevelDb + hardBoost, MaxLevelDb + hardBoost * 0.5f);
+        }
+
+        private static void AddCand(Kind kind, Vector3 pos, Vector3 outDir, float path, MaterialType mat, float share, float extraDb, Vector3 aim, float dirMax)
+        {
+            if (_candN >= Cands.Length) return;
+            MaterialProps(mat, out float matDb, out float matCut);
+            float spread = -20f * Mathf.Log10(Mathf.Max(path, RefPath) / RefPath);
+            float dirDb = -dirMax * (1f - Vector3.Dot(outDir.normalized, aim)) * 0.5f;
+            float shareDb = 10f * Mathf.Log10(Mathf.Max(share, 1e-4f));
+            float level = spread + dirDb + matDb + extraDb + shareDb;
+            float cutoff = Mathf.Min(AirCutoff(path), matCut) * (kind == Kind.Spec ? 1f : 0.75f);
+            Cands[_candN++] = new Tap
+            {
+                Pos = pos, OutDir = outDir, Path = path, LevelDb = level, DirDb = dirDb, Cutoff = cutoff,
+                Mat = mat, Kind = kind, Energy = Mathf.Pow(10f, level / 10f),
+            };
+        }
+
+        private static void SortCandsByEnergy()
+        {
+            for (int i = 1; i < _candN; i++)
+            {
+                Tap x = Cands[i];
+                int j = i - 1;
+                while (j >= 0 && Cands[j].Energy < x.Energy) { Cands[j + 1] = Cands[j]; j--; }
+                Cands[j + 1] = x;
+            }
+        }
+
+        private static void ScanFar(Vector3 o, int mask)
+        {
+            if ((o - _farOrigin).sqrMagnitude < 25f && Time.time - _farTime < 5f) return;
+            _farOrigin = o; _farTime = Time.time;
+            float el = FarElevationDeg * Mathf.Deg2Rad;
+            for (int i = 0; i < FarRays; i++)
+            {
+                float az = i * (Mathf.PI * 2f / FarRays);
+                Vector3 d = new Vector3(Mathf.Cos(az) * Mathf.Cos(el), Mathf.Sin(el), Mathf.Sin(az) * Mathf.Cos(el));
+                FarDir[i] = d;
+                if (CountedRay.Raycast(o, d, out RaycastHit hit, FarRange, mask, QueryTriggerInteraction.Ignore))
+                {
+                    FarDist[i] = hit.distance; FarPoint[i] = hit.point; FarNormal[i] = hit.normal; FarCol[i] = hit.collider;
+                }
+                else { FarDist[i] = float.PositiveInfinity; FarCol[i] = null; }
+            }
+        }
+
+        // ---------------- acoustics tables ----------------
+
+        // Air absorption as a low-pass cutoff for a path length (ISO 9613-1 fit at 20 C / 70% RH, ~3 dB loss points).
+        private static readonly float[] AirPathM = { 10f, 40f, 100f, 300f, 1000f };
+        private static readonly float[] AirCutHz = { 20000f, 9000f, 5000f, 2200f, 600f };
+
+        public static float AirCutoff(float path)
+        {
+            if (path <= AirPathM[0]) return AirCutHz[0];
+            for (int i = 1; i < AirPathM.Length; i++)
+            {
+                if (path > AirPathM[i]) continue;
+                float t = Mathf.InverseLerp(Mathf.Log(AirPathM[i - 1]), Mathf.Log(AirPathM[i]), Mathf.Log(path));
+                return Mathf.Exp(Mathf.Lerp(Mathf.Log(AirCutHz[i - 1]), Mathf.Log(AirCutHz[i]), t));
+            }
+            return AirCutHz[AirCutHz.Length - 1];
+        }
+
+        // Reflection loss (dB) and brightness (low-pass Hz) per EFT bullet material tag.
+        public static void MaterialProps(MaterialType m, out float db, out float cutoff)
+        {
+            switch (m)
+            {
+                case MaterialType.Concrete: case MaterialType.Stone: case MaterialType.Asphalt: case MaterialType.Tile:
+                case MaterialType.GenericHard: case MaterialType.MetalThick: case MaterialType.MetalNoDecal:
+                case MaterialType.Water: case MaterialType.WaterPuddle:
+                    db = -0.5f; cutoff = 20000f; break;
+                case MaterialType.Glass:
+                    db = -1f; cutoff = 20000f; break;
+                case MaterialType.MetalThin: case MaterialType.GarbageMetal:
+                    db = -1f; cutoff = 16000f; break;
+                case MaterialType.WoodThick:
+                    db = -1.5f; cutoff = 9000f; break;
+                case MaterialType.Plastic:
+                    db = -2f; cutoff = 10000f; break;
+                case MaterialType.WoodThin:
+                    db = -3f; cutoff = 6000f; break;
+                case MaterialType.Gravel: case MaterialType.Pebbles:
+                    db = -3f; cutoff = 6000f; break;
+                case MaterialType.Soil: case MaterialType.SoilForest: case MaterialType.Mud: case MaterialType.Snow:
+                case MaterialType.GrassHigh: case MaterialType.GrassLow: case MaterialType.Swamp:
+                    db = -4f; cutoff = 4000f; break;
+                case MaterialType.Cardboard: case MaterialType.GlassShattered:
+                    db = -5f; cutoff = 5000f; break;
+                case MaterialType.Fabric: case MaterialType.GenericSoft: case MaterialType.GarbagePaper:
+                case MaterialType.Rubber: case MaterialType.Tyre: case MaterialType.Body: case MaterialType.BodyArmor:
+                    db = -8f; cutoff = 2500f; break;
+                case MaterialType.Chainfence: case MaterialType.Grate:
+                    db = -10f; cutoff = 6000f; break; // mostly see-through
+                default:
+                    db = -1f; cutoff = 14000f; break; // untagged: treat as a generic hard surface
+            }
+        }
+
+        private static MaterialType Material(Collider c) => Surfaces.Material(c);
+
+        // No HRTF on the echoes, so front/back is cued the way the ear's shadow does it: from behind is duller.
+        private static float HeadShadow(Vector3 o, Vector3 fwd, Vector3 pos)
+        {
+            Vector3 a = pos - o;
+            a.y = 0f; fwd.y = 0f;
+            if (a.sqrMagnitude < 1e-4f || fwd.sqrMagnitude < 1e-4f) return 1f;
+            float back = Mathf.Max(0f, -Vector3.Dot(a.normalized, fwd.normalized));
+            return Mathf.Lerp(1f, 0.55f, back);
+        }
+
+        private static float DbToLin(float db) => Mathf.Pow(10f, db / 20f);
+
+        // ---------------- logs ----------------
+
+        private static void LogTap(string sample, int i, ref Tap t, float delay, float lvl, float cutoff, Vector3 o, Vector3 fwd, bool stole)
+        {
+            if (!DiagLog.IsOpen) return;
+            Vector3 a = t.Pos - o;
+            Vector3 ah = new Vector3(a.x, 0, a.z), fh = new Vector3(fwd.x, 0, fwd.z);
+            float az = ah.sqrMagnitude > 1e-4f && fh.sqrMagnitude > 1e-4f ? Vector3.SignedAngle(fh, ah, Vector3.up) : 0f;
+            float el = a.sqrMagnitude > 1e-4f ? Mathf.Asin(Mathf.Clamp(a.normalized.y, -1f, 1f)) * Mathf.Rad2Deg : 0f;
+            DiagLog.Row("echoes.csv", string.Join(",",
+                DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), sample, TapN.ToString(), i.ToString(), t.Kind.ToString(),
+                t.Mat.ToString(), DiagLog.F(t.Path, "0.0"), DiagLog.F(delay * 1000f, "0"), DiagLog.F(lvl, "0.0"),
+                DiagLog.F(t.DirDb, "0.0"), DiagLog.F(cutoff, "0"), DiagLog.F(az, "0"), DiagLog.F(el, "0"), stole ? "1" : "0"));
+        }
+
+        private static void LogNone(string sample)
+        {
+            if (!DiagLog.IsOpen) return;
+            DiagLog.Row("echoes.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), sample, "0", "", "none", "", "", "", "", "", "", "", "", ""));
+        }
+
+        public static string Summary()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("OWN GUN ECHOES (fix 6)");
+            if (SamplesEchoed == 0) { sb.AppendLine("  none played (fix 6 off, or no own shots)"); return sb.ToString(); }
+            sb.AppendLine($"  samples echoed {SamplesEchoed} (shots, firing loops, tails)   echoes played {TapsPlayed} = {(float)TapsPlayed / SamplesEchoed:0.0} per sample");
+            sb.AppendLine($"  by kind: mirror {TapsByKind[0]}  scattered {TapsByKind[1]}  aim {TapsByKind[2]}  far {TapsByKind[3]}");
+            if (TapsPlayed > 0) sb.AppendLine($"  mean level {_levelSum / TapsPlayed:0.0} dB   mean path {_pathSum / TapsPlayed:0.0} m");
+            sb.AppendLine($"  voices: max busy {MaxBusy} of {EchoVoices.PoolSize}, stolen {Stolen}");
+            var mats = new List<string>();
+            foreach (var kv in TapsByMaterial) mats.Add($"{kv.Key}:{kv.Value}");
+            sb.AppendLine("  surfaces: " + string.Join("  ", mats) + "   (None = no bullet material tag found)");
+            sb.AppendLine($"  windows registered as glass: {Surfaces.WindowsFound}   glass-facade/bar candidates (0.4.2): {GlassBarsTaps}");
+            sb.Append(Loudness.Summary());
+            return sb.ToString();
+        }
+    }
+
+    // The echo voice pool: plain AudioSources (2D panning by position, no distance roll-off; level and filter are set per
+    // echo) routed to the game's gunshot mixer group.
+    internal class EchoVoices : MonoBehaviour
+    {
+        public const int PoolSize = 24;
+        private const double LoopSafetyS = 15.0;
+
+        private class Voice
+        {
+            public GameObject Go;
+            public AudioSource Src;
+            public AudioLowPassFilter Lp;
+            public double Start, BusyUntil;
+            public bool OpenLoop;
+            public object Owner;
+            public float Delay;
+        }
+
+        private static readonly Voice[] Pool = new Voice[PoolSize];
+        private static bool _built;
+        private static AnimationCurve _flat;
+
+        public static int Busy
+        {
+            get
+            {
+                if (!_built) return 0;
+                double now = AudioSettings.dspTime; int n = 0;
+                foreach (Voice v in Pool) if (v.BusyUntil > now) n++;
+                return n;
+            }
+        }
+
+        private static void Build()
+        {
+            if (_built) return;
+            _flat = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 1f));
+            for (int i = 0; i < PoolSize; i++)
+            {
+                var go = new GameObject("RealSoundSimulation echo " + i);
+                DontDestroyOnLoad(go);
+                var src = go.AddComponent<AudioSource>();
+                src.playOnAwake = false;
+                src.spatialBlend = 1f;
+                src.spatialize = false;
+                src.dopplerLevel = 0f;
+                src.spread = 0f;
+                src.reverbZoneMix = 0f;
+                src.bypassReverbZones = true;
+                src.priority = 40;
+                src.rolloffMode = AudioRolloffMode.Custom;
+                src.maxDistance = 100000f;
+                src.SetCustomCurve(AudioSourceCurveType.CustomRolloff, _flat);
+                var lp = go.AddComponent<AudioLowPassFilter>();
+                lp.lowpassResonanceQ = 1f;
+                lp.cutoffFrequency = 22000f;
+                Pool[i] = new Voice { Go = go, Src = src, Lp = lp };
+            }
+            _built = true;
+        }
+
+        // Returns true if a busy voice had to be stopped to make room.
+        public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay)
+        {
+            Build();
+            double now = AudioSettings.dspTime;
+            Voice pick = null; bool stole = false;
+            foreach (Voice v in Pool) if (v.BusyUntil <= now) { pick = v; break; }
+            if (pick == null)
+            {
+                foreach (Voice v in Pool) if (pick == null || v.Start < pick.Start) pick = v;
+                pick.Src.Stop();
+                stole = true;
+            }
+            var ba = MonoBehaviourSingleton<BetterAudio>.Instantiated ? MonoBehaviourSingleton<BetterAudio>.Instance : null;
+            if (ba != null) pick.Src.outputAudioMixerGroup = ba.GunshotMixerGroup;
+            pick.Go.transform.position = pos;
+            pick.Src.clip = clip;
+            pick.Src.loop = loop;
+            pick.Src.volume = Mathf.Clamp01(volume);
+            pick.Src.pitch = pitch > 0f ? pitch : 1f;
+            pick.Lp.cutoffFrequency = Mathf.Clamp(cutoff, 400f, 22000f);
+            pick.Src.PlayScheduled(start);
+            pick.Start = start; pick.Owner = owner; pick.Delay = delay; pick.OpenLoop = loop;
+            if (loop)
+            {
+                pick.BusyUntil = start + LoopSafetyS;
+                pick.Src.SetScheduledEndTime(start + LoopSafetyS);
+            }
+            else
+            {
+                double end = start + duration;
+                pick.Src.SetScheduledEndTime(end);
+                pick.BusyUntil = end + 0.02;
+            }
+            return stole;
+        }
+
+        // The owner queue scheduled a new sample at `nextStart`: its looping echoes end there, each shifted by its delay.
+        public static void CloseLoops(object owner, double nextStart)
+        {
+            if (!_built) return;
+            foreach (Voice v in Pool)
+            {
+                if (!v.OpenLoop || !ReferenceEquals(v.Owner, owner)) continue;
+                double end = nextStart + v.Delay;
+                v.Src.SetScheduledEndTime(end);
+                v.BusyUntil = end + 0.02;
+                v.OpenLoop = false;
+            }
+        }
+
+        public static void StopAll()
+        {
+            if (!_built) return;
+            foreach (Voice v in Pool)
+            {
+                if (v.Src != null) v.Src.Stop();
+                v.BusyUntil = 0; v.OpenLoop = false; v.Owner = null;
+            }
+        }
+
+        private void Update()
+        {
+            if (!_built) return;
+            if (!Plugin.EchoOn.Value) { if (Busy > 0) StopAll(); return; }
+            double now = AudioSettings.dspTime;
+            foreach (Voice v in Pool)
+                if (v.OpenLoop && now > v.Start + LoopSafetyS - 0.1) { v.OpenLoop = false; v.Owner = null; }
+        }
+    }
+}

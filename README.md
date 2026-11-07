@@ -1,0 +1,51 @@
+# Real Sound Simulation
+
+A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.5.7**: diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out) and 8 (outdoor sound indoors from openings), all off by default and switchable live in F12. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Documentation
+
+| Doc | Read it for |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the plugin works: parts, startup, every game hook, how fixes switch |
+| [docs/FIXES.md](docs/FIXES.md) | Each fix: the problem, the evidence, what it changes, settings, how to check it |
+| [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) | Every log file and column, the F9 overlay, raid history |
+| [docs/AMBIENCE.md](docs/AMBIENCE.md) | How the game's ambient audio works (layers, outdoor value, room settings, the rain dropout bug) and the options for step 4b |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | The agreed order of work, status, and what to test next |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | What changed in each version and whether it has run in game |
+| [01_How_SPT_Tarkov_Audio_Works.md](01_How_SPT_Tarkov_Audio_Works.md) | The game's own audio system (research) |
+| [02_Solutions_and_Feasibility.md](02_Solutions_and_Feasibility.md) | The full plan, including what isn't built yet |
+| [TESTING.md](TESTING.md) | What to do in a test raid |
+| [00_WORKING_NOTES.md](00_WORKING_NOTES.md) | Raw notes and raid findings |
+
+These docs are updated in the same change as the code.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/RealSoundSimulation.Dsp/` | Pure C# DSP (no Unity): headset model (passive leak + electronic talk-through, compressor, limiter, hiss). The offline bench and the game run the same code |
+| `src/RealSoundSimulation/` | BepInEx plugin: `Diagnostics/` (self-check, overlay, CSV logs, timing; change no sound) and `Fixes/` (change sound; each off by default) |
+| `tools/HeadsetBench/` | Offline bench: renders WAVs per headset preset and measures footstep gain, clamp, recovery, hiss, frequency response, CPU and allocations |
+| `01_…md`, `02_…md`, `00_WORKING_NOTES.md`, `data/` | The research: how the game's audio works, the solutions plan, working notes, extracted server audio settings |
+| `docs/` | Architecture, fixes, diagnostics, changelog |
+| `deploy.ps1` | Build and copy the plugin into `G:\SPT\BepInEx\plugins\FFloridaMann-RealSoundSimulation` (run with `powershell -ExecutionPolicy Bypass -File deploy.ps1` if scripts are blocked) |
+| `TESTING.md` | What to listen for and what to do in a test raid |
+
+## Build and run
+
+```powershell
+dotnet build RealSoundSimulation.sln -c Release
+dotnet run -c Release --project tools/HeadsetBench -- bench_out   # writes bench_out/*.wav + report.md
+.\deploy.ps1                                                       # installs the plugin into SPT
+```
+
+Paths to the game are in `Directory.Build.props` (`SptDir`).
+
+## Rules this codebase follows
+
+- **Nothing allocates on the audio thread.** The bench fails if `HeadsetProcessor.Process` allocates.
+- **No Harmony patches on Burst job `Execute` methods.** They run native code, so the patch would never fire. Patch the managed schedulers and readers instead.
+- **Patch named members, not `method_N`/`float_N`.** Every target is listed in `PatchSelfCheck` and verified at startup (see `BepInEx/RealSoundSimulationLogs/selfcheck.txt`).
+- **BepInEx setting names (section and key) never contain `=` `'` `"` `\` `[` `]`, tabs or newlines.** BepInEx throws on them and the whole plugin silently fails to load. Descriptions can contain anything. After every deploy, confirm the plugin loaded: `BepInEx/RealSoundSimulationLogs/selfcheck.txt` must have a fresh timestamp.
+- **Every feature is switchable in F12** and logs what it decided, so it can be A/B'd in raid and checked from logs.
+- **Docs are updated in the same change as the code.**

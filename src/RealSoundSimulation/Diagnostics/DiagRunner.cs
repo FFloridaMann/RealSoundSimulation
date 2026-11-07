@@ -1,0 +1,438 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Audio.SpatialSystem;
+using Audio.SpatialSystem.SpatialAudioCalculator.CombinedOcclusionCalculator;
+using EFT;
+using HarmonyLib;
+using UnityEngine;
+
+using RealSoundSimulation.Fixes;
+
+namespace RealSoundSimulation.Diagnostics
+{
+    // Watches the game's spatial audio system while in raid: logs every sound container's occlusion state, counts voices,
+    // dumps each audio group's rolloff curve the first time it's seen, times the audio systems, and writes a summary.
+    internal sealed class DiagRunner : MonoBehaviour
+    {
+        private static readonly AccessTools.FieldRef<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>> ContainersRef =
+            AccessTools.FieldRefAccess<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>>("_allRegisteredSoundContainers");
+        private static readonly AccessTools.FieldRef<SpatialAudioSystem, Dictionary<int, SoundOcclusionProcessor>> ProcessorsRef =
+            AccessTools.FieldRefAccess<SpatialAudioSystem, Dictionary<int, SoundOcclusionProcessor>>("_allRegisteredProcessorsByContainerID");
+        private static readonly AccessTools.FieldRef<SpatialAudioSystem, List<SoundOcclusionProcessor>> ActiveRef =
+            AccessTools.FieldRefAccess<SpatialAudioSystem, List<SoundOcclusionProcessor>>("_activeProcessors");
+        private static readonly AccessTools.FieldRef<BetterSource, AudioGroupPreset> PresetRef =
+            AccessTools.FieldRefAccess<BetterSource, AudioGroupPreset>("Preset");
+
+        private static readonly HashSet<string> Reported = new HashSet<string>();
+
+        private bool _inRaid;
+        private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
+        private int _framesInWindow, _maxActive, _maxContainers, _maxPlaying, _maxBetterSources;
+        private long _activeSum, _activeSamples;
+        private int _containerRows, _rowsTierLow, _rowsTierMed, _rowsTierHigh, _rowsPropagated, _rowsGunOccluded;
+        private readonly HashSet<string> _dumpedSourceKeys = new HashSet<string>();
+        private readonly Dictionary<string, SortedDictionary<int, int>> _maxDistByGroup = new Dictionary<string, SortedDictionary<int, int>>();
+        private readonly StringBuilder _sb = new StringBuilder(4096);
+        private string _overlayText = "";
+        private GUIStyle _style;
+        private readonly List<Row> _rows = new List<Row>(256);
+
+        private string _fixStateAtStart = "";
+        internal static float RaidStartTime;
+
+        private struct Row
+        {
+            public int Id, Sources; public float Dist, MaxDist, Prop, Obst, Occl, T, D, R; public string Prio, Room, Occluder;
+            public bool Outdoor, SameRoom, RanT, RanD, RanR, HasCalc;
+        }
+
+        internal static void ReportOnce(string what, Exception e)
+        {
+            if (!Reported.Add(what)) return;
+            Plugin.Log.LogWarning($"Diagnostics: {what} failed once (further errors hidden): {e}");
+            DiagLog.Error($"{what} failed once (further errors hidden): {e}");
+        }
+
+        private void Update()
+        {
+            if (Plugin.OverlayKey.Value.IsDown()) Plugin.OverlayOn.Value = !Plugin.OverlayOn.Value;
+
+            bool raid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
+            if (raid && !_inRaid) Plugin.Safe("raid start", RaidStart);
+            if (!raid && _inRaid) Plugin.Safe("raid end", RaidEnd);
+            _inRaid = raid;
+            if (!raid) return;
+            if (Plugin.MarkKey.Value.IsDown()) Plugin.Safe("mark", Mark);
+
+            float now = Time.time;
+            _framesInWindow++;
+            Perf.Begin();
+            try { Tick(now); }
+            catch (Exception e) { ReportOnce("tick", e); }
+            finally { Perf.End(Perf.Part.DiagTick); }
+            Perf.Begin();
+            try { EnvProbe.Tick(now); }
+            catch (Exception e) { ReportOnce("env probe (tick)", e); }
+            finally { Perf.End(Perf.Part.EnvLog); }
+            Perf.Begin();
+            try { DiagLog.MaybeFlush(Time.realtimeSinceStartup); }
+            finally { Perf.End(Perf.Part.LogFlush); }
+        }
+
+        // Mark key (0.3.1): "this spot sounds wrong". One row in marks.csv with the position, what the probe measures now,
+        // the last own shot and the surfaces the probe rays hit (material:count), plus a line in the BepInEx log.
+        private int _marks;
+        private void Mark()
+        {
+            _marks++;
+            Vector3 p = Acoustics.EnclosureProbe.LastOrigin;
+            var counts = new Dictionary<string, int>();
+            for (int i = 0; i < Acoustics.EnclosureProbe.RayCount; i++)
+            {
+                if (float.IsInfinity(Acoustics.EnclosureProbe.HitDist[i]) || Acoustics.EnclosureProbe.IsGround(Acoustics.EnclosureProbe.HitNormal[i])) continue;
+                string m = Acoustics.EnclosureProbe.HitMat[i].ToString();
+                counts.TryGetValue(m, out int c); counts[m] = c + 1;
+            }
+            string surfaces = string.Join(" ", counts.Select(kv => $"{kv.Key}:{kv.Value}"));
+            DiagLog.Row("marks.csv", string.Join(",",
+                DiagLog.F(Time.time - _raidStart, "0.00"), _marks.ToString(), DiagLog.F(p.x, "0.00"), DiagLog.F(p.y, "0.00"), DiagLog.F(p.z, "0.00"),
+                DoorwayBlend.TargetOutdoorness < 0.5f ? "1" : "0", DiagLog.F(DoorwayBlend.TargetOutdoorness),
+                DiagLog.F(Acoustics.EnclosureProbe.Enclosure), DiagLog.F(Acoustics.EnclosureProbe.HorizClosure), DiagLog.F(Acoustics.EnclosureProbe.OverClosure),
+                DiagLog.F(Acoustics.EnclosureProbe.ZenithClosure), DiagLog.F(Acoustics.EnclosureProbe.Room), DiagLog.F(Acoustics.EnclosureProbe.SizeFactor), DiagLog.F(Acoustics.EnclosureProbe.ThinShare),
+                DiagLog.F(Acoustics.EnclosureProbe.MeanHit, "0.0"),
+                float.IsNaN(GunEnvironmentBlend.LastShotTime) ? "" : DiagLog.F(GunEnvironmentBlend.LastShotTime - _raidStart, "0.00"),
+                DiagLog.F(GunEnvironmentBlend.LastIndoorWeight), surfaces,
+                DiagLog.F(Acoustics.OutdoorExposure.ExposureOpen), DiagLog.F(Acoustics.OutdoorExposure.ExposureGlass), DiagLog.F(Acoustics.OutdoorExposure.ExposureOther),
+                Acoustics.OutdoorExposure.OpenN.ToString(), Acoustics.OutdoorExposure.GlassN.ToString(), Acoustics.OutdoorExposure.BlockedN.ToString(),
+                DiagLog.F(Acoustics.OutdoorExposure.NearestOpenM, "0.0"), DiagLog.F(Acoustics.OutdoorExposure.NearestGlassM, "0.0"),
+                DiagLog.F(Acoustics.OutdoorExposure.RoomFloor), DiagLog.F(Acoustics.OutdoorExposure.PreviewValue),
+                DiagLog.F(Acoustics.OutdoorExposure.CeilingM, "0.0"), Acoustics.OutdoorExposure.CeilingMat.ToString(),
+                Acoustics.OutdoorExposure.FloorsAbove.ToString(), Acoustics.OutdoorExposure.RoofMat.ToString()));
+            Acoustics.OutdoorExposure.DumpRays(_marks, Time.time - _raidStart);
+            Plugin.Log.LogInfo($"Mark {_marks} at {p} (room {Acoustics.EnclosureProbe.Room:0.00}, surfaces {surfaces})");
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (_inRaid) Plugin.Safe("raid end (quit)", RaidEnd);
+        }
+
+        // ---------------- raid lifecycle ----------------
+
+        private void RaidStart()
+        {
+            _raidStart = Time.time;
+            RaidStartTime = _raidStart;
+            _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
+            _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = 0;
+            _activeSum = _activeSamples = 0;
+            _containerRows = _rowsTierLow = _rowsTierMed = _rowsTierHigh = _rowsPropagated = _rowsGunOccluded = 0;
+            _dumpedSourceKeys.Clear();
+            _maxDistByGroup.Clear();
+            ShotProbe.Reset();
+            EnvProbe.Reset(_raidStart);
+            GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset();
+            _fixStateAtStart = Plugin.FixState();
+            Perf.Reset(Time.realtimeSinceStartup);
+            TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
+            if (!Plugin.LogsOn.Value) return;
+
+            DiagLog.Open();
+            SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
+            var cfg = AudioSettings.GetConfiguration();
+            var sb = new StringBuilder();
+            sb.AppendLine($"Raid start {DateTime.Now:yyyy-MM-dd HH:mm:ss}  Unity {Application.unityVersion}  game {Application.version}");
+            sb.AppendLine($"CPU logical cores: {SystemInfo.processorCount}  -> BSG audio quality tier: {AudioUtils.GetQualityByLogicCores()}");
+            sb.AppendLine($"Audio: {cfg.sampleRate} Hz, dspBuffer {cfg.dspBufferSize}, speakers {cfg.speakerMode}, realVoices {cfg.numRealVoices}, virtualVoices {cfg.numVirtualVoices}");
+            sb.AppendLine("Fixes at raid start: " + Plugin.FixState());
+            sb.AppendLine($"Spatializer plugin: '{AudioSettings.GetSpatializerPluginName()}'");
+            if (sas.LocationInfo != null)
+            {
+                var li = sas.LocationInfo;
+                sb.AppendLine($"Location bake: {li.relativeBakeDataPath}  rooms {li.roomsCount}  portals {li.portalsCount}  routes {li.routesCount}  roomPairs {li.roomPairsCount}  maxRoutes {li.maxRoutesCount}");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Effective occlusion settings (after the server's values were applied):");
+            sb.AppendLine(sas.OcclusionSettings != null ? JsonUtility.ToJson(sas.OcclusionSettings, true) : "(none)");
+            DiagLog.Text("settings.txt", sb.ToString());
+            Plugin.Log.LogInfo("Diagnostics: logging raid to " + DiagLog.RaidDir);
+        }
+
+        private void RaidEnd()
+        {
+            if (DiagLog.IsOpen) DiagLog.Text("summary.txt", BuildSummary());
+            DiagLog.Close();
+            _overlayText = "";
+        }
+
+        // ---------------- per-frame work ----------------
+
+        private void Tick(float now)
+        {
+            SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
+            List<SoundOcclusionProcessor> active = ActiveRef(sas);
+            int activeCount = active?.Count ?? 0;
+            _activeSum += activeCount; _activeSamples++;
+            if (activeCount > _maxActive) _maxActive = activeCount;
+
+            bool wantRows = now >= _nextContainerLog || (Plugin.OverlayOn.Value && now >= _nextOverlay);
+            if (wantRows)
+            {
+                CollectRows(sas);
+                if (now >= _nextContainerLog)
+                {
+                    _nextContainerLog = now + Plugin.ContainerLogInterval.Value;
+                    if (DiagLog.IsOpen) WriteRows(now - _raidStart);
+                }
+                if (Plugin.OverlayOn.Value && now >= _nextOverlay)
+                {
+                    _nextOverlay = now + 0.25f;
+                    BuildOverlay(sas, activeCount);
+                }
+            }
+
+            if (now >= _nextScan)
+            {
+                _nextScan = now + Plugin.SourceScanInterval.Value;
+                Perf.Begin();
+                try { ScanSources(now - _raidStart); }
+                finally { Perf.End(Perf.Part.SourceScan); }
+            }
+
+            if (now >= _nextTiming)
+            {
+                _nextTiming = now + 5f;
+                if (DiagLog.IsOpen)
+                {
+                    var u = TimingPatches.SpatialUpdate; var l = TimingPatches.SpatialLate; var b = TimingPatches.BetterAudioUpdate;
+                    DiagLog.Row("timing.csv", string.Join(",", DiagLog.F(now - _raidStart, "0.0"), _framesInWindow.ToString(),
+                        DiagLog.F(u.WindowAvgMs, "0.000"), DiagLog.F(u.WindowMaxMs, "0.000"),
+                        DiagLog.F(l.WindowAvgMs, "0.000"), DiagLog.F(l.WindowMaxMs, "0.000"),
+                        DiagLog.F(b.WindowAvgMs, "0.000"), DiagLog.F(b.WindowMaxMs, "0.000"),
+                        activeCount.ToString(), _rows.Count.ToString()));
+                }
+                TimingPatches.SpatialUpdate.ResetWindow(); TimingPatches.SpatialLate.ResetWindow(); TimingPatches.BetterAudioUpdate.ResetWindow();
+                _framesInWindow = 0;
+            }
+        }
+
+        private void CollectRows(SpatialAudioSystem sas)
+        {
+            _rows.Clear();
+            Dictionary<int, AudioSourceContainer> containers = ContainersRef(sas);
+            Dictionary<int, SoundOcclusionProcessor> processors = ProcessorsRef(sas);
+            Transform listener = sas.ListenerTransform;
+            if (containers == null || listener == null) return;
+            Vector3 lp = listener.position;
+            ISpatialAudioRoom lroom = sas.ListenerCurrentRoom;
+
+            foreach (KeyValuePair<int, AudioSourceContainer> kv in containers)
+            {
+                AudioSourceContainer c = kv.Value;
+                if (c == null || !c.IsValid) continue;
+                var r = new Row
+                {
+                    Id = c.ID, Sources = c.Count, Dist = Vector3.Distance(lp, c.CurrentPosition), MaxDist = c.MaxDistance,
+                    Prop = c.PropagationEffect, Obst = c.ObstructionEffect, Occl = c.OcclusionEffect, Prio = "-",
+                    T = float.NaN, D = float.NaN, R = float.NaN,
+                };
+                ISpatialAudioRoom room = c.CurrentAudioRoom;
+                r.Room = ShotProbe.RoomName(room);
+                try
+                {
+                    r.Outdoor = room != null && room.IsValid && room.IsOutdoor;
+                    r.SameRoom = room != null && lroom != null && room.IsValid && lroom.IsValid && sas.IsSourceInListenerRoom(c);
+                }
+                catch { }
+
+                if (processors != null && processors.TryGetValue(c.ID, out SoundOcclusionProcessor p) && p != null)
+                {
+                    r.Prio = p.Priority.ToString();
+                    r.Occluder = p._occluder != null ? p._occluder.GetType().Name : "";
+                    if (p._occluder is CombinedSpatialAudioOccluder co && co._obstructionCalculator is SpatialAudioOcclusionCombinedCalculator oc)
+                    {
+                        r.HasCalc = true;
+                        r.RanT = oc._ranTransmission; r.RanD = oc._ranDiffraction; r.RanR = oc._ranReflection;
+                        AggregateOcclusionResult a = oc.LastAggregateResult;
+                        r.T = a.transmissionScore; r.D = a.diffractionScore; r.R = a.reflectionScore;
+                    }
+                }
+                _rows.Add(r);
+            }
+            if (_rows.Count > _maxContainers) _maxContainers = _rows.Count;
+        }
+
+        private void WriteRows(float t)
+        {
+            string ts = DiagLog.F(t, "0.00");
+            foreach (Row r in _rows)
+            {
+                _containerRows++;
+                if (r.Prio == "Low") _rowsTierLow++; else if (r.Prio == "Medium") _rowsTierMed++; else if (r.Prio == "High") _rowsTierHigh++;
+                if (r.Prop > 0f) _rowsPropagated++;
+                if (r.Occl > 0.55f) _rowsGunOccluded++;
+                DiagLog.Row("containers.csv", string.Join(",",
+                    ts, r.Id.ToString(), DiagLog.F(r.Dist, "0.0"), DiagLog.F(r.MaxDist, "0"), r.Prio, DiagLog.Csv(r.Room),
+                    r.Outdoor ? "1" : "0", r.SameRoom ? "1" : "0",
+                    DiagLog.F(r.Prop), DiagLog.F(r.Obst), DiagLog.F(r.Occl), r.Occl > 0.55f ? "1" : "0",
+                    r.HasCalc ? (r.RanT ? "1" : "0") : "", r.HasCalc ? (r.RanD ? "1" : "0") : "", r.HasCalc ? (r.RanR ? "1" : "0") : "",
+                    DiagLog.F(r.T), DiagLog.F(r.D), DiagLog.F(r.R), r.Sources.ToString(), r.Occluder ?? ""));
+            }
+        }
+
+        private void ScanSources(float t)
+        {
+            BetterSource[] all = FindObjectsOfType<BetterSource>();
+            int playing = 0;
+            foreach (BetterSource s in all)
+            {
+                if (s == null || s.source1 == null) continue;
+                AudioSource a = s.source1;
+                if (!a.isPlaying) continue;
+                playing++;
+
+                string group;
+                try { AudioGroupPreset p = PresetRef(s); group = p != null ? p.name : "?"; }
+                catch { group = "?"; }
+                string mixer = a.outputAudioMixerGroup != null ? a.outputAudioMixerGroup.name : "none";
+
+                if (!_maxDistByGroup.TryGetValue(group, out var hist)) _maxDistByGroup[group] = hist = new SortedDictionary<int, int>();
+                int bucket = Mathf.RoundToInt(a.maxDistance / 25f) * 25;
+                hist.TryGetValue(bucket, out int n); hist[bucket] = n + 1;
+
+                string key = group + "|" + mixer + "|" + a.rolloffMode;
+                if (DiagLog.IsOpen && _dumpedSourceKeys.Add(key)) DiagLog.Row("rolloff_dump.txt", DescribeSource(group, mixer, s, a));
+            }
+            if (playing > _maxPlaying) _maxPlaying = playing;
+            if (all.Length > _maxBetterSources) _maxBetterSources = all.Length;
+            if (DiagLog.IsOpen)
+            {
+                var cfg = AudioSettings.GetConfiguration();
+                DiagLog.Row("sources.csv", string.Join(",", DiagLog.F(t, "0.0"), all.Length.ToString(), playing.ToString(), cfg.numRealVoices.ToString(), cfg.numVirtualVoices.ToString()));
+            }
+        }
+
+        private static string DescribeSource(string group, string mixer, BetterSource s, AudioSource a)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"== group '{group}'  mixer '{mixer}'  type {s.GetType().Name}  object '{s.name}'");
+            sb.AppendLine($"   rolloff {a.rolloffMode}  min {a.minDistance:0.##}  max {a.maxDistance:0.#}  spatialBlend {a.spatialBlend:0.##}  spatialize {a.spatialize}  spread {a.spread:0}  doppler {a.dopplerLevel:0.##}  priority {a.priority}");
+            AppendCurve(sb, "custom rolloff", a, AudioSourceCurveType.CustomRolloff);
+            AppendCurve(sb, "spatial blend", a, AudioSourceCurveType.SpatialBlend);
+            AppendCurve(sb, "spread", a, AudioSourceCurveType.Spread);
+            AudioLowPassFilter lpf = a.GetComponent<AudioLowPassFilter>();
+            if (lpf != null)
+            {
+                sb.Append($"   AudioLowPassFilter enabled {lpf.enabled} cutoff {lpf.cutoffFrequency:0} Hz");
+                if (lpf.customCutoffCurve != null && lpf.customCutoffCurve.length > 0) sb.Append("  distance curve " + Keys(lpf.customCutoffCurve));
+                sb.AppendLine();
+            }
+            AudioHighPassFilter hpf = a.GetComponent<AudioHighPassFilter>();
+            if (hpf != null) sb.AppendLine($"   AudioHighPassFilter enabled {hpf.enabled} cutoff {hpf.cutoffFrequency:0} Hz");
+            var comps = a.GetComponents<Component>().Select(x => x == null ? "null" : x.GetType().Name);
+            sb.AppendLine("   components: " + string.Join(", ", comps));
+            return sb.ToString();
+        }
+
+        private static void AppendCurve(StringBuilder sb, string label, AudioSource a, AudioSourceCurveType type)
+        {
+            try
+            {
+                AnimationCurve c = a.GetCustomCurve(type);
+                if (c != null && c.length > 0) sb.AppendLine($"   {label} (x = distance / maxDistance): {Keys(c)}");
+            }
+            catch { }
+        }
+
+        private static string Keys(AnimationCurve c) => string.Join(" ", c.keys.Select(k => $"{k.time:0.###}:{k.value:0.###}"));
+
+        // ---------------- overlay ----------------
+
+        private void BuildOverlay(SpatialAudioSystem sas, int activeCount)
+        {
+            _sb.Clear();
+            var u = TimingPatches.SpatialUpdate; var l = TimingPatches.SpatialLate; var b = TimingPatches.BetterAudioUpdate;
+            _sb.Append("<b>Real Sound Simulation diagnostics</b>  (F9)\n");
+            _sb.Append($"tier {AudioUtils.GetQualityByLogicCores()} ({SystemInfo.processorCount} cores)  listener room {ShotProbe.RoomName(sas.ListenerCurrentRoom)}\n");
+            _sb.Append($"active processors {activeCount} (1 updated per frame)  containers {_rows.Count}  playing sources ~{_maxPlaying} max\n");
+            _sb.Append($"ms/frame  spatial upd {u.WindowAvgMs:0.000}/{u.WindowMaxMs:0.00}  late {l.WindowAvgMs:0.000}/{l.WindowMaxMs:0.00}  BetterAudio {b.WindowAvgMs:0.000}/{b.WindowMaxMs:0.00}\n");
+            _sb.Append($"shots {ShotProbe.Shots}  LOS+occluded mixer {ShotProbe.ShotsWithLosOccluded}/{ShotProbe.ShotsWithLos}  >250m LOS occluded {ShotProbe.ShotsBeyond250WithLosOccluded}/{ShotProbe.ShotsBeyond250WithLos}  mixer flips {ShotProbe.MixerFlips}\n");
+            _sb.Append(Perf.OverlayLine(Time.realtimeSinceStartup));
+            _sb.Append(Acoustics.OutdoorExposure.OverlayLine());
+            _sb.Append("  dist   prio   prop  obst  occl  stages  T    D    R    room\n");
+            foreach (Row r in _rows.OrderBy(x => x.Dist).Take(Plugin.OverlayRows.Value))
+            {
+                string stages = r.HasCalc ? $"{(r.RanT ? "T" : "-")}{(r.RanD ? "D" : "-")}{(r.RanR ? "R" : "-")}" : "   ";
+                string mode = r.Prop > 0f ? "<color=#7fd0ff>P</color>" : (r.Obst > 0f ? "<color=#ffb070>O</color>" : " ");
+                _sb.Append($"{mode}{r.Dist,6:0.0} {r.Prio,-6} {r.Prop,5:0.00} {r.Obst,5:0.00} {(r.Occl > 0.55f ? "<color=#ff6060>" : "")}{r.Occl,5:0.00}{(r.Occl > 0.55f ? "</color>" : "")}  {stages}    {Num(r.T)} {Num(r.D)} {Num(r.R)} {(r.SameRoom ? "=" : "")}{r.Room}\n");
+            }
+            _overlayText = _sb.ToString();
+        }
+
+        private static string Num(float v) => float.IsNaN(v) ? "  - " : v.ToString("0.00");
+
+        private void OnGUI()
+        {
+            if (!_inRaid || !Plugin.OverlayOn.Value || string.IsNullOrEmpty(_overlayText)) return;
+            if (_style == null)
+            {
+                _style = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12, wordWrap = false };
+                _style.normal.textColor = Color.white;
+                Font mono = Font.CreateDynamicFontFromOSFont("Consolas", 12);
+                if (mono != null) _style.font = mono;
+            }
+            var content = new GUIContent(_overlayText);
+            Vector2 size = _style.CalcSize(content);
+            GUI.Box(new Rect(8, 8, size.x + 16, size.y + 12), GUIContent.none);
+            GUI.Label(new Rect(16, 14, size.x, size.y), content, _style);
+        }
+
+        // ---------------- summary ----------------
+
+        private string BuildSummary()
+        {
+            var sb = new StringBuilder();
+            float dur = Time.time - _raidStart;
+            sb.AppendLine($"Raid summary  {DateTime.Now:yyyy-MM-dd HH:mm:ss}  duration {dur / 60f:0.0} min");
+            sb.AppendLine($"CPU logical cores {SystemInfo.processorCount} -> audio tier {AudioUtils.GetQualityByLogicCores()}");
+            sb.AppendLine("Fixes at start: " + _fixStateAtStart);
+            sb.AppendLine("Fixes at end:   " + Plugin.FixState());
+            sb.AppendLine($"  fix 1 held back {GunMixerFix.HeldBack} contrary readings | fix 2 changed {ObstructionScoreFix.Changed} scores by >0.05 | fix 3c blended {GunEnvironmentBlend.Blended} own shots/tails | fix 4 applied {OffMapFix.Applied} times");
+            sb.AppendLine();
+            sb.AppendLine("PERFORMANCE (main thread, per call)");
+            foreach (var m in new[] { TimingPatches.SpatialUpdate, TimingPatches.SpatialLate, TimingPatches.BetterAudioUpdate })
+                sb.AppendLine($"  {m.Name,-28} avg {m.TotalAvgMs:0.000} ms  max {m.TotalMaxMs:0.00} ms  frames over 1 ms: {m.TotalOver1Ms} of {m.TotalCalls}");
+            sb.AppendLine($"  active occlusion processors: avg {(_activeSamples == 0 ? 0 : (double)_activeSum / _activeSamples):0.0}  max {_maxActive}   (BSG updates ONE per frame -> #8/#16)");
+            sb.AppendLine($"  sound containers seen at once: max {_maxContainers}");
+            var cfg = AudioSettings.GetConfiguration();
+            sb.AppendLine($"  playing sources (sampled every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})");
+            sb.AppendLine();
+            sb.AppendLine("OCCLUSION (container samples)");
+            sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");
+            sb.AppendLine($"  propagated (different room) {_rowsPropagated}   occlusion > 0.55 (gun 'Occluded' mixer threshold) {_rowsGunOccluded}");
+            sb.AppendLine();
+            sb.AppendLine("GUNSHOTS (remote shots, max 4/s per weapon)");
+            sb.AppendLine($"  logged {ShotProbe.Shots}   with straight line of sight {ShotProbe.ShotsWithLos}, of which on Occluded mixer {ShotProbe.ShotsWithLosOccluded}");
+            sb.AppendLine($"  beyond 250 m with line of sight {ShotProbe.ShotsBeyond250WithLos}, of which on Occluded mixer {ShotProbe.ShotsBeyond250WithLosOccluded}   <- #4 '250 m cliff' if this is most of them");
+            sb.AppendLine($"  gun mixer group changes during fire: {ShotProbe.MixerFlips}   <- #7 flip-flop");
+            sb.AppendLine("  gunshot bank rolloff (audible range m, 50 m buckets): " + string.Join("  ", ShotProbe.RolloffHistogram.Select(kv => $"{kv.Key}:{kv.Value}")));
+            sb.AppendLine();
+            sb.Append(EnvProbe.Summary());
+            sb.Append(Acoustics.OwnEchoes.Summary());
+            sb.Append(Perf.Summary(Time.realtimeSinceStartup));
+            sb.Append(Acoustics.OutdoorExposure.Summary());
+            sb.Append(AmbienceMix.Summary());
+            sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}");
+            sb.AppendLine(MetaAcousticsCheck.Describe());
+            sb.AppendLine();
+            sb.AppendLine("AudioSource maxDistance by group (25 m buckets, sampled while playing)");
+            foreach (var g in _maxDistByGroup.OrderBy(x => x.Key))
+                sb.AppendLine($"  {g.Key,-22} " + string.Join("  ", g.Value.Select(kv => $"{kv.Key}:{kv.Value}")));
+            sb.AppendLine();
+            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, errors.txt (if any)");
+            return sb.ToString();
+        }
+    }
+}
