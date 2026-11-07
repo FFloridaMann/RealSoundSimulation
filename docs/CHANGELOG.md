@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.12 — 7 Nov 2026 (9k: distant sounds caught as they start)
+**Run in game:** not yet. User: "fix 3 now" (the review's third item); the outdoor tail (3m) is left as 0.6.11 until it has been raided.
+- **9k onset leak fixed.** Raid 29: 33 distant.csv rows indoors with 9k's gain under 0.3 but the sound playing above 0.3 - each distant shot began loud, from its true direction, because 9k only took a sound once fix 4's occlusion pass reached its container a few frames later, and the game then eased the volume down from full. Now a postfix on both `BetterAudio.PlayAtPoint` overloads takes a sound started 80 m+ away at a point the room map doesn't know (off the map, the same test as fix 4) in the frame it starts: position and gain are set at once and the volume the game just set is scaled by the gain. On-map sounds (a real grenade 90 m away) are not touched. Summary: "N caught as they started".
+- **Queued for after the raid (user):** outdoor tail distance loss (−20·log10(max(d, 2) / 2)) and its gate 0.5 → 0.25 (only after the raid shows 3m's behaviour); roof rain brightness from upward paths; at tag 7 the outdoor direction fading to all-round when no paths escape, and the 9l floor all-round; the summary lines cleared before they're written.
+
 ## 0.6.11 — 7 Nov 2026 (inside shot, outside tail: forward-lobe muzzle measure and the outdoor tail from the opening)
 **Run in game:** not yet. From a build request for raid 29 tag 1 (barrel out of a window, the whole shot sounded indoor; user: "inside shot, outside tail"). ownshots.csv at 122–130 s: muzzle 0.49 m from the head, v2 muzzle room 0.72–0.98, aim closure 0.11–0.35, indoor weight 0.61–0.66, after 3j 0.80–0.85.
 - **New `3k Muzzle lobe`** (1; 0 = the sphere as before): the muzzle's room measure (probe v2's 64 directions, and the 32-ray one when 9a is off) weights each direction by ((1 + cos to the aim) / 2)^k, room, roof and size alike. Out of a window the muzzle reads mostly outdoor although half its sphere looks back into the room; firing into a room from a doorway reads more indoor. The head measure stays a sphere. ownshots.csv adds `muzzleRoomSphere` and `v2MuzzleRoomSphere`; the summary has MUZZLE LOBE (mean sphere minus lobe).

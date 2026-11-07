@@ -121,6 +121,8 @@ namespace RealSoundSimulation.Diagnostics
             // 0.6.11
             new Target("3m", "EFT.SoundBank", "PickSingleClip", "M"),
             new Target("3m", "WeaponSoundPlayer", "IsSilenced", "P"),
+            new Target("9k", "BetterAudio", "PlayAtPoint", "M"),
+            new Target("9k", "Audio.SpatialSystem.SpatialAudioSystem", "_audioRoomStorage", "F"),
             new Target("6", "SuperBetterAudioQueue", "Enqueue", "M"),
             new Target("6", "WeaponSoundPlayer", "StopFiringLoop", "M"),
             new Target("6", "BetterAudio", "GunshotMixerGroup", "F"),

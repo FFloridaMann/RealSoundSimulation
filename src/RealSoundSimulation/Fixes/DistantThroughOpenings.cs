@@ -46,12 +46,56 @@ namespace RealSoundSimulation.Fixes
         {
             h.Patch(AccessTools.Method(typeof(BetterSource), nameof(BetterSource.UpdateSourceVolume)),
                 prefix: new HarmonyMethod(typeof(DistantThroughOpenings), nameof(VolumePrefix)));
+            // 0.6.12: catch them as they start (both PlayAtPoint overloads return the source they started)
+            foreach (System.Reflection.MethodInfo mi in typeof(BetterAudio).GetMethods())
+                if (mi.Name == nameof(BetterAudio.PlayAtPoint) && mi.ReturnType == typeof(BetterSource))
+                    h.Patch(mi, postfix: new HarmonyMethod(typeof(DistantThroughOpenings), nameof(PlayPostfix)));
         }
+
+        // 0.6.12: the onset leak (raid 29: 33 log rows indoors where 9k's gain was under 0.3 but the sound played above 0.3).
+        // 9k only took a sound once fix 4's occlusion pass saw its container, a few frames after it started, and the game
+        // then eased the volume down from full - so each distant shot began loud, from its true direction. Now a sound
+        // started 80 m+ away at a point the room map doesn't know (off the map, the same test as fix 4) is taken in the
+        // frame it starts: position and gain set at once, and the volume the game just set scaled by the gain.
+        public static int CaughtAtStart;
+        private static readonly AccessTools.FieldRef<SpatialAudioSystem, AudioRoomStorage> StorageRef =
+            AccessTools.FieldRefAccess<SpatialAudioSystem, AudioRoomStorage>("_audioRoomStorage");
+
+        private static void PlayPostfix(BetterSource __result, Vector3 position)
+        {
+            if (__result == null) return;
+            try
+            {
+                if (!On || !MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return;
+                SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
+                Transform lt = sas.ListenerTransform;
+                if (lt == null || (position - lt.position).sqrMagnitude < MinDistance * MinDistance) return;
+                AudioRoomStorage storage = StorageRef(sas);
+                if (storage == null) return;
+                ISpatialAudioRoom r = CountedRay.Room(storage, sas.ListenerCurrentRoom, position);
+                if (r != null && r.IsValid) return; // on the map: the game's own occlusion handles it
+                if (!Managed.TryGetValue(__result, out M m))
+                {
+                    m = new M { Src = __result, Raw = __result.OcclusionVolumeFactor };
+                    Managed[__result] = m; Moved++;
+                    if (Managed.Count > MaxAtOnce) MaxAtOnce = Managed.Count;
+                }
+                m.Orig = position; m.Written = position; m.Seen = Time.time; m.NextCalc = 0f; m.WrittenF = -1f;
+                Step(m, lt, Enc(), false);
+                m.WrittenF = Mathf.Clamp01(m.Raw * m.Gain);
+                __result.OcclusionVolumeFactor = m.WrittenF;
+                if (__result.source1 != null) __result.source1.volume = Mathf.Clamp01(__result.source1.volume * m.Gain);
+                CaughtAtStart++;
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("9k catch at start", e); }
+        }
+
+        private static float Enc() => float.IsNaN(AmbienceMix.V2Level) ? AcousticProbe.Enclosed : AmbienceMix.V2Indoor;
 
         public static void Reset()
         {
             foreach (M m in Managed.Values) Release(m);
-            Managed.Clear(); Moved = 0; MaxAtOnce = 0; _nextRow = 0f;
+            Managed.Clear(); Moved = 0; MaxAtOnce = 0; _nextRow = 0f; CaughtAtStart = 0;
         }
 
         // From fix 4's postfix, for a container whose room is invalid (off the map): take its far sources.
@@ -113,7 +157,7 @@ namespace RealSoundSimulation.Fixes
         {
             bool on = On;
             Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated ? MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform : null;
-            float enc = float.IsNaN(AmbienceMix.V2Level) ? AcousticProbe.Enclosed : AmbienceMix.V2Indoor;
+            float enc = Enc();
             bool row = DiagLog.IsOpen && Time.time >= _nextRow;
             if (row) _nextRow = Time.time + 0.25f;
             Gone.Clear();
@@ -123,24 +167,9 @@ namespace RealSoundSimulation.Fixes
                 if (m.Src == null || lt == null) { Gone.Add(kv.Key); continue; }
                 bool playing = m.Src.source1 != null && m.Src.source1.isPlaying;
                 if (!on || (!playing && Time.time - m.Seen > 0.5f)) { Release(m); Gone.Add(kv.Key); continue; }
-                Vector3 cur = m.Src.Position;
-                if ((cur - m.Written).sqrMagnitude > 0.01f) { m.Orig = cur; m.NextCalc = 0f; } // a new sound on this pooled source
-                Vector3 rel = m.Orig - lt.position;
-                m.Dist = rel.magnitude;
-                if (m.Dist < 1f) continue;
-                Vector3 trueDir = rel / m.Dist;
-                if (Time.time >= m.NextCalc)
-                {
-                    Vector3 s = new Vector3(trueDir.x, 0f, trueDir.z);
-                    s = s.sqrMagnitude > 1e-6f ? s.normalized : Vector3.forward;
-                    m.T = AcousticProbe.Through(s, out m.Dir);
-                    m.NextCalc = Time.time + 0.1f;
-                }
+                if (!Step(m, lt, enc, true)) continue;
+                Vector3 trueDir = (m.Orig - lt.position) / m.Dist, dir = (m.Written - lt.position) / m.Dist;
                 float w = Mathf.Clamp01(enc);
-                Vector3 dir = Vector3.Slerp(trueDir, m.Dir, w).normalized;
-                m.Gain = Mathf.Lerp(1f, Mathf.Sqrt(Mathf.Clamp01(m.T)), w);
-                m.Written = lt.position + dir * m.Dist;
-                m.Src.Position = m.Written;
                 if (row)
                 {
                     // 0.6.9: what actually leaves the source (raid 28: gunfire heard where our gain was -45 dB)
@@ -158,9 +187,33 @@ namespace RealSoundSimulation.Fixes
             foreach (BetterSource b in Gone) Managed.Remove(b);
         }
 
-        public const string Header = "t,source,distanceM,trueAz,heardAz,transmission,gain,enclosed,clip,heardEl,outVolume,occlFactor,mixer,spatialBlend,spatialize,reverbZoneMix,playing";
+        // One sound's position and gain for now. detectNew: a moved pooled source means a new sound on it (its real point).
+        private static bool Step(M m, Transform lt, float enc, bool detectNew)
+        {
+            Vector3 cur = m.Src.Position;
+            if (detectNew && (cur - m.Written).sqrMagnitude > 0.01f) { m.Orig = cur; m.NextCalc = 0f; } // a new sound on this pooled source
+            Vector3 rel = m.Orig - lt.position;
+            m.Dist = rel.magnitude;
+            if (m.Dist < 1f) return false;
+            Vector3 trueDir = rel / m.Dist;
+            if (Time.time >= m.NextCalc)
+            {
+                Vector3 s = new Vector3(trueDir.x, 0f, trueDir.z);
+                s = s.sqrMagnitude > 1e-6f ? s.normalized : Vector3.forward;
+                m.T = AcousticProbe.Through(s, out m.Dir);
+                m.NextCalc = Time.time + 0.1f;
+            }
+            float w = Mathf.Clamp01(enc);
+            Vector3 dir = Vector3.Slerp(trueDir, m.Dir, w).normalized;
+            m.Gain = Mathf.Lerp(1f, Mathf.Sqrt(Mathf.Clamp01(m.T)), w);
+            m.Written = lt.position + dir * m.Dist;
+            m.Src.Position = m.Written;
+            return true;
+        }
+
+        public const string Header ="t,source,distanceM,trueAz,heardAz,transmission,gain,enclosed,clip,heardEl,outVolume,occlFactor,mixer,spatialBlend,spatialize,reverbZoneMix,playing";
 
         public static string Summary() =>
-            $"DISTANT GUNFIRE THROUGH OPENINGS (9k {(Plugin.DistantThroughOpeningsOn.Value ? "ON" : "off")}): sounds handled {Moved}, at once max {MaxAtOnce}  (distant.csv)\n";
+            $"DISTANT GUNFIRE THROUGH OPENINGS (9k {(Plugin.DistantThroughOpeningsOn.Value ? "ON" : "off")}): sounds handled {Moved} ({CaughtAtStart} caught as they started), at once max {MaxAtOnce}  (distant.csv)\n";
     }
 }

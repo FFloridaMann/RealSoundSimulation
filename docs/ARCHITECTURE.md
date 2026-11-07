@@ -50,7 +50,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── GunEnvironmentBlend.cs fix 3c: your own gunshots mix indoor/outdoor recordings (Doorway or Enclosure mode);
     │                        fix 5: own-gun room reverb boost
     ├── OffMapFix.cs         fix 4: sounds outside the baked map are treated as outdoors
-    ├── DistantThroughOpenings.cs  9k (0.6.8): off-map distant sounds come through the openings when you're inside
+    ├── DistantThroughOpenings.cs  9k (0.6.8): off-map distant sounds come through the openings when you're inside; 0.6.12: also a BetterAudio.PlayAtPoint postfix (both overloads) to take them as they start
     ├── RainDropoutFix.cs    fix 7: the game's indoor rain fading to silence between rooms; 0.6.9: same-clip crossfades
     │                        become a volume ramp
     ├── RoomTone.cs          8g (0.6.9): "wind" room tones follow the outside's level (RoomToneController.ChangeRoomTone
