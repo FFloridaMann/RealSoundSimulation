@@ -18,6 +18,22 @@ The agreed order of work (6 Nov 2026), and why. Each step ends with a test raid;
 | – | Distant obstruction (nothing past ~250 m is muffled by terrain or buildings) | Planned, any time | Independent; uses different, long rays |
 | – | Server settings (phase 1 of the solutions doc) | Planned, any time | Independent |
 
+## Consolidation (6 Nov 2026, after 0.5.7)
+
+0.5.0 → 0.5.7 went out in one afternoon, each fixing the last one's side effects. Before building more: checkpoint, clean up, one current-state design doc, a fixed test route, then one change per build.
+
+1. **Checkpoint — done.** Git repo, branch `main`, private GitHub remote (see README). Every build that goes into a raid gets a commit.
+2. **Clean-up — proposed, waiting for approval.** None of it changes the sound with your current F12 settings.
+   - **A. Defaults = the tested setup?** The code defaults are "everything off", but every raid since raid 10 ran with your F12 values: all fixes on, `2 Obstruction score` ParallelPaths, `3d` Enclosure, `3i` Soft, `8f` HRTF on. Option: make those the defaults, so a reset or fresh install gives the tested setup (every fix stays switchable). Your own config file keeps its values either way.
+   - **B. Remove `3h Ambience through glass`.** Fix 8 replaced it (0.4.2); with fix 8 on it does nothing. The setting, `DoorwayBlend.GlassLeak` and its ambience.csv column go.
+   - **C. Remove dead code.** `AmbienceMix.IndoorFade()` (replaced by `IndoorLayers()` in 0.5.7, only logged) and the 0.5.0 opening "clusters" in `OutdoorExposure` (the opening sounds use the 6 fixed sectors since 0.5.2; the clusters are only logged, 3 exposure.csv columns).
+   - **D. Correct setting descriptions** (no key renames, since a rename resets the value): `Outdoor exposure probe` (says "indoors only, 24 rays, changes no sound"; it now runs everywhere, 48 directions, and drives fix 8); `8b` (says "needs fix 7"; not since 0.5.6); `8` (list what it does now); `3c` (its name says "at doorways"; in Enclosure mode it acts everywhere, so say so in the description).
+   - **E. Correct code comments.** The `OutdoorExposure` header still describes 0.4.0 (every 0.25 s, indoors only, 1/(1+(d/5)²) weighting, 3 strongest openings, "logged only"). Rename `PreviewValue` to what it is now (the applied value); drop unused constants.
+   - **Decided, kept:** the 15 s source scan (51.5 ms every 15 s; user, 6 Nov: keep it).
+3. **One current-state design doc** for indoor/outdoor sound (how it works now, not the patch history), and bring this roadmap's table up to date (step 2 and 4b status are stale; the "Next raid" sections below are history).
+4. **A fixed test route** with expected results, run on every build.
+5. **Then one change per build**, from: roof holes, phase 3 (roof material), step 6, weather research, material research, the Tarkov/3D-audio review, step 5, step 7.
+
 ## Next raid: check 0.4.2 (step 4b phase 2)
 
 Turn on **"8 Outdoor sound indoors from openings"** (keep fix 3 on; fix 7 on too). Then A/B it (8 on/off) at:
