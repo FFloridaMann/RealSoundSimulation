@@ -209,6 +209,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9j` | rain from openings: outdoor sound indoors comes from the exit points (window/door) (§2.6) | on |
 | `9k` | distant gunfire through openings (§3.2b; needs fix 4). 0.6.9: every escaping path counts (side openings by how they face the battle, openings to the sky above at 0.35, facing away 0.05) | on |
 | `9l` | rain through the building: muffled floor for the outdoor sound deep inside (0.6.9) | −32 dB |
+| `9m` | roof rain directional mode (0.6.10; `9c` is the outdoor sounds only). Roof rain is also low-passed by its paths | UnityPanner |
 | `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9) | 1 |
 | `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |

@@ -147,7 +147,7 @@ All 48 exposure directions at that moment: `ray`, `azimuthDeg` (relative to wher
 ### rain2.csv (0.6.8, every 0.25 s: the game's indoor rain player)
 One row per source (the player has two, for crossfades): `clip`, `channels`, `playing`, `virtual` (Unity dropped it for lack of voices), `mute`, `gameVolume` (what the game set), `ourFactor` (roof rain factor applied), `volume` (what plays), `spatialBlend`, `spread`, `spatialize`, `mixer`. Raid 27: the car dealer's roof rain went silent at some spots while our factor held.
 
-0.6.9: rain2.csv ends with `fadeComp` (how much roof rain is raised to undo the indoor-layer fade; 1 = none).
+0.6.9: rain2.csv ends with `fadeComp` (how much roof rain is raised to undo the indoor-layer fade; 1 = none). 0.6.10: then `lowpassHz` (the roof rain's path muffling as applied; "off" = none), and probe2.csv ends with `roofCutoffHz` (how bright the roof paths arrive).
 
 ### roomtone.csv (0.6.9, each room tone change, `8g`)
 `room`, `clip` (the room tone clip), `roomToneVolume` (the room's own level), `wind` (1 = clip name contains "wind": it follows the outside's level), `gain` (the 8g gain at that moment). The summary's AMBIENCE MIX lists every room tone heard, and which mixer volumes the indoor-layer fade moves.

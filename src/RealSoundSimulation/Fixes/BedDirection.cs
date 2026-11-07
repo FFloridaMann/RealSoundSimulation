@@ -18,7 +18,8 @@ namespace RealSoundSimulation.Fixes
     //   width    Unity panner: spread 180 deg (all round) .. 20 deg (one direction), from the probe's focus x "9h".
     //            Meta HRTF ("9c"): spatialized, volumetric radius 3 m .. 0.3 m instead.
     //   distance no distance loss (min distance 50 m): the probe already decided the level.
-    //   behind   Unity panner only: duller from behind (ear shadow), on the source's own low-pass filter (outdoor beds).
+    //   behind   Unity panner only: duller from behind (ear shadow), on the source's own low-pass filter.
+    //   muffling 0.6.10, roof rain: how dull its paths arrive (AcousticProbe.RoofCutoffHz), on its own low-pass filter.
     // A source is only moved if that is safe: its object has no children and every audio source on it is in the group.
     // Otherwise it stays flat and the summary says so ("fixed").
     // Everything is put back exactly as it was when the blend returns to 0, v2 is switched off, or the raid ends.
@@ -26,8 +27,12 @@ namespace RealSoundSimulation.Fixes
     {
         public enum Mode { UnityPanner, MetaHrtf }
 
-        public static readonly BedDirection Outdoor = new BedDirection("outdoor beds");
-        public static readonly BedDirection Roof = new BedDirection("roof rain");
+        // 0.6.10: each group has its own mode setting ("9c" outdoor beds, "9m" roof rain), so HRTF can be tried on the roof
+        // rain alone - the only place up versus down matters - while the wide stereo beds stay on the panner.
+        public static readonly BedDirection Outdoor = new BedDirection("outdoor beds", () => Plugin.BedMode.Value);
+        public static readonly BedDirection Roof = new BedDirection("roof rain", () => Plugin.RoofBedMode.Value);
+        private readonly System.Func<Mode> _mode;
+        private float _cut = 22000f; // 0.6.10: path muffling from the probe (roof rain), smoothed
 
         private class S
         {
@@ -42,7 +47,7 @@ namespace RealSoundSimulation.Fixes
         public float Blend, Focus;
         public int Movable, Fixed;
 
-        private BedDirection(string name) { _name = name; }
+        private BedDirection(string name, System.Func<Mode> mode) { _name = name; _mode = mode; }
 
         public void Init(List<AudioSource> srcs, List<AudioLowPassFilter> lps, List<bool> own)
         {
@@ -53,8 +58,9 @@ namespace RealSoundSimulation.Fixes
 
         public static void RestoreAll() { Outdoor.Restore(); Roof.Restore(); }
 
-        // arrival/focus: from the probe; enclosed: how far to blend from flat to positioned
-        public void Tick(float dt, Transform lt, bool on, Vector3 arrival, float focus, float enclosed)
+        // arrival/focus: from the probe; enclosed: how far to blend from flat to positioned; pathCutoff: how muffled the
+        // sound is by its paths (0.6.10, roof rain: rain down a stair shaft or round a mezzanine is duller than overhead)
+        public void Tick(float dt, Transform lt, bool on, Vector3 arrival, float focus, float enclosed, float pathCutoff = 22000f)
         {
             if (lt == null) return;
             float smooth = Mathf.Max(AmbienceMix.Smooth, AcousticProbe.SmoothS); // 0.6.4: by confidence
@@ -68,8 +74,10 @@ namespace RealSoundSimulation.Fixes
             if (on && AcousticProbe.Valid && arrival.sqrMagnitude > 1e-6f)
                 _dir = Vector3.Slerp(_dir, arrival, 1f - Mathf.Exp(-dt / Mathf.Max(1f, smooth))).normalized;
             if (Blend < 0.002f && target <= 0f) { Restore(); return; }
+            float pc = on ? Mathf.Clamp(pathCutoff, 300f, 22000f) : 22000f;
+            _cut = Mathf.Exp(Mathf.Log(_cut) + (Mathf.Log(pc) - Mathf.Log(_cut)) * a);
 
-            bool meta = Plugin.BedMode.Value == Mode.MetaHrtf;
+            bool meta = _mode() == Mode.MetaHrtf;
             Vector3 fw = lt.forward; fw.y = 0f; if (fw.sqrMagnitude > 1e-4f) fw.Normalize();
             Vector3 flat = new Vector3(_dir.x, 0f, _dir.z);
             float behind = flat.sqrMagnitude > 1e-6f ? Mathf.Max(0f, -Vector3.Dot(flat.normalized, fw)) * Focus * Blend : 0f;
@@ -101,7 +109,9 @@ namespace RealSoundSimulation.Fixes
                 }
                 if (s.OwnLp && s.Lp != null)
                 {
-                    float cut = meta ? 22000f : Mathf.Lerp(22000f, 6000f, behind);
+                    // path muffling (blended in with the 2D/3D blend), and on the panner the ear shadow from behind
+                    float pathCut = Mathf.Exp(Mathf.Lerp(Mathf.Log(22000f), Mathf.Log(_cut), Blend));
+                    float cut = Mathf.Min(pathCut, meta ? 22000f : Mathf.Lerp(22000f, 6000f, behind));
                     s.Lp.enabled = cut < 21500f;
                     s.Lp.cutoffFrequency = cut;
                 }
@@ -146,9 +156,11 @@ namespace RealSoundSimulation.Fixes
                 if (s.OwnLp && s.Lp != null) s.Lp.enabled = false;
                 s.Active = false;
             }
-            Blend = 0f;
+            Blend = 0f; _cut = 22000f;
         }
 
-        public string Summary() => $"  probe v2 directional {_name}: {Movable} movable, {Fixed} fixed (left flat), mode {Plugin.BedMode.Value}\n";
+        public float PathCutoff => _cut;
+
+        public string Summary() => $"  probe v2 directional {_name}: {Movable} movable, {Fixed} fixed (left flat), mode {_mode()}\n";
     }
 }

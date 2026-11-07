@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.10 — 7 Nov 2026 (roof rain: its own directional mode, muffled by its paths)
+**Run in game:** not yet. User: "Yes, build it" (after the panner review: keep the panner for the beds; try HRTF only where up/down matters).
+- **New `9m Roof rain directional mode`** (UnityPanner): the roof rain's own mode; `9c` now sets only the outdoor sounds (its key is unchanged, so your value stays). Try `9m` = MetaHrtf with `9c` on the panner.
+- **Roof rain muffled by its paths:** the probe records how bright each roof path is when it reaches the roof (the dullest surface it passed or reflected off, x0.7 per reflection) and the roof rain gets that as a low-pass, on a filter the plugin adds only where the game has none. Straight up stays 22 kHz; down a stair shaft after three bounces ~5 kHz. Until now roof rain had no muffling at all, only level, so rain down a shaft sounded like rain overhead, just quieter. The x0.7 per bounce is a placeholder for the materials overhaul.
+- **Logs:** probe2.csv `roofCutoffHz`; rain2.csv `lowpassHz`; the summary shows each group's mode.
+- **Before the next raid (user's side):** headset surround / "Superhuman Hearing" and Windows spatial sound (Sonic, Atmos) off, so only the plugin spatialises.
+
 ## 0.6.9 — 7 Nov 2026 (raid 28 fixes: doubled gunshots, roof rain, stairwell wind and gunfire, rain floor)
 **Run in game:** not yet. The exposure probe stays on (user). Two reviews of raid 28's logs agreed on the causes; the user said "build" for all but turning the exposure probe off.
 - **Echo voices (fix 6):** pool 48 (was 24); when full, the voice that ends soonest is reused, not the one that started first. Raid 28: every sample was a full-auto loop plus a tail, the pool was full, and 274 echoes were cut off mid-sound (256 by tail echoes) - the likeliest cause of the doubled/stuttering shot.

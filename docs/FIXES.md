@@ -383,6 +383,8 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 - **9k** credits every path that leaves the building: side openings by how they face the battle (cos², as before), openings to the sky above at 0.35 from any direction, side openings facing away at 0.05. Last tag: the only way out was up the stair shaft and 0.6.8 found nothing. distant.csv now logs what each moved source actually outputs (volume, mixer, spatial settings, reverb zone mix).
 - All of these are geometry or settings, not per material: retune after the materials overhaul.
 
+**0.6.10, roof rain:** its own directional mode, `9m` (UnityPanner); `9c` sets only the outdoor sounds now. The roof rain is also low-passed by how its paths reach the roof (dullest surface on the way, x0.7 per reflection; probe2.csv `roofCutoffHz`), so rain down a stair shaft or round a mezzanine is duller than overhead in either mode. Before 0.6.10 it had no muffling, only level.
+
 **Problem.** Raid 21: the exposure probe counted only straight lines to points the room map calls outdoor, with a "your own ceiling" rule. A garage whose walls and roof are one collider read as deep underground (3 of 48 directions outside), and nothing modelled sound building up in a hard room. The opening sounds played up to 24 copies of the same loops, so quiet rain flammed.
 
 **What changes.**

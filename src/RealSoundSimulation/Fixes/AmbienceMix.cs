@@ -176,7 +176,7 @@ namespace RealSoundSimulation.Fixes
         // 0.6.8: the game's indoor rain player, every 0.25 s (raid 27: roof rain went silent at car dealer spots while our
         // factor held at 0.55). rain2.csv.
         private static float _nextRainRow;
-        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp";
+        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp,lowpassHz";
         private static void LogRain()
         {
             if (!DiagLog.IsOpen || Time.time < _nextRainRow) return;
@@ -189,8 +189,15 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.Row("rain2.csv", string.Join(",", DiagLog.F(t, "0.00"), i.ToString(), s.clip != null ? s.clip.name : "", s.clip != null ? s.clip.channels.ToString() : "",
                     s.isPlaying ? "1" : "0", s.isVirtual ? "1" : "0", s.mute ? "1" : "0", i < _rainGame.Length ? DiagLog.F(_rainGame[i]) : "", DiagLog.F(RoofRainApplied),
                     DiagLog.F(s.volume), DiagLog.F(s.spatialBlend), DiagLog.F(s.spread, "0"), s.spatialize ? "1" : "0",
-                    s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : "", DiagLog.F(RoofRainComp)));
+                    s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : "", DiagLog.F(RoofRainComp),
+                    LpOf(s)));
             }
+        }
+
+        private static string LpOf(AudioSource s)
+        {
+            AudioLowPassFilter lp = s.GetComponent<AudioLowPassFilter>();
+            return lp != null && lp.enabled ? DiagLog.F(lp.cutoffFrequency, "0") : "off";
         }
 
         // 0.6.9: the game's own volume for an indoor rain source (before our roof factor), for fix 7's volume ramps
@@ -280,7 +287,7 @@ namespace RealSoundSimulation.Fixes
                     if (BedPan != 0f) foreach (Bed b in Beds) if (b.Src != null) b.Src.panStereo = 0f;
                     BedPan = 0f; BedCutoff = 22000f;
                     BedDirection.Outdoor.Tick(dt, lt2, true, AcousticProbe.Arrival, AcousticProbe.Focus, AcousticProbe.Enclosed);
-                    BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed);
+                    BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed, AcousticProbe.RoofCutoffHz);
                     return;
                 }
                 BedDirection.Outdoor.Tick(dt, lt2, false, Vector3.zero, 0f, 0f);
@@ -350,7 +357,16 @@ namespace RealSoundSimulation.Fixes
             var lps = new List<AudioLowPassFilter>(); var own = new List<bool>();
             foreach (Bed b in Beds) { lps.Add(b.Lp); own.Add(b.OwnFilter); }
             BedDirection.Outdoor.Init(srcs, lps, own);
-            BedDirection.Roof.Init(new List<AudioSource>(RainSrc), null, null);
+            // 0.6.10: the roof rain gets its own low-pass too (path muffling), added only where the game has none
+            var rLps = new List<AudioLowPassFilter>(); var rOwn = new List<bool>();
+            foreach (AudioSource s in RainSrc)
+            {
+                AudioLowPassFilter lp = s != null ? s.GetComponent<AudioLowPassFilter>() : null;
+                bool mine = false;
+                if (s != null && lp == null) { lp = s.gameObject.AddComponent<AudioLowPassFilter>(); lp.lowpassResonanceQ = 1f; lp.cutoffFrequency = 22000f; lp.enabled = false; mine = true; }
+                rLps.Add(lp); rOwn.Add(mine);
+            }
+            BedDirection.Roof.Init(new List<AudioSource>(RainSrc), rLps, rOwn);
         }
 
         public static int BedsFound, IndoorRainFound;
