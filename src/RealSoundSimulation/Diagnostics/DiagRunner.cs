@@ -33,6 +33,8 @@ namespace RealSoundSimulation.Diagnostics
         private int _lastBots = -1, _maxBots, _spawned; // 0.6.18
         internal static float LastSpawnChange = float.NegativeInfinity; // 0.6.19: Time.time the alive-bot count last changed
         private int _backoffFrames; // 0.6.19: frames the diagnostics skipped after a spawn
+        internal static int LastAliveBots = -1; // 0.6.20: for slowframes.csv
+        private AudioThreadProbe _audioProbe; private float _nextAudioProbeTry; // 0.6.20
 
         // Everyone alive except you; -1 if the game world isn't there.
         private static int AliveBots()
@@ -91,6 +93,8 @@ namespace RealSoundSimulation.Diagnostics
             try { Tick(now, backoff); }
             catch (Exception e) { ReportOnce("tick", e); }
             finally { Perf.End(Perf.Part.DiagTick); }
+            try { AudioCounters.Sample(); } // 0.6.20: one read per counter, also during the back-off (spawn frames are the ones to see)
+            catch (Exception e) { ReportOnce("audio counters", e); }
             if (backoff) return;
             Perf.Begin();
             try { EnvProbe.Tick(now); }
@@ -162,9 +166,18 @@ namespace RealSoundSimulation.Diagnostics
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
+            _nextAudioProbeTry = 0f; Plugin.Safe("audio thread probe", AttachAudioProbe); // 0.6.20
+            BatchWait.Reset(); AudioCounters.Stop(); // 0.6.20
             if (!Plugin.LogsOn.Value) return;
 
             DiagLog.Open();
+            if (Plugin.AudioThreadTimingOn.Value) Plugin.Safe("audio counters", AudioCounters.RaidStart); // 0.6.20: after Open (writes into the raid folder)
+            Plugin.Safe("shared patches", () => // 0.6.20: once every plugin has loaded (other mods patch after our Awake)
+            {
+                string report = SharedPatches.Describe();
+                DiagLog.Text("patches.txt", report);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(DiagLog.RootDir, "patches.txt"), report);
+            });
             SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
             var cfg = AudioSettings.GetConfiguration();
             var sb = new StringBuilder();
@@ -189,7 +202,21 @@ namespace RealSoundSimulation.Diagnostics
         {
             if (DiagLog.HasRaidDir) DiagLog.Text("summary.txt", BuildSummary());
             DiagLog.Close();
+            Plugin.Safe("audio counters", AudioCounters.Stop); // 0.6.20
             _overlayText = "";
+            if (_audioProbe != null) { Destroy(_audioProbe); _audioProbe = null; } // 0.6.20
+        }
+
+        // 0.6.19: the audio-thread probe lives on the AudioListener's object (OnAudioFilterRead only runs there). The
+        // listener can change mid-raid (camera swaps), so it is re-attached if it goes missing, at most every 5 s.
+        private void AttachAudioProbe()
+        {
+            if (!Plugin.AudioThreadTimingOn.Value) return;
+            if (_audioProbe != null) return;
+            AudioListener l = FindObjectOfType<AudioListener>();
+            if (l == null) return;
+            _audioProbe = l.gameObject.AddComponent<AudioThreadProbe>();
+            _audioProbe.Init(AudioSettings.GetConfiguration().sampleRate);
         }
 
         // ---------------- per-frame work ----------------
@@ -233,6 +260,7 @@ namespace RealSoundSimulation.Diagnostics
             // Raid 33: the two biggest frames (869 and 940 ms) had no gunfire nearby but grew the heap 75-100 MB - this lines
             // FrameDiag's slow frames (clock time) up with spawn waves.
             int bots = AliveBots();
+            LastAliveBots = bots; // 0.6.20
             if (bots >= 0 && bots != _lastBots)
             {
                 if (_lastBots >= 0 && DiagLog.IsOpen)
@@ -250,13 +278,21 @@ namespace RealSoundSimulation.Diagnostics
                 if (DiagLog.IsOpen)
                 {
                     var u = TimingPatches.SpatialUpdate; var l = TimingPatches.SpatialLate; var b = TimingPatches.BetterAudioUpdate;
+                    AudioThreadProbe.Window aw = _audioProbe != null ? _audioProbe.Snapshot() : default(AudioThreadProbe.Window); // 0.6.20
                     DiagLog.Row("timing.csv", string.Join(",", DiagLog.F(now - _raidStart, "0.0"), _framesInWindow.ToString(),
                         DiagLog.F(u.WindowAvgMs, "0.000"), DiagLog.F(u.WindowMaxMs, "0.000"),
                         DiagLog.F(l.WindowAvgMs, "0.000"), DiagLog.F(l.WindowMaxMs, "0.000"),
                         DiagLog.F(b.WindowAvgMs, "0.000"), DiagLog.F(b.WindowMaxMs, "0.000"),
-                        activeCount.ToString(), _rows.Count.ToString(), bots >= 0 ? bots.ToString() : ""));
+                        activeCount.ToString(), _rows.Count.ToString(), bots >= 0 ? bots.ToString() : "",
+                        _audioProbe != null ? aw.Calls.ToString() : "", _audioProbe != null ? DiagLog.F((float)aw.BlockMs, "0.00") : "",
+                        _audioProbe != null ? DiagLog.F((float)aw.GapAvgMs, "0.00") : "", _audioProbe != null ? DiagLog.F((float)aw.GapMaxMs, "0.0") : "",
+                        _audioProbe != null ? aw.Late15.ToString() : "", _audioProbe != null ? aw.Late2.ToString() : "", _audioProbe != null ? aw.Stalls.ToString() : "",
+                        DiagLog.F((float)BatchWait.WinAvg, "0.000"), DiagLog.F((float)BatchWait.WinMax, "0.00"), BatchWait.WinWaited.ToString())); // 0.6.20 (6.0b)
                 }
+                else if (_audioProbe != null) _audioProbe.Snapshot(); // keep the window at 5 s for the overlay
+                if (_audioProbe == null && Plugin.AudioThreadTimingOn.Value && now >= _nextAudioProbeTry) { _nextAudioProbeTry = now + 5f; Plugin.Safe("audio thread probe", AttachAudioProbe); }
                 TimingPatches.SpatialUpdate.ResetWindow(); TimingPatches.SpatialLate.ResetWindow(); TimingPatches.BetterAudioUpdate.ResetWindow();
+                AudioCounters.WriteWindow(now - _raidStart); BatchWait.ResetWindow(); // 0.6.20
                 _framesInWindow = 0;
             }
         }
@@ -412,6 +448,8 @@ namespace RealSoundSimulation.Diagnostics
             _sb.Append($"ms/frame  spatial upd {u.WindowAvgMs:0.000}/{u.WindowMaxMs:0.00}  late {l.WindowAvgMs:0.000}/{l.WindowMaxMs:0.00}  BetterAudio {b.WindowAvgMs:0.000}/{b.WindowMaxMs:0.00}\n");
             _sb.Append($"shots {ShotProbe.Shots}  LOS+occluded mixer {ShotProbe.ShotsWithLosOccluded}/{ShotProbe.ShotsWithLos}  >250m LOS occluded {ShotProbe.ShotsBeyond250WithLosOccluded}/{ShotProbe.ShotsBeyond250WithLos}  mixer flips {ShotProbe.MixerFlips}\n");
             _sb.Append(Perf.OverlayLine(Time.realtimeSinceStartup));
+            if (_audioProbe != null) _sb.Append(_audioProbe.OverlayLine()); // 0.6.20
+            _sb.Append($"probe batch wait avg {BatchWait.WinAvg:0.000} max {BatchWait.WinMax:0.00} ms, frames waited {BatchWait.WinWaited} (window)\n"); // 0.6.20
             _sb.Append(Acoustics.OutdoorExposure.OverlayLine());
             _sb.Append(Acoustics.AcousticProbe.OverlayLine());
             _sb.Append("  dist   prio   prop  obst  occl  stages  T    D    R    room\n");
@@ -467,6 +505,11 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine($"  alive bots: max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
             sb.AppendLine($"  diagnostics backed off for {_backoffFrames} frames after spawns (Diagnostics back off after a spawn s = {Plugin.SpawnBackoffS.Value:0.0})"); // 0.6.19
             sb.AppendLine();
+            sb.Append(_audioProbe != null ? _audioProbe.Summary() : "AUDIO THREAD: probe off or not attached (Time the audio thread)\n"); // 0.6.20
+            sb.Append(SharedPatches.Summary());
+            sb.Append(AudioCounters.Summary()); // 0.6.20 (6.0a)
+            sb.Append(BatchWait.Summary()); // 0.6.20 (6.0b)
+            sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");
             sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");
             sb.AppendLine($"  propagated (different room) {_rowsPropagated}   occlusion > 0.55 (gun 'Occluded' mixer threshold) {_rowsGunOccluded}");
@@ -493,7 +536,7 @@ namespace RealSoundSimulation.Diagnostics
             foreach (var g in _maxDistByGroup.OrderBy(x => x.Key))
                 sb.AppendLine($"  {g.Key,-22} " + string.Join("  ", g.Value.Select(kv => $"{kv.Key}:{kv.Value}")));
             sb.AppendLine();
-            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, errors.txt (if any)");
+            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, patches.txt, audio-counters.txt, audiocounters.csv, slowframes.csv, errors.txt (if any)");
             return sb.ToString();
         }
     }

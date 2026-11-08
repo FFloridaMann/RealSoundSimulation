@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.19 + server GC change (25 → 64) waiting for a raid · **Next build:** 6.1 routes.csv
+**Now:** 0.6.20 + server GC change (25 → 64) waiting for a raid · **Next build:** 6.1 routes.csv
 
 ---
 
@@ -41,13 +41,13 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
 ## ⏭ 6.0a · Audio-thread timing (measure)
 - [x] Built on branch `claude/selfcheck-foreign-patches-block-timing`
-- [ ] Merge into main (as 0.6.20)
-- [ ] Raid with it on
-- [ ] Add a "how close to the deadline" measure (the built one only sees late blocks)
+- [x] Merge into main (as 0.6.20)
+- [x] Add a "how close to the deadline" measure: Unity's audio counters, if the game offers them (0.6.20)
+- [ ] Raid with it on; read audio-counters.txt (are there any?) and the summary's AUDIO THREAD
 
 ## ⏭ 6.0b · Ray batch wait on busy CPUs (measure)
-- [ ] Log the batch wait per frame
-- [ ] Heavy Streets raid, sort by frame time
+- [x] Log the batch wait per frame (timing.csv, slowframes.csv; 0.6.20)
+- [ ] Heavy Streets raid, sort slowframes.csv by frameMs
 - [ ] Decide: ray quality by core count / next-frame batch / neither
 
 ## ⏭ 6.1 · Portal positioning ← **next**

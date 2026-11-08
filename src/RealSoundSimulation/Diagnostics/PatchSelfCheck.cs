@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -176,6 +177,26 @@ namespace RealSoundSimulation.Diagnostics
             File.WriteAllText(Path.Combine(DiagLog.RootDir, "selfcheck.txt"), sb.ToString());
             if (missing == 0) Plugin.Log.LogInfo($"Self-check: all {Targets.Length} targets present.");
             else Plugin.Log.LogWarning($"Self-check: {missing} of {Targets.Length} targets missing. See {Path.Combine(DiagLog.RootDir, "selfcheck.txt")}");
+        }
+
+        // 0.6.20: every method target (all overloads), for SharedPatches: which other mods patch them.
+        internal static List<(string Fix, MethodBase Method)> MethodTargets()
+        {
+            var list = new List<(string, MethodBase)>();
+            var seen = new HashSet<MethodBase>();
+            foreach (Target t in Targets)
+            {
+                if (t.Kind != "M") continue;
+                try
+                {
+                    Type type = AccessTools.TypeByName(t.Type);
+                    if (type == null) continue;
+                    foreach (MethodInfo m in type.GetMethods(AccessTools.all))
+                        if (m.Name == t.Member && seen.Add(m)) list.Add((t.Fix, m));
+                }
+                catch { }
+            }
+            return list;
         }
 
         private static bool Resolve(Target t)

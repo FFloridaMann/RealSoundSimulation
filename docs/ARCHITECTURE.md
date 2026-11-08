@@ -40,6 +40,14 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   ├── Perf.cs              cost per part (calls, ms, raycasts, room lookups) for the summary's COST section
 │   ├── RayView.cs           0.6.0: draws probe v2's rays in the world (F11)
 │   ├── MetaAcousticsCheck.cs counts Meta XR acoustic map/geometry components for the summary
+│   ├── SharedPatches.cs     0.6.20: at raid start, which other mods patch our (and planned) targets, loaded plugins, the
+│   │                        mixer's snapshots and groups as they are now -> patches.txt
+│   ├── AudioThreadProbe.cs  0.6.20: pass-through filter on the AudioListener for the raid; times the gap between DSP
+│   │                        blocks (late blocks = the audio thread can't keep up) -> timing.csv, overlay, summary
+│   ├── AudioCounters.cs     0.6.20: lists the Unity profiler counters the game offers, records the audio ones each
+│   │                        frame (DSP load, voices, if present) -> audio-counters.txt, audiocounters.csv, summary
+│   ├── BatchWait.cs         0.6.20: how long the main thread waits for probe v2's ray batch and the muzzle measure
+│   │                        -> timing.csv, slowframes.csv, overlay, summary
 │   └── DiagLog.cs           one folder per raid, buffered CSV writing, errors.txt
 │
 └── Fixes/                   change sound; each switchable live (defaults = the tested setup)
@@ -81,6 +89,9 @@ The whole of `Awake` is wrapped too: if loading fails, `errors.txt` says "PLUGIN
 | `EnclosureProbe.Update` | In raid, every 0.1 s: 32 raycasts around your head (if "Enclosure probe" is on). | 320 short raycasts per second. |
 | `OutdoorExposure.Update` | In raid, every 0.25 s: 5 rays up (always); indoors also 24 level rays, up to 8 room lookups each, and one "in between" ray per direction that reaches outside. | Logged in the summary (avg/max ms per update). |
 | `EchoVoices.Update` | Stops all echoes when fix 6 is switched off; frees looping echoes left open past 15 s. | A loop over 24 voices. The echo work itself happens when you fire, not per frame. |
+| `AudioThreadProbe.OnAudioFilterRead` (0.6.20) | On the audio thread, once per DSP block: one Stopwatch read and a few counters. | Nothing on the main thread; read every 5 s. |
+| `AudioCounters.Sample` (0.6.20, from `DiagRunner.Update`) | Every frame in raid: one read of each recorded Unity audio counter (up to 24). | A few reads per frame; no allocation. |
+| `BatchWait.FrameEnd` (0.6.20, from `AcousticProbe.LateUpdate`) | Every frame probe v2 runs: adds up the frame's batch wait, writes a slowframes.csv row for a slow previous frame. | Two Stopwatch reads per batch; no allocation. |
 
 ### Game code we hook
 

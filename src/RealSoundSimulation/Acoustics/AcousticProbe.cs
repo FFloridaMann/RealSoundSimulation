@@ -273,6 +273,7 @@ namespace RealSoundSimulation.Acoustics
             bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
             if (inRaid && Plugin.RayViewKey.Value.IsDown()) RayView.Toggle();
             if (!inRaid || !Plugin.AcousticProbeOn.Value) { DropPending(); Valid = false; RayView.Hide(); return; }
+            _ranFrame = Time.frameCount;
             Perf.Begin();
             try { Step(MonoBehaviourSingleton<SpatialAudioSystem>.Instance); }
             catch (Exception e) { DiagRunner.ReportOnce("acoustic probe v2", e); }
@@ -285,12 +286,20 @@ namespace RealSoundSimulation.Acoustics
         // still overlaps the rays with the rest of the frame's Update work.
         private void LateUpdate()
         {
-            if (!_hasPending) return;
-            Perf.Begin();
-            try { FinishPending(); }
-            catch (Exception e) { DiagRunner.ReportOnce("acoustic probe v2 (finish)", e); }
-            finally { Perf.End(Perf.Part.AcousticProbe); }
+            if (_hasPending)
+            {
+                Perf.Begin();
+                try { FinishPending(); }
+                catch (Exception e) { DiagRunner.ReportOnce("acoustic probe v2 (finish)", e); }
+                finally { Perf.End(Perf.Part.AcousticProbe); }
+            }
+            if (_ranFrame == Time.frameCount) // 0.6.20: the probe ran in raid this frame
+            {
+                try { BatchWait.FrameEnd(); }
+                catch (Exception e) { DiagRunner.ReportOnce("probe batch wait", e); }
+            }
         }
+        private static int _ranFrame = -1; // 0.6.20
 
         private static void Step(SpatialAudioSystem sas)
         {
@@ -374,7 +383,9 @@ namespace RealSoundSimulation.Acoustics
         {
             if (!_hasPending) return;
             _hasPending = false;
+            long w0 = BatchWait.Now(); bool wasDone = _pending.IsCompleted; // 0.6.20 (6.0b): how long the main thread waits here
             _pending.Complete();
+            BatchWait.AddBatch(BatchWait.Ms(w0), wasDone, _pendingN);
             Stats s = default;
             for (int k = 0; k < _pendingN; k++)
             {
@@ -1053,12 +1064,15 @@ namespace RealSoundSimulation.Acoustics
                 }
                 Stats s = default;
                 float geo = 0f, geoS = 0f, up = 0f, upHit = 0f;
+                double waitMs = 0; // 0.6.20 (6.0b)
                 for (int leg = 0; leg < 3; leg++)
                 {
                     int n = 0;
                     for (int i = 0; i < 64; i++) if (Sync[i].Active) { _cmds[n] = new RaycastCommand(Sync[i].O, Sync[i].D, qp, MaxLeg); Idx[n++] = i; }
                     if (n == 0) break;
+                    long w0 = BatchWait.Now();
                     RaycastCommand.ScheduleBatch(_cmds.GetSubArray(0, n), _hits.GetSubArray(0, n), 8, 1).Complete();
+                    waitMs += BatchWait.Ms(w0);
                     RaysCast += n; CountedRay.Rays += n;
                     for (int k = 0; k < n; k++)
                     {
@@ -1069,6 +1083,7 @@ namespace RealSoundSimulation.Acoustics
                         if (leg == 0 && Sync[i].First.y > 0.6f) { up += LobeW[i]; if (Sync[i].FirstHit && Sync[i].FirstHitM < 40f) upHit += LobeW[i]; }
                     }
                 }
+                BatchWait.AddMuzzle(waitMs);
                 MuzzleRoom = Mathf.Clamp01(1f - geo / Mathf.Max(lSum, 1e-3f));
                 MuzzleRoomSphere = Mathf.Clamp01(1f - geoS / 64f);
                 _muzzleAim = aim;

@@ -16,8 +16,8 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 3 | 3 | Own-gun indoor/outdoor recording blend (3c) | Done |
 | 4 | 4 | Echoes for your own shots | Done, tuning continues |
 | 5 | 4b | Outside sound heard indoors | Mostly built; roof holes left |
-| 6 | 6.0a | Audio-thread timing (measure) | Built on a branch, not merged |
-| 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Planned |
+| 6 | 6.0a | Audio-thread timing (measure) | Built (0.6.20), not raided |
+| 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Measuring built (0.6.20), not raided |
 | 8 | **6.1** | **Portal positioning** | **Next** |
 | 9 | M | Realistic materials (+ 4b roof material) | Planned |
 | 10 | 6.2 | Through-wall sound by material | Planned |
@@ -71,12 +71,12 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 ### 6.0a · Audio-thread block timing (diagnostic)
 - **Why it matters:** voices cost the audio thread, not the frame. Each ~20 ms block must finish before the sound card needs it, or you hear crackle. This, not the 196 real-voice slots, is the real ceiling for the voice budget (below). It's also the only way to see crackle caused by other mods' per-source filters.
 - **Plan:** time each block from the listener's `OnAudioFilterRead` (no allocations; the Phase 0 "audio-thread health" probe). Log per raid the slowest block and the share of blocks over 50% and 80% of the deadline. Show it on the F9 overlay.
-- **Status:** built on branch `claude/selfcheck-foreign-patches-block-timing`, together with the shared-patch report. Not merged, not raided. That branch calls itself 0.6.19; it becomes 0.6.20 if merged, because main's 0.6.19 is the diagnostics clean-up.
-- **Gap in what was built:** it times the *gap between* blocks. That counts blocks that ran late, but can't show how close the others came to their deadline. The 50% / 80% shares need a different measure, such as Unity's audio DSP load, if a counter for it works in the release game.
+- **Status:** built in **0.6.20** (merged from branch `claude/selfcheck-foreign-patches-block-timing`, with the shared-patch report). Not raided yet.
+- **What was built:** it times the *gap between* blocks, which counts blocks that ran late. For how close the other blocks came to their deadline, 0.6.20 also records Unity's own audio counters, if the game offers them: audio-counters.txt lists what's there. A DSP load counter in percent gives the 50% / 80% shares. If the game offers none, the late-block count is all there is.
 
 ### 6.0b · Ray batch wait on busy CPUs
 - **The concern:** probe v2's ray batch shares the worker threads with the game's occlusion rays, Burst jobs and SAIN's vision rays. On fewer cores in a big fight, the batch finishes late and the main thread waits for it in LateUpdate.
-- **Measure first:** log the batch wait per frame as its own timing column, then sort a heavy Streets raid by frame time. If the wait is near zero on the bad frames, neither fix below is needed.
+- **Measure first:** built in **0.6.20**: the batch wait per frame in timing.csv, and every slow frame in slowframes.csv (with clock time to match FrameDiag). Next: a heavy Streets raid, sorted by `frameMs`. If the wait is near zero on the bad frames, neither fix below is needed.
 - **Possible fixes:**
   - **`9g Ray quality` by core count**, the way the game picks its own tiers: High at 12+ logical cores, Medium at 8–11, Low below 8. The manual setting overrides it.
   - **Next-frame batch:** collect the batch at the start of the next frame (as 0.6.15 did) instead of in the same LateUpdate (0.6.16 moved it so the batch never spans FixedUpdate). This needs a sync point that's safe for physics, e.g. finishing before FixedUpdate runs.
