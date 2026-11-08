@@ -132,6 +132,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 ---
 
 ## Any time
+- [ ] G: ground between you and a distant shooter (grass vs asphalt; a filter, never an echo)
 - [ ] Distant obstruction (past ~250 m)
 - [ ] Server settings (solutions doc phase 1)
 

@@ -28,6 +28,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 15 | C | Supersonic crack by calibre | Planned |
 | 16 | 7 | Gun audio overhaul, every gun | Planned, long |
 | 17 | E | Final echo tuning and optimising | Planned, last |
+| any time | G | Ground between you and a distant shooter | Planned |
 | any time | – | Distant obstruction; server settings | Planned |
 
 Not in this roadmap: **GC and spawn stutters**. That's a separate project, likely separate mods (user, 8 Nov 2026), on branch `claude/gc-and-spawn-stutters`. Its two pieces that belong to Real Sound Simulation's own logging (garbage-free container rows, backing off after spawns) moved here as 0.6.19.
@@ -180,6 +181,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 ---
 
 ## Any time
+- **G · Ground between you and a distant shooter** (user, 8 Nov 2026): grass takes mids and treble off a far shot, asphalt doesn't. One filter per gun, no voices, needs the ground sampled along the path. Details: [MATERIALS.md](MATERIALS.md). Never a separate ground echo: at these delays the ground changes the tone, and the recordings already hold a bounce.
 - **Distant obstruction:** nothing past ~250 m is muffled by terrain or buildings. Independent; uses different, long rays.
 - **Server settings** (phase 1 of the solutions doc). Independent.
 
