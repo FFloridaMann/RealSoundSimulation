@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.22 installed, waiting for a raid (turn on `Log portal routes` in F12) · **Next build:** decided by that raid
+**Now:** 0.6.22 raided (raid 36) · **Next build:** move bot sounds to the opening (6.1)
 
 ---
 
@@ -52,14 +52,14 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
 ## ⏭ 6.1 · Portal positioning ← **next**
 - [x] routes.csv: each bot gunshot's opening and route (measure only, switch off by default; 0.6.22)
-- [ ] Raid + review routes.csv
+- [x] Raid + review routes.csv (raid 36, Factory: 156 of 171 shots had a route; median 33 deg from the true direction, 40% over 45; best opening changed 7 times; 9 shots from a floor below had no baked route)
 - [ ] Move bot sounds to the opening they come through
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Check: bot gunshots when you cross a threshold
 - [x] A bot's first burst starts un-muffled, then gets cut down (raid 34): `1d First burst muffled` (0.6.21)
 - [ ] Raid: compare `1d` on and off in a distant fight (raid 35: never triggered)
 - [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
-- [ ] Raid with a distant fight (85 m or more): read botshots.csv, then fix whichever cause it shows. Raid 35 (Factory, close fights only): 0 muted, 0 no free voices; 9 of 47 sounds cut, all a burst's tail ended by the same gun's next burst (average 1.9 s lost)
+- [ ] Tails cut by the same gun's next burst: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Neither raid had a fight 85 m or further
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials
@@ -77,6 +77,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
 ## 6.3 · Echoes for bot gunshots and grenades
 - [ ] One headroom cap counting every echo type; bots get their own share
+- [ ] Log voices over time by type (only peaks exist today; raid 35's peaks summed to 208 of 196)
 - [ ] Measure voice peaks (raids that measure voices only)
 - [ ] Echoes per shooter, not per round
 - [ ] Audibility gate
