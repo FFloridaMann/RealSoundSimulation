@@ -21,7 +21,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 8 | **6.1** | **Portal positioning** | **In progress:** routes logging built (0.6.22), not raided |
 | 9 | M | Realistic materials (+ 4b roof material) | Planned |
 | 10 | 6.2 | Through-wall sound by material | Planned |
-| 11 | 6.3 | Echoes for bot gunshots | Planned |
+| 11 | 6.3 | Echoes for bot gunshots and grenades | Planned |
 | 12 | W | Weather research and retune | Planned |
 | 13 | 5 | Headset simulation | Planned (moved after step 6) |
 | 14 | 6b | SEB recordings on full-auto guns | Planned |
@@ -107,8 +107,10 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 - **Before it,** the voice budget's two changes: reserve 16 → 32, and the mod's own non-echo voices counted in the cap.
 - **Why here:** needs 6.1's positions, the material tables (M) and the budget changes. Adds up to 4 voices at once.
 
-### 6.3 · Echoes for bot gunshots
+### 6.3 · Echoes for bot gunshots and grenades
 - **What:** bot echoes under the voice budget (below): per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling; two tiers.
+- **Grenades and other explosions** (user, 8 Nov 2026; raid 35: three grenades in a stairwell got only the game's own sound while your gunshots there got echoes): a few echoes per explosion, through the same queue. Explosions are rare and loud, so they pass the audibility gate and cost few voices. They must play on a mixer that Bring Back Concussion's cut-off reaches, as gun echoes do, so they duck with everything else. Needs finding the explosion's play path in the game code.
+- **First, free up voices:** an echo holds its voice for the whole recording (2.5–5 s) although it is quiet and fades into the room long before that. Raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices. End echoes early, with a short fade, once they are too quiet to hear. Cuts the voices each echo costs without changing what you hear.
 - **Why here:** needs 6.1's source positions and 6.0a's measured ceiling. It's the one addition that grows with the size of the fight.
 
 ---
@@ -201,6 +203,8 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 
 ## Voice budget for step 6 (8 Nov 2026, design; not built)
 
+**Raid 35 (8 Nov 2026) adds three facts.** (a) Your own firing alone can fill all 96 echo voices, so bot echoes need their own share and must never come out of yours. (b) The audio thread did not notice: the 5 s window holding that peak had 15 blocks over 1.5× and 0 over 2×, the same as a quiet window (17 and 0). One raid, 16 logical cores. (c) The game's gun voices are a separate pool from ours, and ours run at low priority (220), so echoes running out drop echoes, not gunshots. **Every echo type has to count against the one headroom cap**, or own + bot + explosion echoes could add up to more voices than Unity has.
+
 Step 6 adds sounds the game does not play today. Portal positioning adds none (it moves the voice the game already plays). The through-wall layer adds one voice per qualifying shot. Bot echoes are the one that can run away, because they scale with the fight and not with your trigger finger. The numbers the logs already give:
 
 | Measure | Value | Source |
@@ -216,7 +220,7 @@ So about 140 voices of headroom after the game's worst case and the 16 reserve. 
 2. **Audibility gate.** Only shots whose arriving level after occlusion and distance is above a threshold get echoes at all. Most shooters in a big fight fail it.
 3. **One queue, loudest first, hard ceiling.** All extra voices go through one queue ordered by arriving level, with a fixed cap for bot echoes (start at 24). At the cap the quietest candidate is dropped before it starts, as the headroom cap does for own echoes now.
 4. **Two tiers.** Shooters that pass the gate but miss the ceiling get the zero-voice treatment: their existing voice's reverb send raised by the listener's room measure, as fix 5 does for your own shots. Only the top few get discrete echoes.
-5. **Fixed allocation order:** through-wall layer (4 at once, gunshots and explosions within ~60 m) first, then own echoes, then bot echoes. Your own shots never lose a voice to a bot's.
+5. **Fixed allocation order:** through-wall layer (4 at once, gunshots and explosions within ~60 m) first, then own echoes, then explosion echoes, then bot echoes. Your own shots never lose a voice to a bot's.
 
 **Through-wall tuning note (user, 8 Nov 2026):** for the deep thump/thud of the through-wall layer, a low-pass around **50 Hz** sounds really good on the user's PC and headset. Build it as a slider (through-wall cutoff Hz, default 50) rather than a constant: the right value depends on the headset and on the wall. Explosions keep more below the cutoff than gunshots (low frequencies pass walls more), so the explosion copy should sit at or above that default and the gunshot copy below it, both on the same slider scale.
 

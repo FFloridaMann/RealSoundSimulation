@@ -75,13 +75,16 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Through-wall thump layer + cutoff slider (default 50 Hz)
 - [ ] Separate cutoffs: explosions vs gunshots
 
-## 6.3 · Echoes for bot gunshots
+## 6.3 · Echoes for bot gunshots and grenades
+- [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
+- [ ] One headroom cap counting every echo type; bots get their own share
 - [ ] Measure voice peaks (raids that measure voices only)
 - [ ] Echoes per shooter, not per round
 - [ ] Audibility gate
 - [ ] Loudest-first queue with a ceiling (start 24)
 - [ ] Zero-voice tier for the rest
 - [ ] F12 settings: ceiling, threshold, tier switch
+- [ ] Grenade and explosion echoes (find the explosion's play path; must duck with Bring Back Concussion)
 
 ---
 
