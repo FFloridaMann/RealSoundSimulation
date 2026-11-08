@@ -69,7 +69,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials
-- [ ] Research each surface (absorption, transmission, resonance)
+- [x] Research each surface: [MATERIALS.md](MATERIALS.md) (absorption by frequency, transmission loss; no usable scattering data)
 - [ ] Replace the tables in fix 6 and the room measure
 - [ ] Roof material (4b phase 3)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels

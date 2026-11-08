@@ -12,6 +12,7 @@ A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How
 | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) | Every log file and column, the F9 overlay, raid history |
 | [docs/AMBIENCE.md](docs/AMBIENCE.md) | How the game's ambient audio works (layers, outdoor value, room settings, the rain dropout bug) and the options for step 4b |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | The agreed order of work, status, and what to test next |
+| [docs/MATERIALS.md](docs/MATERIALS.md) | Measured and calculated acoustic values for the game's surface tags, against what the mod assumes |
 | [docs/TRACKER.md](docs/TRACKER.md) | Checklist of every step and its substeps, in work order (tick boxes as they finish) |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | What changed in each version and whether it has run in game |
 | [01_How_SPT_Tarkov_Audio_Works.md](01_How_SPT_Tarkov_Audio_Works.md) | The game's own audio system (research) |
