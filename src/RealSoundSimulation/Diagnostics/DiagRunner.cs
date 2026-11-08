@@ -31,6 +31,8 @@ namespace RealSoundSimulation.Diagnostics
         private bool _inRaid;
         private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
         private int _lastBots = -1, _maxBots, _spawned; // 0.6.18
+        internal static float LastSpawnChange = float.NegativeInfinity; // 0.6.19: Time.time the alive-bot count last changed
+        private int _backoffFrames; // 0.6.19: frames the diagnostics skipped after a spawn
 
         // Everyone alive except you; -1 if the game world isn't there.
         private static int AliveBots()
@@ -83,10 +85,13 @@ namespace RealSoundSimulation.Diagnostics
 
             float now = Time.time;
             _framesInWindow++;
+            bool backoff = now - LastSpawnChange < Plugin.SpawnBackoffS.Value; // 0.6.19: a spawn wave is making frames long; add nothing
+            if (backoff) _backoffFrames++;
             Perf.Begin();
-            try { Tick(now); }
+            try { Tick(now, backoff); }
             catch (Exception e) { ReportOnce("tick", e); }
             finally { Perf.End(Perf.Part.DiagTick); }
+            if (backoff) return;
             Perf.Begin();
             try { EnvProbe.Tick(now); }
             catch (Exception e) { ReportOnce("env probe (tick)", e); }
@@ -146,7 +151,7 @@ namespace RealSoundSimulation.Diagnostics
             RaidStartTime = _raidStart;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
             _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0; LastPlayingInContainers = 0;
-            _lastBots = -1; _maxBots = 0; _spawned = 0;
+            _lastBots = -1; _maxBots = 0; _spawned = 0; LastSpawnChange = float.NegativeInfinity; _backoffFrames = 0;
             _activeSum = _activeSamples = 0;
             _containerRows = _rowsTierLow = _rowsTierMed = _rowsTierHigh = _rowsPropagated = _rowsGunOccluded = 0;
             _dumpedSourceKeys.Clear();
@@ -189,7 +194,7 @@ namespace RealSoundSimulation.Diagnostics
 
         // ---------------- per-frame work ----------------
 
-        private void Tick(float now)
+        private void Tick(float now, bool backoff)
         {
             SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
             List<SoundOcclusionProcessor> active = ActiveRef(sas);
@@ -197,7 +202,7 @@ namespace RealSoundSimulation.Diagnostics
             _activeSum += activeCount; _activeSamples++;
             if (activeCount > _maxActive) _maxActive = activeCount;
 
-            bool wantRows = now >= _nextContainerLog || (Plugin.OverlayOn.Value && now >= _nextOverlay);
+            bool wantRows = !backoff && (now >= _nextContainerLog || (Plugin.OverlayOn.Value && now >= _nextOverlay)); // 0.6.19: not during a spawn wave
             if (wantRows)
             {
                 CollectRows(sas);
@@ -216,7 +221,7 @@ namespace RealSoundSimulation.Diagnostics
 
             // 0.6.15: 0 = off (the default). Raid 31: FrameDiag found this FindObjectsOfType scan behind 83 frames of ~56 ms -
             // the plugin's only hitch. The playing-sources count at every container sample (0.6.14) replaces it.
-            if (Plugin.SourceScanInterval.Value > 0f && now >= _nextScan)
+            if (!backoff && Plugin.SourceScanInterval.Value > 0f && now >= _nextScan)
             {
                 _nextScan = now + Plugin.SourceScanInterval.Value;
                 Perf.Begin();
@@ -234,11 +239,12 @@ namespace RealSoundSimulation.Diagnostics
                     DiagLog.Row("spawns.csv", string.Join(",", DiagLog.F(now - _raidStart, "0.00"), DateTime.Now.ToString("HH:mm:ss.fff"),
                         bots.ToString(), (bots - _lastBots).ToString("+0;-0;0")));
                 if (_lastBots >= 0 && bots > _lastBots) _spawned += bots - _lastBots;
+                if (_lastBots >= 0) LastSpawnChange = now; // 0.6.19 (not the first reading)
                 _lastBots = bots;
                 if (bots > _maxBots) _maxBots = bots;
             }
 
-            if (now >= _nextTiming)
+            if (!backoff && now >= _nextTiming)
             {
                 _nextTiming = now + 5f;
                 if (DiagLog.IsOpen)
@@ -314,12 +320,17 @@ namespace RealSoundSimulation.Diagnostics
                 if (r.Prio == "Low") _rowsTierLow++; else if (r.Prio == "Medium") _rowsTierMed++; else if (r.Prio == "High") _rowsTierHigh++;
                 if (r.Prop > 0f) _rowsPropagated++;
                 if (r.Occl > 0.55f) _rowsGunOccluded++;
-                DiagLog.Row("containers.csv", string.Join(",",
-                    ts, r.Id.ToString(), DiagLog.F(r.Dist, "0.0"), DiagLog.F(r.MaxDist, "0"), r.Prio, DiagLog.Csv(r.Room),
-                    r.Outdoor ? "1" : "0", r.SameRoom ? "1" : "0",
-                    DiagLog.F(r.Prop), DiagLog.F(r.Obst), DiagLog.F(r.Occl), r.Occl > 0.55f ? "1" : "0",
-                    r.HasCalc ? (r.RanT ? "1" : "0") : "", r.HasCalc ? (r.RanD ? "1" : "0") : "", r.HasCalc ? (r.RanR ? "1" : "0") : "",
-                    DiagLog.F(r.T), DiagLog.F(r.D), DiagLog.F(r.R), r.Sources.ToString(), r.Occluder ?? ""));
+                // 0.6.19: built without allocating (up to ~300 rows/s in a big fight; same columns, fixed decimals)
+                var sb = DiagLog.Begin();
+                sb.Append(ts); sb.Append(','); DiagLog.AppendI(sb, r.Id); sb.Append(','); DiagLog.AppendF(sb, r.Dist, 1); sb.Append(',');
+                DiagLog.AppendF(sb, r.MaxDist, 0); sb.Append(','); sb.Append(r.Prio); sb.Append(','); DiagLog.AppendS(sb, r.Room); sb.Append(',');
+                DiagLog.AppendB(sb, r.Outdoor); sb.Append(','); DiagLog.AppendB(sb, r.SameRoom); sb.Append(',');
+                DiagLog.AppendF(sb, r.Prop, 3); sb.Append(','); DiagLog.AppendF(sb, r.Obst, 3); sb.Append(','); DiagLog.AppendF(sb, r.Occl, 3); sb.Append(',');
+                DiagLog.AppendB(sb, r.Occl > 0.55f); sb.Append(',');
+                if (r.HasCalc) DiagLog.AppendB(sb, r.RanT); sb.Append(','); if (r.HasCalc) DiagLog.AppendB(sb, r.RanD); sb.Append(','); if (r.HasCalc) DiagLog.AppendB(sb, r.RanR); sb.Append(',');
+                DiagLog.AppendF(sb, r.T, 3); sb.Append(','); DiagLog.AppendF(sb, r.D, 3); sb.Append(','); DiagLog.AppendF(sb, r.R, 3); sb.Append(',');
+                DiagLog.AppendI(sb, r.Sources); sb.Append(','); DiagLog.AppendS(sb, r.Occluder);
+                DiagLog.EndRow("containers.csv");
             }
         }
 
@@ -454,6 +465,7 @@ namespace RealSoundSimulation.Diagnostics
                 : $"  playing sources (all): source scan off (Source scan interval s = 0); realVoices {cfg.numRealVoices}");
             sb.AppendLine($"  playing sources in sound containers (counted at every container sample, every {Plugin.ContainerLogInterval.Value:0.0} s): max {_maxContainerPlaying}; our echo voices max busy {Acoustics.OwnEchoes.MaxBusy} of {Acoustics.EchoVoices.PoolSize}");
             sb.AppendLine($"  alive bots: max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
+            sb.AppendLine($"  diagnostics backed off for {_backoffFrames} frames after spawns (Diagnostics back off after a spawn s = {Plugin.SpawnBackoffS.Value:0.0})"); // 0.6.19
             sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");
             sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");

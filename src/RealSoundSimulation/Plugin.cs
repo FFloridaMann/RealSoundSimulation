@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.18")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.19")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -30,6 +30,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> ContainerLogInterval;
         internal static ConfigEntry<float> SourceScanInterval;
         internal static ConfigEntry<bool> TimingOn;
+        internal static ConfigEntry<float> SpawnBackoffS;              // 0.6.19
         internal static ConfigEntry<bool> ProbeOn;
         internal static ConfigEntry<KeyboardShortcut> MarkKey;
         internal static ConfigEntry<bool> ExposureProbeOn;
@@ -115,6 +116,7 @@ namespace RealSoundSimulation
             ContainerLogInterval = Config.Bind(diag, "Container log interval s", 0.5f, new ConfigDescription("How often every sound container's occlusion state is logged (at least every 1 s while there are more than 50 containers).", new AcceptableValueRange<float>(0.1f, 5f)));
             SourceScanInterval = Config.Bind(diag, "Source scan interval s", 0f, new ConfigDescription("How often every playing source in the scene is counted and new rolloff curves dumped (FindObjectsOfType: ~56 ms each time, a visible hitch). 0 = off (default since 0.6.15); the summary's playing sources in sound containers (every 0.5 s) replaces it.", new AcceptableValueRange<float>(0f, 60f)));
             TimingOn = Config.Bind(diag, "Time the audio systems", true, "Measure milliseconds spent in SpatialAudioSystem and BetterAudio each frame.");
+            SpawnBackoffS = Config.Bind(diag, "Diagnostics back off after a spawn s", 2f, new ConfigDescription("0.6.19: for this long after the alive-bot count changes, the diagnostics skip their per-frame work (container rows, overlay, ambience and probe rows, log saving) so none of it lands on the frames a spawn wave already makes long. Measurements only, with one side effect: the echo headroom cap (fix 6) keeps its last count of playing game sources until the back-off ends. 0 = off.", new AcceptableValueRange<float>(0f, 10f)));
             ProbeOn = Config.Bind(diag, "Enclosure probe", true, "Measure how enclosed the space around you is with 32 short rays every 0.1 s. Logged to probe.csv; used by fix 3c in Enclosure mode. Changes no sound by itself.");
             ExposureProbeOn = Config.Bind(diag, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what (open, glass, bars, other): 48 directions all round (level and 15 deg up), re-measured continuously at about 290 rays per second, plus what is above you (floors, roof). Runs indoors and outdoors. Fix 8 needs it on. Logged to exposure.csv and shown on the overlay.");
             MarkKey = Config.Bind(diag, "Mark key", new KeyboardShortcut(KeyCode.F10), "Press in raid to mark this spot in marks.csv (position, what the probe measured, the last own shot and the surfaces around you). Use it where something sounds wrong.");

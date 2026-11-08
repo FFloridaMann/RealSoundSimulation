@@ -76,7 +76,7 @@ The whole of `Awake` is wrapped too: if loading fails, `errors.txt` says "PLUGIN
 
 | Component | Does | Cost |
 |---|---|---|
-| `DiagRunner.Update` | Detects raid start/end. Mark key (F10): one row in marks.csv. Every 0.5 s: reads every sound container's occlusion state. Every 15 s: scans playing sources. Every 5 s: writes timing. 10×/s: ambience sample. | Dominated by the 15 s source scan (`FindObjectsOfType`), which is why it is slow. |
+| `DiagRunner.Update` | Detects raid start/end. Mark key (F10): one row in marks.csv. Every 0.5 s: reads every sound container's occlusion state. Every 15 s: scans playing sources. Every 5 s: writes timing. 10×/s: ambience sample. 0.6.19: all of that is skipped for 2 s after the bot count changes (`Diagnostics back off after a spawn s`); the bot count itself is still read every frame. | Dominated by the 15 s source scan (`FindObjectsOfType`), which is why it is slow (off by default since 0.6.15). |
 | `DoorwayBlend.LateUpdate` | In raid: works out "outdoorness" from the nearest doorway (always, because fixes 3c and 4 use it). If fix 3 is on: applies it to the mixer snapshots and ambience. | A loop over the outdoor doorways of the current area, a few hundred distance checks at most. |
 | `EnclosureProbe.Update` | In raid, every 0.1 s: 32 raycasts around your head (if "Enclosure probe" is on). | 320 short raycasts per second. |
 | `OutdoorExposure.Update` | In raid, every 0.25 s: 5 rays up (always); indoors also 24 level rays, up to 8 room lookups each, and one "in between" ray per direction that reaches outside. | Logged in the summary (avg/max ms per update). |

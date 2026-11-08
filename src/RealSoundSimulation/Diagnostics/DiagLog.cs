@@ -61,6 +61,69 @@ namespace RealSoundSimulation.Diagnostics
             w.WriteLine(line);
         }
 
+        // 0.6.19: allocation-free rows for the files written many times a second (containers.csv: up to ~300 rows/s in a big
+        // fight). Row(file, string) builds ~25 strings per row; Mono's StringBuilder.Append(int/float) also goes through
+        // ToString, so digits are appended by hand. Usage: var sb = Begin(); AppendF(sb, x, 2); sb.Append(','); ... EndRow(file).
+        private static readonly StringBuilder RowSb = new StringBuilder(512);
+        private static char[] _rowBuf = new char[1024];
+        private static readonly char[] Digits = new char[24];
+        private static readonly long[] Pow10 = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
+
+        public static StringBuilder Begin() { RowSb.Clear(); return RowSb; }
+
+        public static void AppendI(StringBuilder sb, long v)
+        {
+            if (v < 0) { sb.Append('-'); v = -v; }
+            if (v == 0) { sb.Append('0'); return; }
+            int n = 0;
+            while (v > 0 && n < Digits.Length) { Digits[n++] = (char)('0' + (int)(v % 10)); v /= 10; }
+            while (n > 0) sb.Append(Digits[--n]);
+        }
+
+        // Fixed decimals (0..6), invariant, nothing for NaN/infinity (same as F()).
+        public static void AppendF(StringBuilder sb, float v, int decimals)
+        {
+            if (float.IsNaN(v) || float.IsInfinity(v)) return;
+            if (decimals < 0) decimals = 0; else if (decimals > 6) decimals = 6;
+            double d = v;
+            if (d < 0) { sb.Append('-'); d = -d; }
+            long scale = Pow10[decimals];
+            long scaled = (long)Math.Round(d * scale);
+            AppendI(sb, scaled / scale);
+            if (decimals == 0) return;
+            sb.Append('.');
+            long frac = scaled % scale;
+            for (long p = scale / 10; p > 0; p /= 10) sb.Append((char)('0' + (int)(frac / p % 10)));
+        }
+
+        public static void AppendB(StringBuilder sb, bool v) => sb.Append(v ? '1' : '0');
+
+        // Same quoting as Csv(), without the copy when there is no comma.
+        public static void AppendS(StringBuilder sb, string s)
+        {
+            if (string.IsNullOrEmpty(s)) return;
+            if (s.IndexOf(',') < 0) { sb.Append(s); return; }
+            sb.Append('"');
+            for (int i = 0; i < s.Length; i++) sb.Append(s[i] == '"' ? '\'' : s[i]);
+            sb.Append('"');
+        }
+
+        public static void EndRow(string file)
+        {
+            if (RaidDir == null || !Plugin.LogsOn.Value) return;
+            if (!Writers.TryGetValue(file, out StreamWriter w))
+            {
+                w = new StreamWriter(Path.Combine(RaidDir, file), false, new UTF8Encoding(false), 1 << 16);
+                if (Headers.TryGetValue(file, out string h)) w.WriteLine(h);
+                Writers[file] = w;
+            }
+            int len = RowSb.Length;
+            if (_rowBuf.Length < len) _rowBuf = new char[Math.Max(len, _rowBuf.Length * 2)];
+            RowSb.CopyTo(0, _rowBuf, 0, len);
+            w.Write(_rowBuf, 0, len);
+            w.WriteLine();
+        }
+
         public static void Text(string file, string text)
         {
             if (RaidDir == null) return; // settings.txt and summary.txt: written even with "Write logs" switched off mid-raid

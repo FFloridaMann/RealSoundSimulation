@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.19 — 8 Nov 2026 (diagnostics: no garbage from container rows, back off during spawn waves)
+**Run in game:** not yet. Changes no sound (one side effect below). Aimed at raid 33's frame spikes: 869 and 940 ms frames with no gunfire nearby, the heap growing 75–100 MB each, and 100–150 ms frames in windows with 6–9 new sound containers. The spawn work itself is the game's and SAIN's; this removes what the plugin's own logging adds to those frames. Taken from the `claude/gc-and-spawn-stutters` branch (built there as part of "0.6.20"); that branch's GC timing experiment stays there, because GC and spawn stutters are a separate project and will likely be separate mods (user, 8 Nov).
+- **containers.csv rows without garbage.** Up to ~300 rows/s in a big fight, each built from ~25 strings. New `DiagLog.Begin/AppendI/AppendF/AppendB/AppendS/EndRow`: digits appended by hand (Mono's StringBuilder.Append(int) allocates), one reused builder and char buffer. Same columns; the 0–1 scores now have three fixed decimals (`0.500` instead of `0.5`).
+- **`Diagnostics back off after a spawn s`** (F12 section 1, default 2, 0 = off): for this long after the alive-bot count changes, the diagnostics skip their per-frame work (container rows, overlay, ambience and probe rows, timing row, source scan, log saving). spawns.csv is still written. Summary counts the frames skipped. Side effect: the echo headroom cap keeps its last count of playing game sources until the back-off ends (raid 32: the cap never engaged).
+- Version 0.6.19. (The unmerged `claude/selfcheck-foreign-patches-block-timing` branch also calls itself 0.6.19; it takes the next number if it is merged.)
+
 ## 0.6.18 — 7 Nov 2026 (diagnostics: alive bots and spawn waves)
 **Run in game:** not yet. Purpose: line FrameDiag's slow frames up with spawn waves. Raid 33: the two biggest frames (869 ms at 134.6 s, 940 ms at 190.7 s) had no gunfire within 5 s but grew the heap 75–100 MB, and several 100–150 ms frames sat in windows with 6–9 new sound containers.
 - **timing.csv** ends with `aliveBots` (everyone alive in GameWorld.AllAlivePlayersList except you).
