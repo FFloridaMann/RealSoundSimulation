@@ -13,7 +13,7 @@ RealSoundSimulationLogs\
     ambience.csv  probe.csv    ownshots.csv    timing.csv   sources.csv   rolloff_dump.txt
 ```
 
-CSV times (`t`) are seconds since the raid started, except `shots.csv` (seconds since the game started). Files are flushed every 2 s. If the game hangs or is killed, the CSVs keep everything up to the last flush, but `summary.txt` is not written.
+CSV times (`t`) are seconds since the raid started (`shots.csv` too since 0.6.21; before that it was seconds since the game started). Files are flushed every 2 s. If the game hangs or is killed, the CSVs keep everything up to the last flush, but `summary.txt` is not written.
 
 ## Files written outside raids
 
@@ -73,6 +73,9 @@ A *container* is the game's grouping of sounds at one spot (one per player, plus
 | T, D, R | each check's score (1.0 usually means "no path found") |
 | sources | sounds in the container |
 | occluder | the game class doing the work (CombinedSpatialAudioOccluder for players, ContinuousPropagatedSpatialAudioOccluder for one-off sounds such as SPTBattleAmbience, …) |
+
+### botshots.csv (0.6.21, one row per sound a bot's gun queued or lost)
+`t`, `clock` (same clock as FrameDiag), `shooterId`, `event` (`body` = a shot or firing loop, `tail`, `muted` = not played because the voice's occlusion volume was 0, `noqueue` = not played because no voices were free), `clip`, `lengthS`, `delayS` (time of flight until it starts), `dist`, `occl`, `occludedMixer` (1 = the muffled gun mixer), `occlVolume` (the voice's occlusion volume factor), `firstBurstSeeded` (1 = setting `1d` started this burst muffled), `cutPrevS` and `cutPrevShare` (this sound ended the same gun's previous sound early: seconds lost and share of that sound; empty if nothing was cut). A firing loop being ended by its tail is the game's design and is not counted. The summary's BOT GUNSHOTS section has the totals.
 
 ### shots.csv (each remote gunshot, at most 4/s per gun)
 `shooterId, dist, rolloff` (audible range m), `silenced`, `mixer` (Gunshots or Occluded), `occl/prop/obst` of the shooter's container, `shooterRoom/listenerRoom`, `los` (1 = straight line of sight on the game's occlusion layers), `beyond250`.

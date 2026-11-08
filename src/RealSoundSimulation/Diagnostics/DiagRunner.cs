@@ -162,7 +162,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
+            BotShots.Reset(); FirstBurstOcclusion.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -509,6 +509,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(SharedPatches.Summary());
             sb.Append(AudioCounters.Summary()); // 0.6.20 (6.0a)
             sb.Append(BatchWait.Summary()); // 0.6.20 (6.0b)
+            sb.Append(BotShots.Summary()); // 0.6.21
             sb.AppendLine();
             sb.AppendLine("OCCLUSION (container samples)");
             sb.AppendLine($"  samples {_containerRows}: priority Low {_rowsTierLow} / Medium {_rowsTierMed} / High {_rowsTierHigh}");
@@ -536,7 +537,7 @@ namespace RealSoundSimulation.Diagnostics
             foreach (var g in _maxDistByGroup.OrderBy(x => x.Key))
                 sb.AppendLine($"  {g.Key,-22} " + string.Join("  ", g.Value.Select(kv => $"{kv.Key}:{kv.Value}")));
             sb.AppendLine();
-            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, patches.txt, audio-counters.txt, audiocounters.csv, slowframes.csv, errors.txt (if any)");
+            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, patches.txt, audio-counters.txt, audiocounters.csv, slowframes.csv, botshots.csv, errors.txt (if any)");
             return sb.ToString();
         }
     }

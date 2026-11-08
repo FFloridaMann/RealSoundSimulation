@@ -66,6 +66,16 @@ F12 → Real Sound Simulation → **"0. Gun sounds"** (top of the list). Not a f
 
 ---
 
+### 1d: First burst muffled (0.6.21)
+
+**Problem (raid 34).** A quiet bot further away than its own footsteps carry (~80 m) has a processor marked `OutOfRange`, and the game does not compute occlusion for those, so the value stays 0. When it fires, its gun voices raise the container's range to 600 m and the calculation starts. That takes several frames and is smoothed, so the first rounds of its first burst played un-muffled on the open gun mixer, then got cut down. Fix 1's "fresh shot" rule read the same 0, and its hold kept the open mixer for up to another 0.5 s.
+
+**Fix.** A prefix and postfix on `WeaponSoundPlayer.RegisterSourceForOcclusionProcess`, which runs only when a gun borrows new voices, before its first sound is queued. If that shooter's occlusion was never computed, one line-of-sight test; if blocked, `CombinedSpatialAudioOccluder`'s smoothed value starts at 1 (propagation if the shooter is in another room, obstruction if in yours), the real calculation is forced to start, and the voices and mixer pick up the new value at once. The game's own result then takes over. The real value can't be computed in that call, because the obstruction checks are a job chain over several frames.
+
+**Limits.** Only a bot's first burst: later ones keep the last computed value, even if the bot has moved since. A blocked line can still be a doorway the sound gets through, so a first burst may start slightly too muffled for a moment.
+
+**Check.** `1d` off and on, a distant bot fight: botshots.csv `firstBurstSeeded` = 1 on those rows, `occl` already high and `occludedMixer` 1 on the first row. Summary: BOT GUNSHOTS.
+
 ## Fix 2: Obstruction score
 
 **Problem.** When you and a sound are in the same space with something between you, the game runs up to three checks (`SpatialAudioOcclusionCombinedCalculator`): **transmission** (through the obstacle), **diffraction** (around its edges) and **reflection** (bouncing off surfaces). Each gives 0 (clear) to 1 (blocked), and the game takes the **average**. But a check that *fails to find a path* returns 1.0, so a thin wall (0.2) plus a failed corner search (1.0) averages to 0.6, which is over the 0.55 muffle line.

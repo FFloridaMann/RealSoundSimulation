@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.20 waiting for a raid · **Next build:** 6.1 routes.csv
+**Now:** 0.6.21 waiting for a raid · **Next build:** 6.1 routes.csv
 
 ---
 
@@ -56,9 +56,11 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Move bot sounds to the opening they come through
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Check: bot gunshots when you cross a threshold
-- [ ] Bot bursts start un-muffled, then cut down (raid 34): a quiet bot's container is out of range, so its occlusion is 0 until it fires
-- [ ] Shots "cut off" in distant fights (raid 34, mark 1): log each bot gunshot source's start and stop to find what ends them early
-- [ ] shots.csv: time is the game clock, not raid seconds (logging bug)
+- [x] A bot's first burst starts un-muffled, then gets cut down (raid 34): `1d First burst muffled` (0.6.21)
+- [ ] Raid: compare `1d` on and off in a distant fight
+- [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
+- [ ] Raid: read botshots.csv, then fix whichever cause it shows (cut by the next shot / muted / no free voices)
+- [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials
 - [ ] Research each surface (absorption, transmission, resonance)

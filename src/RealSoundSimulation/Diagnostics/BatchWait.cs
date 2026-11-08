@@ -77,7 +77,7 @@ namespace RealSoundSimulation.Diagnostics
         }
 
         // HH:mm:ss.fff without allocating (the same clock as spawns.csv and FrameDiag's frames.log)
-        private static void AppendClock(StringBuilder sb, DateTime t)
+        internal static void AppendClock(StringBuilder sb, DateTime t)
         {
             Two(sb, t.Hour); sb.Append(':'); Two(sb, t.Minute); sb.Append(':'); Two(sb, t.Second); sb.Append('.');
             int ms = t.Millisecond; sb.Append((char)('0' + ms / 100)); sb.Append((char)('0' + ms / 10 % 10)); sb.Append((char)('0' + ms % 10));

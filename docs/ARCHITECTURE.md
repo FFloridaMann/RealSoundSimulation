@@ -46,6 +46,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   │                        blocks (late blocks = the audio thread can't keep up) -> timing.csv, overlay, summary
 │   ├── AudioCounters.cs     0.6.20: lists the Unity profiler counters the game offers, records the audio ones each
 │   │                        frame (DSP load, voices, if present) -> audio-counters.txt, audiocounters.csv, summary
+│   ├── BotShots.cs          0.6.21: every sound a bot's gun queued or lost; which were cut by the next one -> botshots.csv
 │   ├── BatchWait.cs         0.6.20: how long the main thread waits for probe v2's ray batch and the muzzle measure
 │   │                        -> timing.csv, slowframes.csv, overlay, summary
 │   └── DiagLog.cs           one folder per raid, buffered CSV writing, errors.txt
@@ -53,6 +54,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 └── Fixes/                   change sound; each switchable live (defaults = the tested setup)
     ├── GunSoundSource.cs    setting 0 (0.6.3): swap a gun's banks to SEB's (seb_sounds/, background-loaded) or back
     ├── GunMixerFix.cs       fix 1: stop muffled/clear flip-flop on gunshots
+    ├── FirstBurstOcclusion.cs 1d (0.6.21): a bot's first burst starts muffled if a wall is in the way
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways
     ├── GunEnvironmentBlend.cs fix 3c: your own gunshots mix indoor/outdoor recordings (Doorway or Enclosure mode);

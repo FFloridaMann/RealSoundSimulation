@@ -13,7 +13,7 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly Dictionary<string, string> Headers = new Dictionary<string, string>
         {
             ["containers.csv"] = "t,id,dist,maxDist,priority,room,roomOutdoor,sameRoomAsListener,prop,obst,occl,gunOccludedMixer,ranT,ranD,ranR,T,D,R,sources,occluder",
-            ["shots.csv"] = "t,shooterId,dist,rolloff,silenced,mixer,occl,prop,obst,shooterRoom,listenerRoom,los,beyond250",
+            ["shots.csv"] = "t,shooterId,dist,rolloff,silenced,mixer,occl,prop,obst,shooterRoom,listenerRoom,los,beyond250,clock",
             ["timing.csv"] = "t,frames,spatialUpdateAvgMs,spatialUpdateMaxMs,spatialLateAvgMs,spatialLateMaxMs,betterAudioAvgMs,betterAudioMaxMs,activeProcessors,containers,aliveBots,audioBlocks,audioBlockMs,audioGapAvgMs,audioGapMaxMs,audioLate15,audioLate2x,audioStalls,batchWaitAvgMs,batchWaitMaxMs,batchWaitedFrames",
             ["sources.csv"] = "t,betterSources,playing,realVoices,virtualVoices",
             ["probe.csv"] = "t,x,y,z,roomIndoor,doorwayTarget,enclosure,horizontal,overhead,meanHitM,wallClosure,roofClosure,room,sizeFactor,thinShare,zenithClosure",
@@ -29,6 +29,7 @@ namespace RealSoundSimulation.Diagnostics
             ["distant.csv"] = Fixes.DistantThroughOpenings.Header,
             ["roomtone.csv"] = Fixes.RoomTone.Header,
             ["spawns.csv"] = "t,clock,aliveBots,delta",
+            ["botshots.csv"] = BotShots.Header,
             ["slowframes.csv"] = "t,clock,frameMs,batchWaitMs,muzzleWaitMs,rays,aliveBots", // 0.6.20: rows describe the previous frame
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
             ["transitions.csv"] = "t,system,now,x,y,z,fadeS,room",

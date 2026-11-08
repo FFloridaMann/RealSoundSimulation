@@ -106,10 +106,10 @@ namespace RealSoundSimulation.Diagnostics
                 if (beyond && los) { ShotsBeyond250WithLos++; if (occludedMixer) ShotsBeyond250WithLosOccluded++; }
 
                 DiagLog.Row("shots.csv", string.Join(",",
-                    DiagLog.F(now, "0.00"), shooterId.ToString(), DiagLog.F(dist, "0.0"), DiagLog.F(rolloff, "0"),
+                    DiagLog.F(now - DiagRunner.RaidStartTime, "0.00"), shooterId.ToString(), DiagLog.F(dist, "0.0"), DiagLog.F(rolloff, "0"), // 0.6.21: raid seconds (was the game clock)
                     __instance.IsSilenced ? "1" : "0", DiagLog.Csv(mixer != null ? mixer.name : ""),
                     DiagLog.F(occl), DiagLog.F(prop), DiagLog.F(obst),
-                    DiagLog.Csv(shooterRoom), DiagLog.Csv(listenerRoom), los ? "1" : "0", beyond ? "1" : "0"));
+                    DiagLog.Csv(shooterRoom), DiagLog.Csv(listenerRoom), los ? "1" : "0", beyond ? "1" : "0", System.DateTime.Now.ToString("HH:mm:ss.fff")));
             }
             catch (System.Exception e)
             {
