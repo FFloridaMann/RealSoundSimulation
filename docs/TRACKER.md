@@ -55,11 +55,12 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Raid + review routes.csv (raid 36, Factory: 156 of 171 shots had a route; median 33 deg from the true direction, 40% over 45; best opening changed 7 times; 9 shots from a floor below had no baked route)
 - [ ] Move bot sounds to the opening they come through
 - [ ] Check: bot gunshots underground vs above ground
+- [ ] Floors with no baked route (raid 36: 9 shots from 5 m below): needs the through-floor path in 6.2, not "fully blocked"
 - [ ] Check: bot gunshots when you cross a threshold
 - [x] A bot's first burst starts un-muffled, then gets cut down (raid 34): `1d First burst muffled` (0.6.21)
 - [ ] Raid: compare `1d` on and off in a distant fight (raid 35: never triggered)
 - [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
-- [ ] Tails cut by the same gun's next burst: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Neither raid had a fight 85 m or further
+- [ ] Shots cut by the same gun's next sound: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost, 62 tails and 27 shots; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Same mechanism as the STM-9 with the FRT. The old Gun Audio mod's "Let shots overlap" fixed it and was removed 5 Nov; port that into Real Sound Simulation
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials

@@ -105,6 +105,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 - **What** (solutions doc 3.1 and 3.4):
   - a material-based through-wall loss for remote and distant sounds;
   - a through-wall layer for gunshots and explosions within ~60 m: the deep thump, with its cutoff as a slider (see the tuning note under the voice budget).
+- **Portals and walls together** (user, 8 Nov 2026): every blocked gunshot plays both paths, the loudest wins for level. Through a concrete floor you still hear a muffled thump (airborne loss about 45–55 dB against a gunshot around 150–160 dB at the muzzle), and through the stairwell you hear the clearer sound from the opening. Room pairs with no baked route (raid 36: 9 shots from 5 m below) get the through-floor path alone instead of the game's "fully blocked".
 - **Before it,** the voice budget's two changes: reserve 16 → 32, and the mod's own non-echo voices counted in the cap.
 - **Why here:** needs 6.1's positions, the material tables (M) and the budget changes. Adds up to 4 voices at once.
 
