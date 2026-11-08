@@ -132,6 +132,7 @@ namespace RealSoundSimulation.Diagnostics
             new Target("1d", "Audio.SpatialSystem.CombinedSpatialAudioOccluder", "_smoothedObstructionEffect", "F"),
             new Target("log", "WeaponSoundPlayer", "_isFiring", "F"),
             new Target("1e", "SuperBetterAudioQueue", "Update", "M"),
+            new Target("6.1", "BetterAudioQueue", "Pose", "M"),
             new Target("1e", "SuperBetterAudioQueue", "_samples", "F"),
             new Target("1e", "SuperBetterAudioQueue", "_nextUpdate", "F"),
             new Target("1e", "SuperBetterAudioQueue", "_lastSource", "F"),

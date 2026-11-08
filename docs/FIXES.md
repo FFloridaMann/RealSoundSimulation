@@ -429,6 +429,18 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 
 ---
 
+## 6.1: Bot gunshots from the opening (0.6.24)
+
+**Problem.** A bot in another room was heard from its true direction, through the wall. Raid 36: half the openings the sound really reaches you through were over 33 degrees from that direction, 40% over 45, the worst 150.
+
+**Fix.** The game already works out the best route for every shooter in another room (`PropagationJob`) and uses only its cost. `Acoustics/PortalRoutes.cs` reads the finished result: the opening nearest you and the route's length. `Fixes/PortalPositioning.cs` then places that gun's two voices at `listener + direction(opening - listener) x route length`, in LateUpdate (the game re-poses them in Update, so nothing needs restoring; the occlusion maths uses the container's own position).
+
+**Stabilising.** Route changes need a cost improvement over 0.05. Blended in by the propagation effect (0 at 0, full at 0.3). Direction and distance smoothed over 150 ms. Faded out within 1 m of the opening. Routes re-read every 0.1 s per firing gun.
+
+**Limits.** Gunshots only. No route means the true position: the same room, both outdoors, or no baked route between the rooms (raid 36: shots from a floor below), which wait for 6.2's through-wall path. Flight time still uses the true distance.
+
+**Check.** A bot firing from another room: `6.1` off (through the wall) and on (from the door or stairwell). `6.1a` at 0.5 is halfway. routes.csv `movedDeg`; summary PORTAL POSITIONING; COST line for its cost.
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

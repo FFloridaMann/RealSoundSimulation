@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.24 — 8 Nov 2026 (6.1: bot gunshots come from the opening)
+**Run in game:** not yet. ROADMAP 6.1. Raid 36's routes.csv: 156 of 171 bot shots had a route, half the openings over 33 degrees from the true direction, 40% over 45, the worst 150; the best opening changed only 7 times.
+- **New `6.1 Bot gunshots from the opening`** (on, live) and **`6.1a Opening strength`** (1) (`Fixes/PortalPositioning.cs`). A bot's gun voices are placed along the direction of the opening nearest you, at the real length of the route (solutions doc 2.1). The game already picks the route; only its cost was used.
+- **Stabilised:** a route changes only if another is better by more than 0.05; blended in by the propagation effect (full at 0.3), so a shot just around a door frame doesn't jump; direction and distance smoothed over 150 ms; faded out within 1 m of the opening. Routes re-read every 0.1 s per firing gun.
+- No route (same room, both outdoors, none baked, such as raid 36's shots from a floor below) keeps the true position; those wait for 6.2's through-wall path. Gunshots only for now.
+- `Acoustics/PortalRoutes.cs`: one route reader shared by routes.csv and the move. routes.csv ends with `movedDeg`. Summary: PORTAL POSITIONING. COST has its own line.
+- Version 0.6.24.
+
 ## 0.6.23 — 8 Nov 2026 (shots ring under the next one)
 **Run in game:** not yet. From raid 36 (raid_20261108_165557, Factory): 89 of 224 bot sounds were cut by the same gun's next sound, on average 1.85 s lost; 0 muted, 0 without voices. Same mechanism as the STM-9 on the FRT sounding like one looping shot. The old Gun Audio mod's "Let shots overlap" fixed it and left with that mod on 5 Nov.
 - **New `1e Shots ring under the next`** (on, live; `Fixes/ShotOverlap.cs`), every gun. `SuperBetterAudioQueue.Update` with one change: only a firing loop is ended when the next sound starts. Gun Audio's random pitch and volume are not included. A gun still has two voices, so a third sound takes back the oldest. A non-auto gun's voices are kept long enough to cover the sound's flight time.

@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.22 raided (raid 36) · **Next build:** move bot sounds to the opening (6.1)
+**Now:** 0.6.23 (shot overlap) and 0.6.24 (gunshots from the opening) waiting for a raid
 
 ---
 
@@ -53,7 +53,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 ## ⏭ 6.1 · Portal positioning ← **next**
 - [x] routes.csv: each bot gunshot's opening and route (measure only, switch off by default; 0.6.22)
 - [x] Raid + review routes.csv (raid 36, Factory: 156 of 171 shots had a route; median 33 deg from the true direction, 40% over 45; best opening changed 7 times; 9 shots from a floor below had no baked route)
-- [ ] Move bot sounds to the opening they come through
+- [x] Move bot gunshots to the opening they come through (`6.1`, 0.6.24)
+- [ ] Raid: compare `6.1` on and off with a bot in another room
+- [ ] Decide: footsteps and other sounds too?
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Floors with no baked route (raid 36: 9 shots from 5 m below): needs the through-floor path in 6.2, not "fully blocked"
 - [ ] Check: bot gunshots when you cross a threshold

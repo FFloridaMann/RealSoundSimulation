@@ -4,7 +4,6 @@ using System.Text;
 using Audio.SpatialSystem;
 using EFT;
 using HarmonyLib;
-using Unity.Collections;
 using UnityEngine;
 
 namespace RealSoundSimulation.Diagnostics
@@ -22,7 +21,7 @@ namespace RealSoundSimulation.Diagnostics
     //   notComputed the calculator hasn't run for this room pair yet    busy  its job is still running this frame
     internal static class RouteLog
     {
-        public const string Header = "t,clock,shooterId,reason,straightM,los,dy,sourceRoom,listenerRoom,reversed,routes,bestCost,secondCost,pathM,portals,nearX,nearY,nearZ,nearPortalM,closure,trueAz,portalAz,angleDeg,prop,occl,routeChanged";
+        public const string Header = "t,clock,shooterId,reason,straightM,los,dy,sourceRoom,listenerRoom,reversed,routes,bestCost,secondCost,pathM,portals,nearX,nearY,nearZ,nearPortalM,closure,trueAz,portalAz,angleDeg,prop,occl,routeChanged,movedDeg";
 
         private const float PerGunS = 0.25f, ChangedM = 1.5f, ChangedWithinS = 3f, NoCost = 1e30f;
 
@@ -77,57 +76,11 @@ namespace RealSoundSimulation.Diagnostics
             Vector3 listener = lt.position, gun = w.WeaponPosition;
             float straight = Vector3.Distance(listener, gun);
             ISpatialAudioRoom room = c.CurrentAudioRoom;
-            var calc = occ._propagationCalculator as ParallelSoundPropagationCalculator;
-            SoundPropagationJobScheduler s = calc?._propagationJobScheduler;
-
-            string reason; RoomPair pair = null; bool reversed = false;
-            if (room == null || !room.IsValid) reason = "noRoute";
-            else if (sas.IsSourceAndListenerInCommonOutdoor(room)) reason = "outdoor";
-            else if (sas.IsSourceInListenerRoom(c)) reason = "sameRoom";
-            else if ((listener - c.CurrentPosition).sqrMagnitude > c.SqrMaxDistance) reason = "outOfRange";
-            else if (!sas.TryGetMatchingRoomPair(room, out pair, out reversed) || pair == null || pair.Routes.Length == 0) reason = "noRoute";
-            else if (s == null || s.DataDisposed || !s._routesSettingsData.IsCreated || !s._routeNodesData.IsCreated || calc._prevRoomPairID != pair.ID) reason = "notComputed";
-            else if (!s.LastHandle.IsCompleted) reason = "busy";
-            else reason = "route";
-
-            int routes = 0, best = -1, portals = 0; float bestCost = float.MaxValue, secondCost = float.MaxValue, path = float.NaN, closure = float.NaN;
-            bool found = false; Vector3 near = Vector3.zero;
-            if (reason == "route")
-            {
-                NativeArray<float> costs = s._lowestCost, dists = s._lowestDistance;
-                routes = Mathf.Min(s._routesSettingsData.Length, costs.Length);
-                float bestDist = float.MaxValue;
-                for (int i = 0; i < routes; i++) // the game's own rule (PropagationEffectCalculationJob): within 0.01 of the best cost, the shorter wins
-                {
-                    float cost = costs[i], dist = dists[i];
-                    if (cost >= NoCost) continue; // not evaluated this update (quality limit)
-                    if (cost < bestCost - 0.01f) { if (bestCost < NoCost) secondCost = bestCost; bestCost = cost; bestDist = dist; best = i; }
-                    else if (Mathf.Abs(cost - bestCost) <= 0.01f && dist < bestDist) { bestDist = dist; best = i; }
-                    else if (cost < secondCost) secondCost = cost;
-                }
-                if (best >= 0)
-                {
-                    path = bestDist;
-                    AudioRouteData r = s._routesSettingsData[best];
-                    int start = r.NodeStartIndex + 1, firstPortal = -1, lastPortal = -1;
-                    for (int n = start; n < s._routeNodesData.Length && n < start + r.PortalDataLength; n++)
-                    {
-                        if (s._routeNodesData[n].Type != AudioNode.ENodeType.Portal) break;
-                        if (firstPortal < 0) firstPortal = n;
-                        lastPortal = n; portals++;
-                    }
-                    // the job runs listener-to-shooter when the room pair is stored the other way round
-                    int nearIdx = reversed ? firstPortal : lastPortal;
-                    if (nearIdx >= 0)
-                    {
-                        AudioNode node = s._routeNodesData[nearIdx];
-                        near = new Vector3(node.Position.x, node.Position.y, node.Position.z);
-                        closure = node.PortalClosureLevel;
-                        found = true;
-                    }
-                }
-                else reason = "notComputed";
-            }
+            Acoustics.PortalRoutes.Result rr = Acoustics.PortalRoutes.Read(sas, c, occ, listener);
+            string reason = Acoustics.PortalRoutes.WhyNames[(int)rr.Reason];
+            bool reversed = rr.Reversed, found = rr.Found; Vector3 near = rr.Near;
+            int routes = rr.Routes, best = rr.Best, portals = rr.Portals;
+            float bestCost = rr.BestCost, secondCost = rr.SecondCost, path = rr.Path, closure = rr.Closure;
 
             bool changed = false; float angle = float.NaN, portalAz = float.NaN;
             if (found)
@@ -171,7 +124,8 @@ namespace RealSoundSimulation.Diagnostics
             DiagLog.AppendF(sb, angle, 0); sb.Append(',');
             DiagLog.AppendF(sb, c.PropagationEffect, 3); sb.Append(',');
             DiagLog.AppendF(sb, c.OcclusionEffect, 3); sb.Append(',');
-            DiagLog.AppendB(sb, changed);
+            DiagLog.AppendB(sb, changed); sb.Append(',');
+            DiagLog.AppendF(sb, Fixes.PortalPositioning.MovedDeg(w), 0); // 0.6.24: where 6.1 actually put it
             DiagLog.EndRow("routes.csv");
         }
 

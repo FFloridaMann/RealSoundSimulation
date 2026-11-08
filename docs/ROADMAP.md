@@ -18,7 +18,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 5 | 4b | Outside sound heard indoors | Mostly built; roof holes left |
 | 6 | 6.0a | Audio-thread timing (measure) | Done (raid 34); no audio-load counter exists |
 | 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Done (raid 34); no fix needed |
-| 8 | **6.1** | **Portal positioning** | **In progress:** routes logging built (0.6.22), not raided |
+| 8 | **6.1** | **Portal positioning** | **Built for bot gunshots (0.6.24)**, not raided |
 | 9 | M | Realistic materials (+ 4b roof material) | Planned |
 | 10 | 6.2 | Through-wall sound by material | Planned |
 | 11 | 6.3 | Echoes for bot gunshots and grenades | Planned |
@@ -85,7 +85,8 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 
 ### 6.1 · Portal positioning ← next
 - **What:** a sound from another room comes from the doorway, window or stairwell it reaches you through, not through the wall (solutions doc 2.1).
-- **First build, measure only** (behind a switch, off): **built in 0.6.22** (`Log portal routes`, routes.csv): for each bot gunshot, which opening and route it would take and how far. Not raided yet. Then move the sound there, using the design in solutions doc 2.1 (virtual position from the opening and path length, hysteresis on route choice, blend in by propagation score).
+- **First build, measure only** (behind a switch, off): **built in 0.6.22** (`Log portal routes`, routes.csv): for each bot gunshot, which opening and route it would take and how far. Raid 36: 156 of 171 shots had a route, half over 33 degrees from the true direction, and the route was stable.
+- **The move: built in 0.6.24** (`6.1 Bot gunshots from the opening`, `6.1a`), to the design in solutions doc 2.1. Not raided yet. Gunshots only so far; footsteps and other sounds could follow if it sounds right.
 - **Covers:**
   - bot gunshots heard on both sides of a floor (user, 8 Nov: "I can hear bot gunshots underground and above ground");
   - bot gunshots changing when *you* cross a threshold.
