@@ -1,6 +1,6 @@
 # Real Sound Simulation
 
-A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.19**: a gun sounds switch at the top of F12 (setting 0: SPT or Sound Engine Backport's EFT 1.0 recordings), diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots) (0.6.4–0.6.5: measured room build-up, guided rays, smoothing by confidence, direction by what you hear; 0.6.6: ray quality setting `9g`; 0.6.7: roof rain traced from the roof, direction strength `9h`; 0.6.8: exit points, rain from openings `9j`, distant gunfire through openings `9k`), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.19**: a gun sounds switch at the top of F12 (setting 0: SPT or Sound Engine Backport's EFT 1.0 recordings), diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots) (0.6.4–0.6.5: measured room build-up, guided rays, smoothing by confidence, direction by what you hear; 0.6.6: ray quality setting `9g`; 0.6.7: roof rain traced from the roof, direction strength `9h`; 0.6.8: exit points, rain from openings `9j`, distant gunfire through openings `9k`), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md); checklist: [docs/TRACKER.md](docs/TRACKER.md).
 
 ## Documentation
 
@@ -12,6 +12,7 @@ A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How
 | [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) | Every log file and column, the F9 overlay, raid history |
 | [docs/AMBIENCE.md](docs/AMBIENCE.md) | How the game's ambient audio works (layers, outdoor value, room settings, the rain dropout bug) and the options for step 4b |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | The agreed order of work, status, and what to test next |
+| [docs/TRACKER.md](docs/TRACKER.md) | Checklist of every step and its substeps, in work order (tick boxes as they finish) |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | What changed in each version and whether it has run in game |
 | [01_How_SPT_Tarkov_Audio_Works.md](01_How_SPT_Tarkov_Audio_Works.md) | The game's own audio system (research) |
 | [02_Solutions_and_Feasibility.md](02_Solutions_and_Feasibility.md) | The full plan, including what isn't built yet |

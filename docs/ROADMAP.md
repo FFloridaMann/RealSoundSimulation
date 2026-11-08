@@ -1,29 +1,174 @@
 # Roadmap
 
-The agreed order of work (6 Nov 2026; reordered 8 Nov 2026), and why. **Rows are in work order; the numbers are names**, kept so older notes, changelog entries and settings still match (the headset is still "step 5" though it now comes after step 6). How things work right now: [DESIGN.md](DESIGN.md). Each step ends with a test raid; the next step uses what that raid showed. Status is updated as steps finish. Details of each fix: [FIXES.md](FIXES.md).
+The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 
-| # | Step | Status | Why in this order |
+- **Each step ends with a test raid**; the next step uses what that raid showed.
+- **Step numbers are names, not positions.** They stay fixed so older notes, the changelog and settings still match. For example, the headset is still "step 5" though it now comes after step 6.
+- **Checklist of every step and its substeps: [TRACKER.md](TRACKER.md).**
+- How things work right now: [DESIGN.md](DESIGN.md). Details of each fix: [FIXES.md](FIXES.md).
+
+## At a glance
+
+| Order | # | Step | Status |
 |---|---|---|---|
-| 1 | Doorway fix: keep the same doorway through a crossing; enclosure probe with logging | **Tested (raid 6).** No doorway swaps; probe tracks open/covered/room well once the ground is ignored (0.3.0) | The probe has to be checked against real spaces before anything relies on it |
-| 2 | Own-gun room-reverb experiment (setting 5) | **In use:** `5` at 0 dB, `5a` +6 dB × how hard the room is (0.3.3; stairwells, raids 10–13). Meta's acoustic map is confirmed running (raid 6) | Cheap. Shows how much the game's existing Meta room acoustics can do for your own shots before building echoes ourselves |
-| 3 | Own-gun recording blend driven by enclosure and aim (fix 3c, Enclosure mode) | **Done (raid 10: thresholds, stairwell and office "good").** Further tuning goes with the material research. History: **heard (raids 6–8).** 0.3.0 fixed the ground; 0.3.1 measures a room as walls × roof, scales by size and recognises windows (raid 8: "sounds pretty good"); 0.3.2 adds a roof-right-above-you test, because stepping just outside a small space still sounded indoor | Uses the probe; low risk; covers "covered on three sides" and part of "into vs out of a room" |
-| 4 | Synthesised early reflections ("echoes") for your own shots, with air absorption and surface materials built in | **Done; tuning continues** (stairwell reverb via 5a). **Heard (raid 7): "much much better", "overall huge improvement".** Semi-auto and full-auto together (hooked on the gun's sound queue). Tuning continues | The main "dynamic" effect. Air absorption and materials are shared with it, so they're built together |
-| 4b | **Interior/exterior mixing (phases 1–2 heard; phase 4 built 0.5.0: sound from the openings; phase 3, roof material, still to do):** how much of the outside you hear indoors, and how. Ambience (rain, wind, distant sounds) through windows, glass walls and openings; rain on the roof only under the real roof; no cutting in and out | **Phases 1, 2 and 4 built and in use** (0.4.0–0.5.8); raid 20: "a lot better at thresholds". To do: roof holes; phase 3 (roof material) goes with the material step (M) below. Current behaviour: [DESIGN.md](DESIGN.md) §3 | The doorway blend (fix 3) only fixes the *switch*. Indoors, the level still comes from the game's per-room setting, which is 0 in places with whole glass walls. Before the headset, because ear-pro amplifies ambience |
-| 6.0a | **Audio-thread block timing** (diagnostic, 8 Nov 2026). Voices cost the audio thread, not the frame: each ~20 ms block must finish before the sound card needs it, or it crackles. Time each block from the listener's `OnAudioFilterRead` (allocation-free; the Phase 0 "audio-thread health" probe), log the max and the share of blocks over 50% / 80% of the deadline per raid, and show it in the F9 overlay. This, not the 196 real-voice slots, is the ceiling the voice budget (below) is set against | **Built on branch `claude/selfcheck-foreign-patches-block-timing`** (its "0.6.19", with the shared-patch report; becomes 0.6.20 if merged, since main's 0.6.19 is the diagnostics clean-up). Not merged, not raided. As built it times the **gap between blocks**, so it counts blocks that ran late but cannot see how close the others came to their deadline: the 50% / 80% shares above need a different measure (e.g. Unity's audio DSP load, if a counter for it works in the release game) | Needed to raise the echo pool, reserve or bot share from measured numbers; also the only way to see crackle caused by other mods' per-source filters |
-| 6.0b | **Worker-thread contention under a full mod stack** (8 Nov 2026). Probe v2's ray batch shares the worker threads with the game's occlusion raycasts, Burst jobs and SAIN's vision rays; on fewer cores in a big fight the batch finishes late and the main thread waits for it in LateUpdate. Two potential steps: (a) **`9g Ray quality` by core count**, as the game picks its own ray tiers (High ≥ 12 logical cores, Medium 8–11, Low below 8), with the manual setting as an override; (b) **next-frame batch mode**: collect the batch at the start of the next frame (as 0.6.15 did) instead of the same LateUpdate (0.6.16, chosen so the batch never spans FixedUpdate); needs a sync point that is safe for physics, e.g. completing before FixedUpdate runs. First: log the batch wait per frame as its own timing column and sort a heavy Streets raid by frame time; if the wait is near zero on the bad frames, neither step is needed | Planned, measure first | Independent of step 6; only matters on lower core counts |
-| 6.1 | **Portal positioning** (step 6, part 1; solutions doc 2.1): a sound from another room comes from the doorway, window or stairwell it reaches you through, not through the wall. First a measure-only build behind a switch (off): for each bot gunshot behind cover, the opening and route it would take and how far (routes.csv), then move the voice there. Covers bot gunshots heard on both sides of a floor (user, 8 Nov: "I can hear bot gunshots underground and above ground") and bot gunshots changing when *you* cross a threshold (was its own row) | Planned; **next** | Adds no voices (it moves the one the game already plays), so it does not wait for the voice budget. Everything else in step 6 needs the correct source position first |
-| M | Realistic material acoustics (raid 13, user: "still some tweaking to do on how the materials behave"): research each surface type's measured behaviour (absorption and scattering by frequency, transmission loss, resonance for thin metal and glass) and replace the rough tables in fix 6 and the room measure. **Sound propagation will change with it** (user, 7 Nov): retune afterwards 9l's rain floor, 9k's exit credits (0.35 up / 0.05 away), the roof rain reference (0.85 per upward path), the roof rain's x0.7 dulling per reflection (0.6.10) and the echo levels. **Includes 4b phase 3 (roof material)** | Planned (user idea, raid 9) | Builds on the material tags fixes 6 and 3c already read; before 6.2, whose through-wall loss is by material, so that loss is built once on real numbers. The research itself is desk work and can run any time before then |
-| 6.2 | **How much gets through walls, by material** (step 6, part 2; solutions doc 3.1 and 3.4): the material-based through-wall loss for remote and distant sounds, and the through-wall layer for gunshots and explosions within ~60 m (the deep thump; cutoff as a slider, see the tuning note in the voice budget section). Before it, the budget's two changes: reserve 16 → 32, and the mod's own non-echo voices counted in the cap | Planned | Needs 6.1's positions, the material tables (M) and the budget changes; adds up to 4 voices at once |
-| 6.3 | **Echoes for bot gunshots** (step 6, part 3), under the voice budget below: per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling; two tiers | Planned | Needs 6.1's source positions and 6.0a's measured ceiling. The one addition that grows with the size of the fight |
-| W | **Weather and acoustics research** (user, raid 19). In rain the user hears less gunshot echo and less open-air sound. Logs: echo levels unchanged (dry −22.1 dB, medium rain −22.4, heavy −24.9, the last from more far echoes), so it is masking by the rain bed, which fix 8 now also brings indoors. Research how real rain and weather change what you hear, then decide what step 4 (echoes) and 4b should do: rain noise level by intensity and its masking; humidity and temperature effect on air absorption (high humidity absorbs *less* high frequency at normal temperatures); wet surfaces (water fills pores, so reflections get slightly stronger and soil and grass absorb less); wind (bends sound with height and gusts make it waver); drops hitting nearby surfaces (roofs, cars, puddles) as sound sources | Planned, research first | Research any time. Its echo-level changes go after the material retune (M) and before the headset, so echo levels are tuned once |
-| 5 | Headset simulation into the game, then tuning | Planned. **Moved after step 6** (user, 8 Nov 2026: "shouldnt headsets come after step 6?") | Electronic ear-pro reacts to everything loud around you: your own echoes (4), bot gunshots moved to the openings (6.1), through-wall thumps (6.2), bot echoes (6.3), and the material and weather retunes. After all of them, it is tuned once. Then the 4b indoor/outdoor mix is re-checked through it, because ear-pro amplifies ambience. The DSP itself (`RealSoundSimulation.Dsp`, bench) already exists and can keep improving offline in the meantime |
-| 6b | **SEB recordings on full-auto guns** (user, 7 Nov). Setting `0 Gun sounds` can use Sound Engine Backport's EFT 1.0 recordings, but they are single shots and the game loops one Body recording while the trigger is held, so full-auto guns stay on SPT (`0a` off). User runs SEB on single fire, SPT on full auto. Patch playback so a held trigger plays one SEB single-shot take per round fired (from `FireBullet`, at the gun's fire rate, varied takes, tail on release) instead of the loop | Planned | Independent of the environment work; any time before step 7, which judges every gun's recordings |
-| C | **Supersonic crack by calibre and velocity** (user, 8 Nov 2026). Reference: Garand Thumb's video of many guns and rounds fired over the camera, which is a side-by-side of how the crack of each calibre actually sounds at a fixed miss distance. Today the game has four crack clips (9 mm, 5.45, 7.62, shotgun), played at the shooter's position and delayed like the report (solutions doc 2.9 rebuilds the geometry). This item is the sound itself: per round, from the ammo's speed and the bullet's calibre and length, a crack that varies by (a) velocity: a faster round is a sharper, shorter N-wave; subsonic gives none; (b) size: a wider bullet gives a longer and stronger crack (in Whitham's far-field theory the N-wave's duration and peak pressure both grow in proportion to the diameter, while a longer bullet slightly shortens and weakens it, as length^-1/4; corrected 8 Nov 2026 from "bigger, longer = longer, lower"); just above Mach 1 the crack gets much longer and weaker, so speed matters most for rounds near the speed of sound; (c) miss distance: level falls about as b^-3/4 and the duration grows about as b^1/4. Two ways to build it, in order: pitch-shift, shorten and level the four existing clips by those rules (cheap, keeps BSG's recordings), or synthesise the N-wave itself (a few ms of signal; one voice either way). The video is a listening reference and a check on the mapping, not a source of clips: its audio is compressed and his, so nothing from it ships | Planned, after 2.9 (geometry: emission point and arrival time first); before step 7, since it is part of how every gun sounds | Budget: one voice per passing round, same as now |
-| 7 | **Gun audio overhaul for every gun in the game** (user, 6 Nov). Go through every weapon's sound banks: body, tail, silenced, near/mid/far tiers, indoor/outdoor sets. Make each one sound right and consistent: loudness across guns and calibres, suppressed against unsuppressed, near/far and indoor/outdoor recordings that match, full-auto loops and tails. Needs a way to measure the recordings' real loudness; the game keeps them compressed, so measure the output while they play | Planned, long | Last: after the environment work (4b–6) and the headset, so every gun is judged in the finished acoustics. It changes guns' loudness, so the headset's compressor thresholds get a final check afterwards |
-| – | Distant obstruction (nothing past ~250 m is muffled by terrain or buildings) | Planned, any time | Independent; uses different, long rays |
-| – | Server settings (phase 1 of the solutions doc) | Planned, any time | Independent |
+| 1 | 1 | Doorway fix + enclosure probe | Tested |
+| 2 | 2 | Own-gun room reverb (setting 5) | In use |
+| 3 | 3 | Own-gun indoor/outdoor recording blend (3c) | Done |
+| 4 | 4 | Echoes for your own shots | Done, tuning continues |
+| 5 | 4b | Outside sound heard indoors | Mostly built; roof holes left |
+| 6 | 6.0a | Audio-thread timing (measure) | Built on a branch, not merged |
+| 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Planned |
+| 8 | **6.1** | **Portal positioning** | **Next** |
+| 9 | M | Realistic materials (+ 4b roof material) | Planned |
+| 10 | 6.2 | Through-wall sound by material | Planned |
+| 11 | 6.3 | Echoes for bot gunshots | Planned |
+| 12 | W | Weather research and retune | Planned |
+| 13 | 5 | Headset simulation | Planned (moved after step 6) |
+| 14 | 6b | SEB recordings on full-auto guns | Planned |
+| 15 | C | Supersonic crack by calibre | Planned |
+| 16 | 7 | Gun audio overhaul, every gun | Planned, long |
+| any time | – | Distant obstruction; server settings | Planned |
 
-Not in this roadmap: **GC and spawn stutters**. A separate project, likely separate mods (user, 8 Nov 2026), on branch `claude/gc-and-spawn-stutters`. Its two pieces that are Real Sound Simulation's own logging (garbage-free container rows, backing off after spawns) moved here as 0.6.19.
+Not in this roadmap: **GC and spawn stutters**. That's a separate project, likely separate mods (user, 8 Nov 2026), on branch `claude/gc-and-spawn-stutters`. Its two pieces that belong to Real Sound Simulation's own logging (garbage-free container rows, backing off after spawns) moved here as 0.6.19.
+
+---
+
+## Done
+
+### 1 · Doorway fix + enclosure probe
+- **What:** keep the same doorway through a crossing; an enclosure probe with logging.
+- **Status:** tested (raid 6). No doorway swaps. Once the ground is ignored (0.3.0), the probe tracks open, covered and room spaces well.
+- **Why first:** the probe had to be checked against real spaces before anything relied on it.
+
+### 2 · Own-gun room reverb (setting 5)
+- **Status:** in use. `5` at 0 dB; `5a` +6 dB × how hard the room is (0.3.3; stairwells, raids 10–13). Meta's acoustic map is confirmed running (raid 6).
+- **Why here:** cheap. It showed how much the game's own Meta room acoustics can do for your shots before we built echoes ourselves.
+
+### 3 · Own-gun recording blend by enclosure and aim (fix 3c, Enclosure mode)
+- **Status:** done. Raid 10: thresholds, stairwell and office "good". Further tuning goes with the material step (M).
+- **History:** heard in raids 6–8.
+  - 0.3.0 fixed the ground.
+  - 0.3.1 measures a room as walls × roof, scales it by size and recognises windows (raid 8: "sounds pretty good").
+  - 0.3.2 added a test for a roof right above you, because stepping just outside a small space still sounded indoor.
+- **Why here:** uses the probe and is low risk. Covers "covered on three sides" and part of "into vs out of a room".
+
+### 4 · Echoes for your own shots
+- **What:** synthesised early reflections, with air absorption and surface materials built in. Semi-auto and full-auto (hooked on the gun's sound queue).
+- **Status:** done; tuning continues (stairwell reverb via 5a). Raid 7: "much much better", "overall huge improvement".
+- **Why here:** the main "dynamic" effect. Air absorption and materials are shared with it, so they were built together.
+
+### 4b · Outside sound heard indoors
+- **What:** how much of the outside you hear indoors, and how. Rain, wind and distant sounds come through windows, glass walls and openings; rain on the roof only under the real roof; no cutting in and out.
+- **Status:** phases 1, 2 and 4 are built and in use (0.4.0–0.5.8; phase 4 = sound from the openings). Raid 20: "a lot better at thresholds".
+- **Left to do:** roof holes. Phase 3 (roof material) moved to the material step (M).
+- **Why here:** the doorway blend (fix 3) only fixes the *switch*. Indoors, the level still came from the game's per-room setting, which is 0 in places with whole glass walls. Before the headset, because ear-pro amplifies ambience.
+- Current behaviour: [DESIGN.md](DESIGN.md) §3.
+
+---
+
+## Next: measure, then step 6
+
+### 6.0a · Audio-thread block timing (diagnostic)
+- **Why it matters:** voices cost the audio thread, not the frame. Each ~20 ms block must finish before the sound card needs it, or you hear crackle. This, not the 196 real-voice slots, is the real ceiling for the voice budget (below). It's also the only way to see crackle caused by other mods' per-source filters.
+- **Plan:** time each block from the listener's `OnAudioFilterRead` (no allocations; the Phase 0 "audio-thread health" probe). Log per raid the slowest block and the share of blocks over 50% and 80% of the deadline. Show it on the F9 overlay.
+- **Status:** built on branch `claude/selfcheck-foreign-patches-block-timing`, together with the shared-patch report. Not merged, not raided. That branch calls itself 0.6.19; it becomes 0.6.20 if merged, because main's 0.6.19 is the diagnostics clean-up.
+- **Gap in what was built:** it times the *gap between* blocks. That counts blocks that ran late, but can't show how close the others came to their deadline. The 50% / 80% shares need a different measure, such as Unity's audio DSP load, if a counter for it works in the release game.
+
+### 6.0b · Ray batch wait on busy CPUs
+- **The concern:** probe v2's ray batch shares the worker threads with the game's occlusion rays, Burst jobs and SAIN's vision rays. On fewer cores in a big fight, the batch finishes late and the main thread waits for it in LateUpdate.
+- **Measure first:** log the batch wait per frame as its own timing column, then sort a heavy Streets raid by frame time. If the wait is near zero on the bad frames, neither fix below is needed.
+- **Possible fixes:**
+  - **`9g Ray quality` by core count**, the way the game picks its own tiers: High at 12+ logical cores, Medium at 8–11, Low below 8. The manual setting overrides it.
+  - **Next-frame batch:** collect the batch at the start of the next frame (as 0.6.15 did) instead of in the same LateUpdate (0.6.16 moved it so the batch never spans FixedUpdate). This needs a sync point that's safe for physics, e.g. finishing before FixedUpdate runs.
+- **Why here:** independent of step 6; it only matters on PCs with fewer cores.
+
+### 6.1 · Portal positioning ← next
+- **What:** a sound from another room comes from the doorway, window or stairwell it reaches you through, not through the wall (solutions doc 2.1).
+- **First build, measure only** (behind a switch, off): for each bot gunshot behind cover, log which opening and route it would take and how far (routes.csv). Then move the sound there.
+- **Covers:**
+  - bot gunshots heard on both sides of a floor (user, 8 Nov: "I can hear bot gunshots underground and above ground");
+  - bot gunshots changing when *you* cross a threshold.
+- **Why first in step 6:** it adds no voices (it moves the one the game already plays), so it doesn't wait for the voice budget. Everything else in step 6 needs the correct source position first.
+
+### M · Realistic material acoustics
+- **What:** research how each surface type actually behaves (absorption and scattering by frequency, transmission loss, resonance of thin metal and glass) and replace the rough tables in fix 6 and the room measure. Includes 4b phase 3 (roof material). User idea, raid 9; raid 13: "still some tweaking to do on how the materials behave".
+- **Retune afterwards**, because sound propagation will change (user, 7 Nov):
+  - 9l's rain floor;
+  - 9k's exit credits (0.35 up / 0.05 away);
+  - the roof rain reference (0.85 per upward path);
+  - the roof rain's ×0.7 dulling per reflection (0.6.10);
+  - the echo levels.
+- **Why here:** before 6.2, whose through-wall loss depends on material, so that loss is built once on real numbers. It builds on the material tags fixes 6 and 3c already read. The research itself is desk work and can happen any time before then.
+
+### 6.2 · How much gets through walls, by material
+- **What** (solutions doc 3.1 and 3.4):
+  - a material-based through-wall loss for remote and distant sounds;
+  - a through-wall layer for gunshots and explosions within ~60 m: the deep thump, with its cutoff as a slider (see the tuning note under the voice budget).
+- **Before it,** the voice budget's two changes: reserve 16 → 32, and the mod's own non-echo voices counted in the cap.
+- **Why here:** needs 6.1's positions, the material tables (M) and the budget changes. Adds up to 4 voices at once.
+
+### 6.3 · Echoes for bot gunshots
+- **What:** bot echoes under the voice budget (below): per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling; two tiers.
+- **Why here:** needs 6.1's source positions and 6.0a's measured ceiling. It's the one addition that grows with the size of the fight.
+
+---
+
+## After step 6
+
+### W · Weather and acoustics research
+- **Why:** in rain the user hears less gunshot echo and less open-air sound (raid 19). Logs show the echo levels unchanged (dry −22.1 dB, medium rain −22.4, heavy −24.9, the last from more far echoes). So it's masking by the rain bed, which fix 8 now also brings indoors.
+- **Research how real weather changes what you hear,** then decide what steps 4 (echoes) and 4b should do:
+  - rain noise level by intensity, and how much it masks;
+  - humidity and temperature: air absorption changes (high humidity absorbs *less* high frequency at normal temperatures);
+  - wet surfaces: water fills pores, so reflections get slightly stronger and soil and grass absorb less;
+  - wind: bends sound with height, and gusts make it waver;
+  - drops hitting nearby surfaces (roofs, cars, puddles) as sound sources.
+- **When:** the research can happen any time. Its echo-level changes go after the material retune (M) and before the headset, so echo levels are tuned once.
+
+### 5 · Headset simulation (moved after step 6)
+- **What:** bring the headset simulation into the game, then tune it. The DSP itself (`RealSoundSimulation.Dsp`, with its bench) already exists and can keep improving offline meanwhile.
+- **Why here** (user, 8 Nov 2026: "shouldnt headsets come after step 6?"): electronic ear-pro reacts to everything loud around you:
+  - your own echoes (4);
+  - bot gunshots moved to the openings (6.1);
+  - through-wall thumps (6.2);
+  - bot echoes (6.3);
+  - the material and weather retunes.
+
+  After all of them, it only needs tuning once. Then the 4b indoor/outdoor mix is re-checked through it, because ear-pro amplifies ambience.
+
+### 6b · SEB recordings on full-auto guns
+- **Problem:** setting `0 Gun sounds` can use Sound Engine Backport's EFT 1.0 recordings, but they're single shots, and the game loops one Body recording while the trigger is held. So full-auto guns stay on SPT (`0a` off). The user runs SEB on single fire and SPT on full auto (user, 7 Nov).
+- **Fix:** while the trigger is held, play one SEB single-shot take per round fired (from `FireBullet`, at the gun's fire rate, with varied takes and a tail on release) instead of the loop.
+- **When:** independent of the environment work; any time before step 7, which judges every gun's recordings.
+
+### C · Supersonic crack by calibre and velocity
+- **Today:** the game has four crack clips (9 mm, 5.45, 7.62, shotgun), played at the shooter's position and delayed like the report. Solutions doc 2.9 rebuilds where and when they play; this item is the sound itself.
+- **Reference:** Garand Thumb's video of many guns and rounds fired over the camera, a side-by-side of how each calibre's crack sounds at a fixed miss distance (user, 8 Nov 2026). It's a listening reference and a check on the mapping, not a source of clips: its audio is compressed and it's his, so nothing from it ships.
+- **How the crack should vary,** per round, from the ammo's speed and the bullet's diameter and length:
+  - **Speed:** a faster round gives a sharper, shorter N-wave; subsonic rounds give none. Just above Mach 1 the crack gets much longer and weaker, so speed matters most for rounds near the speed of sound.
+  - **Size:** a wider bullet gives a longer and stronger crack. In Whitham's theory, the N-wave's duration and peak pressure both grow with the diameter, while a longer bullet slightly shortens and weakens it (length^-1/4). (Corrected 8 Nov 2026 from "bigger, longer = longer, lower".)
+  - **Miss distance:** level falls about as b^-3/4; duration grows about as b^1/4.
+- **Two ways to build it, in order:**
+  1. pitch-shift, shorten and level the four existing clips by those rules (cheap, keeps BSG's recordings);
+  2. synthesise the N-wave itself (a few ms of signal).
+
+  Either way it's one voice per passing round, the same as now.
+- **When:** after 2.9 (where and when the crack plays comes first); before step 7, since it's part of how every gun sounds.
+
+### 7 · Gun audio overhaul, every gun (last, long)
+- **What** (user, 6 Nov): go through every weapon's sound banks: body, tail, silenced, near/mid/far tiers, indoor/outdoor sets. Make each one sound right and consistent:
+  - loudness across guns and calibres;
+  - suppressed against unsuppressed;
+  - near/far and indoor/outdoor recordings that match;
+  - full-auto loops and tails.
+- **Needs** a way to measure the recordings' real loudness. The game keeps them compressed, so measure the output while they play.
+- **Why last:** after the environment work (4b–6) and the headset, so every gun is judged in the finished acoustics. It changes guns' loudness, so the headset's compressor thresholds get a final check afterwards.
+
+---
+
+## Any time
+- **Distant obstruction:** nothing past ~250 m is muffled by terrain or buildings. Independent; uses different, long rays.
+- **Server settings** (phase 1 of the solutions doc). Independent.
 
 ## Consolidation (6 Nov 2026, after 0.5.7)
 
