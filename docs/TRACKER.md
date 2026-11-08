@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.21 waiting for a raid · **Next build:** 6.1 routes.csv
+**Now:** 0.6.22 waiting for a raid (turn on `Log portal routes` in F12) · **Next build:** decided by that raid
 
 ---
 
@@ -51,7 +51,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Decide: **neither** (the probe never makes a frame slow on 16 cores; re-check only on a PC with fewer cores)
 
 ## ⏭ 6.1 · Portal positioning ← **next**
-- [ ] routes.csv: each bot gunshot's opening and route (measure only, switch off by default)
+- [x] routes.csv: each bot gunshot's opening and route (measure only, switch off by default; 0.6.22)
 - [ ] Raid + review routes.csv
 - [ ] Move bot sounds to the opening they come through
 - [ ] Check: bot gunshots underground vs above ground

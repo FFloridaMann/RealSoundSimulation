@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.21")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.22")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -32,6 +32,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> TimingOn;
         internal static ConfigEntry<float> SpawnBackoffS;              // 0.6.19
         internal static ConfigEntry<bool> AudioThreadTimingOn; // 0.6.20
+        internal static ConfigEntry<bool> RouteLogOn; // 0.6.22
         internal static ConfigEntry<bool> ProbeOn;
         internal static ConfigEntry<KeyboardShortcut> MarkKey;
         internal static ConfigEntry<bool> ExposureProbeOn;
@@ -120,6 +121,7 @@ namespace RealSoundSimulation
             TimingOn = Config.Bind(diag, "Time the audio systems", true, "Measure milliseconds spent in SpatialAudioSystem and BetterAudio each frame.");
             SpawnBackoffS = Config.Bind(diag, "Diagnostics back off after a spawn s", 2f, new ConfigDescription("0.6.19: for this long after the alive-bot count changes, the diagnostics skip their per-frame work (container rows, overlay, ambience and probe rows, log saving) so none of it lands on the frames a spawn wave already makes long. Measurements only, with one side effect: the echo headroom cap (fix 6) keeps its last count of playing game sources until the back-off ends. 0 = off.", new AcceptableValueRange<float>(0f, 10f)));
             AudioThreadTimingOn = Config.Bind(diag, "Time the audio thread", true, "0.6.20: a pass-through filter on the listener measures the time between DSP blocks (one block = dspBuffer samples, about 21 ms at 48 kHz). Blocks that come late mean the audio thread could not keep up (crackle). timing.csv, the overlay and the summary's AUDIO THREAD section. Also records Unity's own audio counters if this build offers them (the list goes to audio-counters.txt; a DSP load counter would show how close each block came to its deadline). Changes no sound; attached at raid start.");
+            RouteLogOn = Config.Bind(diag, "Log portal routes", false, "0.6.22 (roadmap 6.1, measure only): each time a bot fires (at most 4 times a second per gun), log which doorway or opening the game's best route goes through and how far, to routes.csv. Moves no sound. Live.");
             ProbeOn = Config.Bind(diag, "Enclosure probe", true, "Measure how enclosed the space around you is with 32 short rays every 0.1 s. Logged to probe.csv; used by fix 3c in Enclosure mode. Changes no sound by itself.");
             ExposureProbeOn = Config.Bind(diag, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what (open, glass, bars, other): 48 directions all round (level and 15 deg up), re-measured continuously at about 290 rays per second, plus what is above you (floors, roof). Runs indoors and outdoors. Fix 8 needs it on. Logged to exposure.csv and shown on the overlay.");
             MarkKey = Config.Bind(diag, "Mark key", new KeyboardShortcut(KeyCode.F10), "Press in raid to mark this spot in marks.csv (position, what the probe measured, the last own shot and the surfaces around you). Use it where something sounds wrong.");
@@ -191,6 +193,7 @@ namespace RealSoundSimulation
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("1d first burst", () => FirstBurstOcclusion.Apply(Harmony)); // 0.6.21
             Safe("bot shots log", () => BotShots.Apply(Harmony)); // 0.6.21
+            Safe("route log", () => RouteLog.Apply(Harmony)); // 0.6.22
             Safe("8g room tone", () => RoomTone.Apply(Harmony));
             Safe("3m outdoor tail", () => OutdoorTail.Apply(Harmony));
             Safe("fix 2 obstruction score", () => ObstructionScoreFix.Apply(Harmony));

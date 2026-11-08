@@ -46,6 +46,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 │   │                        blocks (late blocks = the audio thread can't keep up) -> timing.csv, overlay, summary
 │   ├── AudioCounters.cs     0.6.20: lists the Unity profiler counters the game offers, records the audio ones each
 │   │                        frame (DSP load, voices, if present) -> audio-counters.txt, audiocounters.csv, summary
+│   ├── RouteLog.cs          0.6.22: measure only (6.1): the game's best route and opening for each bot shot -> routes.csv
 │   ├── BotShots.cs          0.6.21: every sound a bot's gun queued or lost; which were cut by the next one -> botshots.csv
 │   ├── BatchWait.cs         0.6.20: how long the main thread waits for probe v2's ray batch and the muzzle measure
 │   │                        -> timing.csv, slowframes.csv, overlay, summary

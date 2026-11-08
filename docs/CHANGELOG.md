@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.22 — 8 Nov 2026 (portal positioning, step one: log the routes)
+**Run in game:** not yet. Changes no sound. ROADMAP 6.1's first build, measure only (user: "build 6.1"). The sound itself moves in a later build, once a raid has shown the routes are sensible.
+- **New `Log portal routes`** (F12 section 1, off, live) and **routes.csv** (`Diagnostics/RouteLog.cs`). The game already works out the best route for every bot in another room and only uses its cost. Each time a bot fires (at most 4 times a second per gun) this reads that finished result: the opening nearest you, the route's path length, the cost of the best and second-best routes, how many portals it goes through, and how far the opening is from the true direction. A shot with no route says why (`outdoor`, `sameRoom`, `outOfRange`, `noRoute`, `notComputed`, `busy`). Summary: PORTAL ROUTES (average angle between opening and true direction, share over 45 degrees, path against the straight line, how often the best opening changed). Picks the best route by the game's own rule.
+- Self-check: 7 new targets. Version 0.6.22.
+
 ## 0.6.21 — 8 Nov 2026 (bot gunshots: what cuts them off; first burst starts muffled)
 **Run in game:** not yet. From raid 34 (raid_20261108_154730, Factory, 0.6.20): "the ai fight around mark 1 sounded like a lot of shots were getting cut off". The logs could not say why, so this build measures it, and fixes the one cause they did show. Raid 34 also answered 0.6.20's questions: the game exposes no audio-load counter (only 2 audio memory counters, both 0), and probe v2's ray batch never makes a frame wait (average 0.001 ms, 0% of frames), so 6.0b needs no fix.
 - **New botshots.csv** (`Diagnostics/BotShots.cs`): one row per sound a bot's gun queued or lost. From the game's code a remote shot can be lost or shortened three ways, each counted: **cut** (a gun has two voices that alternate, and the next sound ends the older one at its exact start with no fade, so a semi-auto gun's next shot chops the last one's decay; `cutPrevS`, `cutPrevShare`), **muted** (`FireBullet` plays nothing if the voice's occlusion volume is already 0), **noqueue** (no free voices for the gun). Summary: BOT GUNSHOTS. Clock time in every row, to match FrameDiag.
