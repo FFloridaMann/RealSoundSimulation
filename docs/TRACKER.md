@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.22 waiting for a raid (turn on `Log portal routes` in F12) · **Next build:** decided by that raid
+**Now:** 0.6.22 installed, waiting for a raid (turn on `Log portal routes` in F12) · **Next build:** decided by that raid
 
 ---
 
@@ -57,9 +57,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Check: bot gunshots when you cross a threshold
 - [x] A bot's first burst starts un-muffled, then gets cut down (raid 34): `1d First burst muffled` (0.6.21)
-- [ ] Raid: compare `1d` on and off in a distant fight
+- [ ] Raid: compare `1d` on and off in a distant fight (raid 35: never triggered)
 - [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
-- [ ] Raid: read botshots.csv, then fix whichever cause it shows (cut by the next shot / muted / no free voices)
+- [ ] Raid with a distant fight (85 m or more): read botshots.csv, then fix whichever cause it shows. Raid 35 (Factory, close fights only): 0 muted, 0 no free voices; 9 of 47 sounds cut, all a burst's tail ended by the same gun's next burst (average 1.9 s lost)
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials
