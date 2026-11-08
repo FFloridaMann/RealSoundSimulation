@@ -121,6 +121,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Distant obstruction (past ~250 m)
 - [ ] Server settings (solutions doc phase 1)
 
+## Possible bug fixes later
+- [ ] Bring Back Concussion restores mixer volumes from before the blast when its fade ends. If you cross a doorway during those seconds, the indoor ambience can stay at the old level until it next changes (fix 3 only writes it when it changes)
+
 ## Not in Real Sound Simulation (separate mods)
 GC and spawn stutters, branch `claude/gc-and-spawn-stutters`. Fix before using its GC mode:
 - [ ] Ceiling check can collect every frame (needs a minimum interval)
