@@ -118,6 +118,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Tune how many echoes each sound gets (own shots, bots, grenades)
 - [ ] Tune tail length
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
+- [ ] Full-auto: full echoes on the first round and the tail, only the loudest 1–2 through the burst
 - [ ] Test on Factory and Labs (the most echoes at once)
 
 ---

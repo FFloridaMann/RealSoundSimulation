@@ -171,6 +171,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   - how many echoes each sound gets (own shots, bots, grenades);
   - how long the tails ring;
   - optimising voices: an echo holds its voice for the whole 2.5–5 s recording though it is too quiet to hear long before that, so end quiet ones early with a short fade (raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices).
+- **Full-auto: spend the voices on the end of the burst** (user, 8 Nov 2026). During sustained fire each round masks the echoes of the last one; what the shooter really hears is the echo after the final round. So keep the full set of echoes on the first round and the tail, and run only the loudest one or two through the burst. Fix 6 already skips loop echoes on one-round loops and gives the tail its own echoes; this trims the middle of longer bursts. Judge by ear: the mid-burst echoes also carry some of the sense of the room.
 - **Test on Factory and Labs.** Small, hard, enclosed maps will have the most echoes going at any one time (user, 8 Nov 2026).
 - **Why last:** echo amounts and tail lengths depend on everything before it, so they only need tuning once.
 
