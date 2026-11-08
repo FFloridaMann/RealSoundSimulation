@@ -51,7 +51,7 @@ Research for roadmap step M (8 Nov 2026). **Nothing here is in the game yet.** I
 - **Metal is no longer a guess.** Steel loses bass too (0.21 at the bottom, 0.02 at the top). It's one row for all metal, so thin sheet and thick plate aren't told apart.
 - **Plastic has no match.** Gypsum board is the closest in behaviour, a stiff thin panel. Treat it as an estimate.
 - **Body and BodyArmor** keep the measured "people" values (0.25–0.50), and **Chainfence and Grate** stay as they are, since they're mostly see-through.
-- **Ground differs by source.** My Delany-Bazley calculation from published flow resistivity agrees with Meta on grass and snow. Meta has gravel more absorbent (0.63 against 0.15 at 500 Hz) and soil more absorbent than packed soil calculates. Real ground varies with compaction and moisture, so either is defensible. I'd use Meta's, to stay consistent.
+- **Ground differs by source.** My Delany-Bazley calculation from published flow resistivity roughly agrees with Meta on snow and on the shape of grass (Meta's grass absorbs more at 500–1000 Hz, about 0.5–0.9 against 0.3–0.4). Meta has gravel more absorbent (0.63 against 0.15 at 500 Hz) and soil more absorbent than packed soil calculates. Real ground varies with compaction and moisture, so either is defensible. I'd use Meta's, to stay consistent.
 
 To convert to a loss per bounce: dB = 10 × log10(1 − absorption). So 0.02 is −0.09 dB, 0.15 is −0.7 dB, 0.5 is −3 dB.
 
@@ -69,7 +69,7 @@ To convert to a loss per bounce: dB = 10 × log10(1 − absorption). So 0.02 is 
 | Bot at 50 m | 0.26 ms | First notch about 1.9 kHz |
 | Bot at 100 m | 0.13 ms | First notch about 3.8 kHz |
 
-A muzzle blast lasts under about 3 ms ([Maher](https://www.montana.edu/rmaher/publications/maher_aes_1015_9471.pdf)), so at these delays the bounce overlaps it. **The ground never makes a separate echo. It changes the tone.** At distance it only affects the top end on hard ground. Notches at those delays are also exactly what the mod's doubled-shot complaints sounded like, which is why a separate ground-bounce voice is the wrong tool.
+A muzzle blast lasts under about 3 ms ([Maher](https://www.montana.edu/rmaher/publications/maher_aes_1015_9471.pdf)), so at these delays the bounce overlaps it. **The ground never makes a separate echo. It changes the tone.** At distance it only affects the top end on hard ground. That's why a separate ground-bounce voice is the wrong tool: it would be a copy of the shot a few milliseconds late, which is the kind of delay that sounds like a coloured or doubled shot.
 
 **What it means for the mod:**
 1. **Don't add a ground echo voice.** It would double the bounce already in the recording and comb the shot.
