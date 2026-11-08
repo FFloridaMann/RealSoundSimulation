@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.23 (shot overlap) and 0.6.24 (gunshots from the opening) waiting for a raid
+**Now:** 0.6.24 raided, `6.1` and `1e` kept on · **Next:** M (materials), then 6.2 (through walls)
 
 ---
 
@@ -54,7 +54,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] routes.csv: each bot gunshot's opening and route (measure only, switch off by default; 0.6.22)
 - [x] Raid + review routes.csv (raid 36, Factory: 156 of 171 shots had a route; median 33 deg from the true direction, 40% over 45; best opening changed 7 times; 9 shots from a floor below had no baked route)
 - [x] Move bot gunshots to the opening they come through (`6.1`, 0.6.24)
-- [ ] Raid: compare `6.1` on and off with a bot in another room
+- [x] Raid: compare `6.1` on and off with a bot in another room (raid 38: kept on; moved 31 deg on average; user: on sounded better, given gunshots through walls are coming)
 - [ ] Decide: footsteps and other sounds too?
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Floors with no baked route (raid 36: 9 shots from 5 m below): needs the through-floor path in 6.2, not "fully blocked"
@@ -64,7 +64,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
 - [ ] Shots cut by the same gun's next sound: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost, 62 tails and 27 shots; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Same mechanism as the STM-9 with the FRT. The old Gun Audio mod's "Let shots overlap" fixed it and was removed 5 Nov
 - [x] Port the overlap into Real Sound Simulation: `1e Shots ring under the next` (0.6.23)
-- [ ] Raid: compare `1e` on and off (bots and your STM-9)
+- [x] Raid: `1e` on (raid 38): cuts 40% to 31%, average lost 1.85 s to 1.40 s; semi-auto now loses very little, short bursts still cut by the next tail
 - [x] With overlap: if the game's gun voices run out, take the voices of the gun closest to finishing so a shot never plays silent (0.6.23)
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
@@ -124,6 +124,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 ## E · Final echo tuning and optimising (last)
 - [ ] Tune how many echoes each sound gets (own shots, bots, grenades)
 - [ ] Tune tail length
+- [ ] Short bursts: give a ringing tail its own voice or fade it, instead of the next tail stopping it (two voices per gun, raid 38)
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
 - [ ] Full-auto: full echoes on the first round and the tail, only the loudest 1–2 through the burst
 - [ ] Test on Factory and Labs (the most echoes at once)
