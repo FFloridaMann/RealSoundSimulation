@@ -4,7 +4,7 @@ Research for roadmap step M (8 Nov 2026). **Nothing here is in the game yet.** I
 
 ## What the research found
 
-1. **Thin wood, glass and steel lose bass, not treble.** Our tables dull them (thin wood's echo is cut at 6 kHz). Measured, a 3/8" plywood panel absorbs 0.28 at 125 Hz and 0.11 at 4 kHz, and a window 0.35 and 0.04; Meta's table says the same, and adds steel. Real echoes off them are thin and bright. This is the biggest audible correction, and it needs a high-pass on the echo voices, which only have a low-pass today.
+1. **Thin wood, glass and steel lose bass, not treble, so they shouldn't be dulled.** Our tables dull them (thin wood's echo is cut at 6 kHz). Measured, a 3/8" plywood panel absorbs 0.28 at 125 Hz and 0.11 at 4 kHz, and a window 0.35 and 0.04; Meta's table says the same, and adds steel. This is the biggest audible correction, and it's simply removing those low-passes. **Correction:** I first said this needed a high-pass on the echoes. It doesn't: one bounce loses at most about 2 dB more bass than mids, and rifles carry little energy down there anyway.
 2. **Hard surfaces lose almost nothing per bounce.** Concrete absorbs about 2%, or 0.09 dB. Echoes use 0.5 dB. Probe v2 already uses the right value.
 3. **Ground needs a value per frequency.** Soil, mud and grass share one value (−4 dB) today. Grass loses 12% of the energy at the bottom and 87% at 775–3400 Hz, mud about 15–27%, and snow 85% or more above 176 Hz. See "The ground and the gunshot" below: the ground changes tone, not echoes.
 4. **Walls behave like a low-pass, which supports your 50 Hz thump.** Below a panel's coincidence dip, transmission loss rises about 6 dB per octave. A 150 mm concrete wall takes off about 46 dB at 125 Hz and 76 dB at 4 kHz, so only the lowest part of a gunshot gets through.
@@ -12,10 +12,10 @@ Research for roadmap step M (8 Nov 2026). **Nothing here is in the game yet.** I
 
 ## Limits of this data
 
-- **The game's tags don't say how thick anything is.** "Concrete" could be a 100 mm wall or a 400 mm slab. Each transmission row assumes one thickness; doubling it adds about 6 dB.
+- **The game's tags don't say how thick anything is**, but the game measures it: see "Wall thickness" below. The physics rows assume one thickness; doubling it adds about 6 dB.
 - **Reflection values** come from Meta's table, checked against published measurements. **Wall rows** are calculated from physics and spot-checked against measured slabs and STC ratings.
 - **Real walls leak.** Doors, gaps and paths through the structure usually make field results several dB worse than these lab-style numbers.
-- **Scattering:** I found no usable values per surface, so the current scattering values stay.
+- **Filters:** Unity doesn't document the slope of its low-pass, so anything depending on it has to be judged by ear.
 - **Ground** varies with compaction and moisture, and reflects more at shallow angles than these values suggest.
 
 ## Reflection: absorption by frequency
@@ -77,6 +77,47 @@ A muzzle blast lasts under about 3 ms ([Maher](https://www.montana.edu/rmaher/pu
 3. **The larger effect is ground between you and a distant shooter.** Grass absorbs well from 500 Hz up but reflects like concrete at 125 Hz and below ([field measurements](https://ince.publisher.ingentaconnect.com/contentone/ince/incecp/2021/00000263/00000003/art00051;jsessionid=gpabn5uj6jnh.x-ic-live-03)), and the standard outdoor model (ISO 9613-2) treats asphalt as hard and grass as soft. So a shot across a field should lose mids and treble that a shot across a car park keeps. It costs one filter per gun and no voices, but it needs the ground sampled along the path. New roadmap item G.
 4. **Floors indoors** already work: probe v2 bounces off floors with their material, so the new table reaches them automatically.
 
+## Scattering
+
+How much of a reflection is diffuse rather than mirror-like. These are the presets in the game's own Meta XR plugin, averaged over 500 Hz and 1 kHz. They match the general guidance from room-acoustics software: about 0.1 for large smooth surfaces and 0.6–0.7 for very irregular ones ([ODEON](https://odeon.dk/download/CLCpresentation/A%20new%20scattering%20method%20that%20combines%20roughnes%20and%20diffraction.pdf)).
+
+| Surface | Scattering | Today (probe) |
+|---|---|---|
+| Glass | 0.05 | 0.05 |
+| Water | 0.09 | 0.05 |
+| Steel, wood, rubber | 0.10 | 0.20–0.35 |
+| Concrete, gypsum | 0.13 | 0.15 |
+| Tile | 0.15 | 0.15 |
+| Rough concrete, stone, carpet | 0.18 | 0.25 |
+| Curtain | 0.25 | 0.70 |
+| Brick | 0.33 | none |
+| Soil, mud | 0.33 | 0.40–0.50 |
+| Foliage | 0.45 | 0.60 |
+| Gravel, grass, snow | 0.45 | 0.60–0.80 |
+
+## What the echoes should actually use
+
+A rifle's blast carries most of its energy between about 250 Hz and 1 kHz (reports range from 125 Hz to 1.5 kHz, depending on the gun and where it was measured; [DAGA 2025](https://pub.dega-akustik.de/DAS-DAGA_2025/files/upload/paper/188.pdf), [PubMed](https://pubmed.ncbi.nlm.nih.gov/7761796/)). So the echo level should come from the 176–775 Hz and 775–3400 Hz bands. Per single bounce:
+
+| Surface | Level (dB) | Low-pass needed? |
+|---|---|---|
+| Concrete, tile, water | −0.1 | no |
+| Plastic (gypsum), rubber | −0.3 | no |
+| Thick wood | −0.4 | no |
+| Steel, thin wood | −0.5 | no |
+| Glass | −0.7 | no |
+| Mud | −1.2 | no |
+| Carpet | −1.4 | yes, about 3 kHz |
+| Foliage | −2.7 | no |
+| Soil | −2.9 | no |
+| Curtain | −3.9 | no |
+| Cardboard | −4.8 | mild |
+| Gravel | −5.1 | mild |
+| Grass | −5.9 | yes, about 2.5 kHz |
+| Snow | −10.5 | mild |
+
+Today's echoes lose 8 dB off rubber, where Meta has 0.3 dB, and dull wood and metal that shouldn't be.
+
 ## Through walls: transmission loss
 
 From the mass law, R = 20 log10(mass per m² × frequency) − 47. It predicts a concrete slab well: a measured 203 mm slab was 55 dB at 500 Hz and 76 dB at 4 kHz. Single-number checks from the National Research Council Canada: 1.3 mm steel STC 30, 16 mm plywood STC 21, 150 mm concrete about STC 55.
@@ -96,16 +137,41 @@ From the mass law, R = 20 log10(mass per m² × frequency) − 47. It predicts a
 
 Around a dip the real loss is lower than these figures, sometimes by 10 dB or more. That matters most for plywood and wood at 500–2000 Hz and for glass and thick steel near 2 kHz.
 
-**How this maps to the game (6.2).** Each row becomes a level (the loss at 125 Hz) and a low-pass. Two cautions:
-- Unity's low-pass is steeper than the 6 dB per octave of a real wall, so the slider will need to be judged by ear. Your 50 Hz result is consistent with concrete, but it's one headset.
-- The game has no absolute loudness. A real gunshot at about 150–160 dB is still loud after 46 dB of loss, while −46 dB in the game's mix is faint. So 6.2 needs its own level control rather than using these numbers directly.
+### Meta's values for the same walls
+
+The game's Meta XR plugin also has transmission presets, and they are far less blocking than the physics. These are energy values converted to dB:
+
+| Surface | Meta at 125 Hz | 1 kHz | 4 kHz | Physics at 125 Hz | 1 kHz | 4 kHz |
+|---|---|---|---|---|---|---|
+| Concrete | 24 | 28 | 33 | 46 | 64 | 76 |
+| Brick | 16 | 23 | 31 | – | – | – |
+| Gypsum board | 15 | 26 | 25 | 15 | 33 | 45 |
+| Thick wood | 15 | 16 | 21 | 21 | 39 | 51 |
+| Thin wood | 7 | 10 | 13 | 14 | 32 | 44 |
+| Steel | 6 | 11 | 23 | 15–28 | 33–46 | 45–58 |
+| Glass | 9 | 16 | 11 | 19 | 37 | 49 |
+| Curtain | 4 | 9 | 13 | about 0–3 | – | – |
+
+**This is the answer to the level question.** The game has no absolute loudness: a real gunshot is still loud after 46 dB of loss, while −46 dB in the mix is faint. Meta's numbers look chosen to work in a game mix, so they're a better starting point for 6.2's level, and physics stays useful for the shape.
+
+### Wall thickness
+
+**The game already measures it.** Its transmission check traces through obstacles and computes a total thickness along each path (`TransmissionPathResult.TotalThickness`), then applies `exp(−0.3 × thickness)` and treats anything over 4.5 m as solid. So 6.2 could scale each surface's loss by the real thickness instead of assuming one. Before relying on it, log it in a raid: colliders can be simplified or hollow, so the measured value may not be the real wall.
+
+### The thump
+
+A rifle has its energy around 250 Hz–1 kHz and a concrete wall passes 125 Hz about 12 dB better than 500 Hz, so what comes through should centre around 100–250 Hz. Your 50 Hz preference is lower than that. It may be right for your headset and for how a low-pass sounds, so it stays the default, but the slider should reach about 400 Hz.
+
+### Doors
+
+Doors and gaps leak a lot, but I couldn't find a trustworthy figure. Rated hollow-core doors are about STC 25 and solid-core 30–35, and gaps reduce that further. The game treats open doors as portals, so this only matters for closed ones. Their closure level is in routes.csv (0 in every row so far).
 
 ## Proposed changes, in order
 
-1. **One table.** Today three separate tables disagree (`OwnEchoes.MaterialProps`, `AcousticProbe`'s absorption, `Surfaces`). Replace them with one `Acoustics/Materials.cs` holding the four absorption bands and the wall values.
-2. **Echoes follow it, with a high-pass.** Add a high-pass to echo voices so wood and glass sound thin instead of dull. Level comes from the two middle bands, and the outer bands set the filters.
+1. **One table.** Today three separate tables disagree (`OwnEchoes.MaterialProps`, `AcousticProbe`'s absorption, `Surfaces`). Replace them with one `Acoustics/Materials.cs` holding Meta's absorption, scattering and transmission for each game tag.
+2. **Echoes follow it.** Levels from the table above, the low-passes on wood, glass and metal removed, a low-pass only where it's needed. No new filters, so no extra cost.
 3. **Probe v2 and the rain paths follow it.** Then the retunes listed under step M: rain through the building (9l), exit credits (9k), roof rain and the echo levels. Those need raids.
 4. **Roof material (4b phase 3)** uses the same table.
-5. **Through-wall values** go into 6.2.
+5. **6.2** takes Meta's transmission as its starting level, physics for the shape, and logs the game's measured thickness first.
 
-Sources: [Meta XR Audio material table](https://developers.meta.com/horizon/documentation/unity/meta-xr-audio-sdk-wwise-room-acoustics/), [absorption coefficients (Sengpiel)](https://sengpielaudio.com/calculator-RT60Coeff.htm), [concrete and flooring ranges (Acta Acustica table)](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2021/01/aacus200072/T1.html), [metal range (commercial-acoustics)](https://commercial-acoustics.com/guides/sound-absorption-coefficients/), [precast slab test (Norlite)](https://www.norliteagg.com/sites/default/files/imce_images/norlite_sound_transmission.pdf), [STC values and factors (NRC CBD-239)](https://web.mit.edu/parmstr/Public/NRCan/CanBldgDigests/cbd239_e.html), [mass law and critical frequency (INSUL)](https://www.insul.s05.system7.co.nz/media/29391/Seminar-2.pdf), [ground flow resistivity (FHWA)](https://www.fhwa.dot.gov/Environment/noise/resources/ground_and_pavement_effects/gpeffects02.cfm), [ground factor G (Attenborough)](https://www.ioa.org.uk/system/files/publications/K%20ATTENBOROUGH%20GROUND%20EFFECT%20AND%20SURFACE%20TRANSPORT%20NOISE%20PREDICTION.pdf).
+Sources: Meta XR plugin presets (`MetaXRAcousticMaterialProperties`, in the game's files), [Meta XR Audio material table](https://developers.meta.com/horizon/documentation/unity/meta-xr-audio-sdk-wwise-room-acoustics/), [absorption coefficients (Sengpiel)](https://sengpielaudio.com/calculator-RT60Coeff.htm), [concrete and flooring ranges (Acta Acustica table)](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2021/01/aacus200072/T1.html), [metal range (commercial-acoustics)](https://commercial-acoustics.com/guides/sound-absorption-coefficients/), [precast slab test (Norlite)](https://www.norliteagg.com/sites/default/files/imce_images/norlite_sound_transmission.pdf), [STC values and factors (NRC CBD-239)](https://web.mit.edu/parmstr/Public/NRCan/CanBldgDigests/cbd239_e.html), [mass law and critical frequency (INSUL)](https://www.insul.s05.system7.co.nz/media/29391/Seminar-2.pdf), [ground flow resistivity (FHWA)](https://www.fhwa.dot.gov/Environment/noise/resources/ground_and_pavement_effects/gpeffects02.cfm), [ground factor G (Attenborough)](https://www.ioa.org.uk/system/files/publications/K%20ATTENBOROUGH%20GROUND%20EFFECT%20AND%20SURFACE%20TRANSPORT%20NOISE%20PREDICTION.pdf).
