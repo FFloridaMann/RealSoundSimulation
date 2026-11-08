@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.23 — 8 Nov 2026 (shots ring under the next one)
+**Run in game:** not yet. From raid 36 (raid_20261108_165557, Factory): 89 of 224 bot sounds were cut by the same gun's next sound, on average 1.85 s lost; 0 muted, 0 without voices. Same mechanism as the STM-9 on the FRT sounding like one looping shot. The old Gun Audio mod's "Let shots overlap" fixed it and left with that mod on 5 Nov.
+- **New `1e Shots ring under the next`** (on, live; `Fixes/ShotOverlap.cs`), every gun. `SuperBetterAudioQueue.Update` with one change: only a firing loop is ended when the next sound starts. Gun Audio's random pitch and volume are not included. A gun still has two voices, so a third sound takes back the oldest. A non-auto gun's voices are kept long enough to cover the sound's flight time.
+- **No silent shots** (user idea): if the game has no free gun voices, the gun closest to finishing (not firing, never yours) gives up its two, so a fading tail is cut instead of a shot not playing. Only runs when the pool is empty. Summary: BOT GUNSHOTS.
+- botshots.csv: with `1e` on, `cutPrevS` means a third sound took back the oldest voice.
+- Self-check: 9 new targets. Version 0.6.23.
+
 ## 0.6.22 — 8 Nov 2026 (portal positioning, step one: log the routes)
 **Run in game:** not yet. Changes no sound. ROADMAP 6.1's first build, measure only (user: "build 6.1"). The sound itself moves in a later build, once a raid has shown the routes are sensible.
 - **New `Log portal routes`** (F12 section 1, off, live) and **routes.csv** (`Diagnostics/RouteLog.cs`). The game already works out the best route for every bot in another room and only uses its cost. Each time a bot fires (at most 4 times a second per gun) this reads that finished result: the opening nearest you, the route's path length, the cost of the best and second-best routes, how many portals it goes through, and how far the opening is from the true direction. A shot with no route says why (`outdoor`, `sameRoom`, `outOfRange`, `noRoute`, `notComputed`, `busy`). Summary: PORTAL ROUTES (average angle between opening and true direction, share over 45 degrees, path against the straight line, how often the best opening changed). Picks the best route by the game's own rule.

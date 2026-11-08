@@ -60,8 +60,10 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] A bot's first burst starts un-muffled, then gets cut down (raid 34): `1d First burst muffled` (0.6.21)
 - [ ] Raid: compare `1d` on and off in a distant fight (raid 35: never triggered)
 - [x] Shots "cut off" in distant fights (raid 34, mark 1): log what ends them early (botshots.csv, 0.6.21)
-- [ ] Shots cut by the same gun's next sound: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost, 62 tails and 27 shots; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Same mechanism as the STM-9 with the FRT. The old Gun Audio mod's "Let shots overlap" fixed it and was removed 5 Nov; port that into Real Sound Simulation
-- [ ] With overlap: if the game's gun voices run out (`noqueue`), take the voices of the gun closest to finishing so a shot never plays silent (user, 8 Nov)
+- [ ] Shots cut by the same gun's next sound: the only cause seen so far (raid 36: 89 of 224 sounds, average 1.85 s lost, 62 tails and 27 shots; raid 35: 9 of 47; 0 muted, 0 no free voices in both). Same mechanism as the STM-9 with the FRT. The old Gun Audio mod's "Let shots overlap" fixed it and was removed 5 Nov
+- [x] Port the overlap into Real Sound Simulation: `1e Shots ring under the next` (0.6.23)
+- [ ] Raid: compare `1e` on and off (bots and your STM-9)
+- [x] With overlap: if the game's gun voices run out, take the voices of the gun closest to finishing so a shot never plays silent (0.6.23)
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials

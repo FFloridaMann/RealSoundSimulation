@@ -76,6 +76,14 @@ F12 → Real Sound Simulation → **"0. Gun sounds"** (top of the list). Not a f
 
 **Check.** `1d` off and on, a distant bot fight: botshots.csv `firstBurstSeeded` = 1 on those rows, `occl` already high and `occludedMixer` 1 on the first row. Summary: BOT GUNSHOTS.
 
+### 1e: Shots ring under the next (0.6.23)
+
+**Problem (raid 36).** A gun has two voices that alternate, and `SuperBetterAudioQueue.Update` ends the older one at the exact start of the next sound with no fade. A semi-auto gun's next shot chops the last one's decay, and a new burst chops the last burst's tail: 89 of 224 bot sounds, on average 1.85 s lost. Your STM-9 on the FRT sounded like one looping shot for the same reason.
+
+**Fix.** The game's `Update` with one change: only a firing loop is ended when the next sound starts. Applies to every gun. Two voices remain, so a third sound takes back the oldest. If `BorrowWeaponAudioQueue` finds no free voices, the gun closest to finishing (not firing, never yours) releases its two and the shot plays, so a fading tail is cut rather than a shot going silent.
+
+**Check.** `1e` off and on with bots firing short bursts. Summary BOT GUNSHOTS: the cut count should fall sharply; "gun voices taken" should normally be 0.
+
 ## Fix 2: Obstruction score
 
 **Problem.** When you and a sound are in the same space with something between you, the game runs up to three checks (`SpatialAudioOcclusionCombinedCalculator`): **transmission** (through the obstacle), **diffraction** (around its edges) and **reflection** (bouncing off surfaces). Each gives 0 (clear) to 1 (blocked), and the game takes the **average**. But a check that *fails to find a path* returns 1.0, so a thin wall (0.2) plus a failed corner search (1.0) averages to 0.6, which is over the 0.55 muffle line.

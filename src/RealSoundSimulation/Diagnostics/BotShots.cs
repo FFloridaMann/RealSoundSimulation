@@ -33,6 +33,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private struct Prev { public SuperBetterAudioQueue Queue; public double Start, End, Length; }
         private static readonly Dictionary<int, Prev> Last = new Dictionary<int, Prev>();
+        private static readonly Dictionary<int, Prev> Older = new Dictionary<int, Prev>(); // 0.6.23: with 1e on, the sound that can actually be cut is the one before last
 
         // set for the length of one FireBullet / StopFiringLoop call on a remote gun
         private static WeaponSoundPlayer _cur;
@@ -54,7 +55,7 @@ namespace RealSoundSimulation.Diagnostics
 
         public static void Reset()
         {
-            Last.Clear(); _cur = null; _queued = 0; _inStopLoop = false;
+            Last.Clear(); Older.Clear(); _cur = null; _queued = 0; _inStopLoop = false;
             Bodies = Tails = Muted = NoQueue = Cut = 0; CutSum = CutShareSum = 0;
         }
 
@@ -110,13 +111,16 @@ namespace RealSoundSimulation.Diagnostics
                 float len = rawLen / Mathf.Max(pitch, 0.01f);
                 int key = w.GetInstanceID();
                 float cut = -1f, share = 0f;
-                if (Last.TryGetValue(key, out Prev p) && p.Queue == __instance && startTime >= p.Start && startTime < p.End - 0.01)
+                Prev p;
+                bool have = Plugin.ShotOverlapOn.Value ? Older.TryGetValue(key, out p) : Last.TryGetValue(key, out p);
+                if (have && p.Queue == __instance && startTime >= p.Start && startTime < p.End - 0.01)
                 {
                     cut = (float)(p.End - startTime);
                     share = p.Length > 0 ? (float)(cut / p.Length) : 0f;
                     Cut++; CutSum += cut; CutShareSum += share;
                 }
                 // clipTime 0 = a firing loop: the game ends it on purpose when the tail starts, so it never counts as cut
+                if (Last.TryGetValue(key, out Prev recent)) Older[key] = recent; else Older.Remove(key);
                 if (clipTime > 0f) Last[key] = new Prev { Queue = __instance, Start = startTime, End = startTime + clipTime, Length = clipTime };
                 else Last.Remove(key);
 
@@ -164,8 +168,9 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine("BOT GUNSHOTS (botshots.csv; one row per sound a bot's gun queued or lost)");
             sb.AppendLine($"  sounds queued {played} (shots and loops {Bodies}, tails {Tails}); not played at all: occlusion volume 0 {Muted}, no free voices {NoQueue}");
             sb.AppendLine(Cut > 0
-                ? $"  cut off by the same gun's next sound: {Cut} ({100.0 * Cut / Math.Max(played, 1):0}% of queued), average {CutSum / Cut:0.00} s lost, {100.0 * CutShareSum / Cut:0}% of the sound"
+                ? $"  cut off by the same gun's next sound{(Plugin.ShotOverlapOn.Value ? " (1e on: only a third sound taking back the oldest voice)" : "")}: {Cut} ({100.0 * Cut / Math.Max(played, 1):0}% of queued), average {CutSum / Cut:0.00} s lost, {100.0 * CutShareSum / Cut:0}% of the sound"
                 : "  cut off by the same gun's next sound: 0");
+            sb.AppendLine($"  gun voices taken from the gun closest to finishing because the pool was empty (1e): {Fixes.ShotOverlap.Taken}; pool empty and no gun could give any: {Fixes.ShotOverlap.TakenNone}");
             sb.AppendLine($"  first bursts started muffled (1d): {Fixes.FirstBurstOcclusion.Seeded}; shooter in clear line of sight, left alone: {Fixes.FirstBurstOcclusion.ClearLine}");
             return sb.ToString();
         }

@@ -198,6 +198,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `0`, `0a` | which gun recordings: SPT or SEB (§5.0); SEB on full-auto guns | SPT, off |
 | `1`, `1a`–`1c` | remote gun muffle switching (§4) | on, 0.60 / 0.45 / 0.5 s |
 | `1d` | a bot's first burst starts muffled if a wall is in the way (0.6.21) | on |
+| `1e` | every gun's shots ring under the next one (0.6.23) | on |
 | `2 Obstruction score` | remote sound blocking (§4) | ParallelPaths |
 | `3`, `3a`, `3b` | mix snapshot at doorways (§3.3); needed by fix 8 | on, 1.5 m / 1.0 m |
 | `3c`, `3d`, `3e`, `3f`, `3g`, `3i` | your gunshot recording mix (§5.1) | on, Enclosure, 0.4, 0.5, 0.7, Soft |

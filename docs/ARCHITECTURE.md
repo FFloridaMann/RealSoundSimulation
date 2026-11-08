@@ -56,6 +56,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── GunSoundSource.cs    setting 0 (0.6.3): swap a gun's banks to SEB's (seb_sounds/, background-loaded) or back
     ├── GunMixerFix.cs       fix 1: stop muffled/clear flip-flop on gunshots
     ├── FirstBurstOcclusion.cs 1d (0.6.21): a bot's first burst starts muffled if a wall is in the way
+    ├── ShotOverlap.cs       1e (0.6.23): shots ring under the next one; a gun gives up voices if the pool is empty
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways
     ├── GunEnvironmentBlend.cs fix 3c: your own gunshots mix indoor/outdoor recordings (Doorway or Enclosure mode);

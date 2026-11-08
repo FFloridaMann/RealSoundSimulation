@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.22")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.23")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -56,6 +56,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> GunUnmuffleBelow;
         internal static ConfigEntry<float> GunHoldSeconds;
         internal static ConfigEntry<bool> FirstBurstOn; // 0.6.21
+        internal static ConfigEntry<bool> ShotOverlapOn; // 0.6.23
         internal static ConfigEntry<ObstructionMode> ObstructionModeCfg;
         internal static ConfigEntry<bool> DoorwayOn;
         internal static ConfigEntry<float> DoorwayInside;
@@ -134,6 +135,7 @@ namespace RealSoundSimulation
             GunUnmuffleBelow = Config.Bind(fix, "1b Unmuffle below", 0.45f, new ConfigDescription("Occlusion needed to switch back to the normal sound (game: 0.55).", new AcceptableValueRange<float>(0.05f, 0.9f), new ConfigurationManagerAttributes { Order = 98 }));
             GunHoldSeconds = Config.Bind(fix, "1c Hold s", 0.5f, new ConfigDescription("A change must persist this long before it is applied. The first shot after 2 s of quiet is never delayed.", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 97 }));
             FirstBurstOn = Config.Bind(fix, "1d First burst muffled", true, new ConfigDescription("0.6.21: a quiet bot far away has no occlusion computed yet, so its first burst played un-muffled and was then cut down. With this on, if a wall is in the way, that first burst starts muffled and the game's own calculation takes over. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 96 }));
+            ShotOverlapOn = Config.Bind(fix, "1e Shots ring under the next", true, new ConfigDescription("0.6.23: every gun, yours and bots. The game stops a shot dead when the same gun's next sound starts. With this on it rings out underneath; only a firing loop is ended. A gun has two voices, so a third sound takes back the oldest. If the game runs out of gun voices, the gun closest to finishing gives up its own so a shot never goes silent. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 95 }));
             ObstructionModeCfg = Config.Bind(fix, "2 Obstruction score", ObstructionMode.ParallelPaths, new ConfigDescription("How the through-wall, around-corner and echo checks are combined. Game = average (a failed check counts as fully blocked). IgnoreFailedPaths = average of the checks that found a path. ParallelPaths = blocked only if every path is.", null, new ConfigurationManagerAttributes { Order = 90 }));
             DoorwayOn = Config.Bind(fix, "3 Smooth doorways", true, new ConfigDescription("Blend the indoor/outdoor mix and ambience by distance to the doorway instead of switching.", null, new ConfigurationManagerAttributes { Order = 80 }));
             DoorwayInside = Config.Bind(fix, "3a Blend inside m", 1.5f, new ConfigDescription("Distance inside the doorway over which the blend happens.", new AcceptableValueRange<float>(0.25f, 6f), new ConfigurationManagerAttributes { Order = 79 }));
@@ -192,6 +194,7 @@ namespace RealSoundSimulation
             Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony));
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("1d first burst", () => FirstBurstOcclusion.Apply(Harmony)); // 0.6.21
+            Safe("1e shot overlap", () => ShotOverlap.Apply(Harmony)); // 0.6.23
             Safe("bot shots log", () => BotShots.Apply(Harmony)); // 0.6.21
             Safe("route log", () => RouteLog.Apply(Harmony)); // 0.6.22
             Safe("8g room tone", () => RoomTone.Apply(Harmony));
@@ -217,7 +220,7 @@ namespace RealSoundSimulation
 
         internal static string FixState() =>
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
-            $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")} | " +
+            $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
             $"fix3 doorways {(DoorwayOn.Value ? $"ON (in {DoorwayInside.Value:0.0} m / out {DoorwayOutside.Value:0.0} m)" : "off")} | " +
             $"fix3c own gunshot blend {(GunEnvBlendOn.Value ? $"ON ({OwnShotSource.Value}, aim {OwnShotAimWeight.Value:0.00}, thin {ThinSurfaceCount.Value:0.00}, muzzle {MuzzleWeight.Value:0.00}, small space {SmallSpace.Value})" : "off")} | " +
