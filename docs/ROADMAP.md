@@ -69,6 +69,15 @@ So about 140 voices of headroom after the game's worst case and the 16 reserve. 
 
 Worst case under the budget: 8 audible shooters × 2 + 4 through-wall + the own-echo cap stays well under 60 of the ~140. CPU scales with voices too (HRTF and filters run per voice), so the bounded version is a few percent of a core and the unbounded one is what would hurt. `sources.csv` already logs real and virtual voices each scan, and the summary counts drops at the cap, so the first raid shows whether the budget ever engages. Settings to add: bot echo ceiling, audibility threshold, and a switch for the zero-voice tier, all live in F12.
 
+**What the cap does not count (8 Nov 2026).** The headroom cap subtracts only sources in occlusion containers (players and objects). The beds, rain, wind, room tone, roof rain, your body sounds and anything another mod plays are not counted; they live in the fixed reserve of 16. Today that is enough. With fix 8's opening copies (up to 3 per bed), the old mods' breathing and ringing, and SEB's extra buses, the uncounted load reaches 20–25 voices, more than the reserve, and the cap would hand out voices Unity does not have (it then steals the quietest). The 40 "playing" peak in raid 31 did count everything, but from a scan every 15 s (a sample, not a peak), and that scan is off by default since 0.6.15, so nothing counts the beds now. Two changes:
+
+1. **Reserve 16 → 32**, and name what lives in it in the code comment: beds, rain, wind, room tone, roof rain, body sounds, other mods.
+2. **Count the mod's own non-echo voices** in the cap: the opening copies, the moved beds, the outdoor tails. The mod starts every one of them, so no scene scan is needed.
+
+What scales and what does not: beds and body sounds are constant (8–12, up to ~25 with everything on); footsteps, gear and voices grow slowly with nearby characters; game gunshots grow with the fight; per-round bot echoes would grow with fight × fire rate, which is the only row that explodes and the one the rules above are for. Per-round gun playback (6b, SEB takes on full auto) adds about one voice per gun while it is bursting, provided the previous take fades when the next starts and overlap is capped at 2–3 takes; echoes stay per burst, never per round.
+
+**Measure before raising anything.** Three or four raids on Streets and Factory with bots, `Source scan interval s` at 2 (not 15) so `sources.csv` catches peaks, plus the listener block timing from the Phase 0 list, because the real ceiling is the audio thread (HRTF and filters per voice inside each 20 ms block), not the 196 slots. Then set the pool (96), the reserve and the bot share from the measured peak and the block slack rather than from the arithmetic above.
+
 ## History and evidence
 
 Raid-by-raid checks and design notes as they happened, oldest at the bottom. Not current: for how things work now see [DESIGN.md](DESIGN.md).
