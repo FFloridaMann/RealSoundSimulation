@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.20 + server GC change (25 → 64) waiting for a raid · **Next build:** 6.1 routes.csv
+**Now:** 0.6.20 waiting for a raid · **Next build:** 6.1 routes.csv
 
 ---
 
