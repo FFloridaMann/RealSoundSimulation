@@ -39,16 +39,16 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## ⏭ 6.0a · Audio-thread timing (measure)
+## ✅ 6.0a · Audio-thread timing (measure)
 - [x] Built on branch `claude/selfcheck-foreign-patches-block-timing`
 - [x] Merge into main (as 0.6.20)
 - [x] Add a "how close to the deadline" measure: Unity's audio counters, if the game offers them (0.6.20)
-- [ ] Raid with it on; read audio-counters.txt (are there any?) and the summary's AUDIO THREAD
+- [x] Raid with it on (raid 34, Factory, 8 Nov): only 2 audio counters exist (memory, both read 0), so no DSP load is available; late blocks: 6.8% over 1.5x, 0.09% over 2x ("marginal")
 
-## ⏭ 6.0b · Ray batch wait on busy CPUs (measure)
+## ✅ 6.0b · Ray batch wait on busy CPUs (measure)
 - [x] Log the batch wait per frame (timing.csv, slowframes.csv; 0.6.20)
-- [ ] Heavy Streets raid, sort slowframes.csv by frameMs
-- [ ] Decide: ray quality by core count / next-frame batch / neither
+- [x] Raid with it on (raid 34, Factory): avg wait 0.001 ms, max 0.53 ms, 0% of frames waited
+- [x] Decide: **neither** (the probe never makes a frame slow on 16 cores; re-check only on a PC with fewer cores)
 
 ## ⏭ 6.1 · Portal positioning ← **next**
 - [ ] routes.csv: each bot gunshot's opening and route (measure only, switch off by default)
@@ -56,6 +56,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Move bot sounds to the opening they come through
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Check: bot gunshots when you cross a threshold
+- [ ] Bot bursts start un-muffled, then cut down (raid 34): a quiet bot's container is out of range, so its occlusion is 0 until it fires
+- [ ] Shots "cut off" in distant fights (raid 34, mark 1): log each bot gunshot source's start and stop to find what ends them early
+- [ ] shots.csv: time is the game clock, not raid seconds (logging bug)
 
 ## M · Realistic materials
 - [ ] Research each surface (absorption, transmission, resonance)
