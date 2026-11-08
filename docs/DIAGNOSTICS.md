@@ -26,7 +26,7 @@ Only appears if something failed. It's appended to, never cleared, and each line
 ## Files written per raid
 
 ### settings.txt (raid start)
-- CPU logical cores and the game's audio quality tier (16 threads → High, 8–11 → Medium, fewer → Low).
+- CPU logical cores and the game's audio quality tier (12 or more logical cores → High, 8–11 → Medium, fewer → Low; `AudioUtils.GetQualityByLogicCores`).
 - Sample rate, DSP buffer, voice limits, spatializer plugin.
 - Which fixes were on at raid start.
 - The map's baked audio data (rooms, portals, routes).
