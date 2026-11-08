@@ -76,7 +76,6 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Separate cutoffs: explosions vs gunshots
 
 ## 6.3 · Echoes for bot gunshots and grenades
-- [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
 - [ ] One headroom cap counting every echo type; bots get their own share
 - [ ] Measure voice peaks (raids that measure voices only)
 - [ ] Echoes per shooter, not per round
@@ -114,6 +113,12 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] A way to measure real loudness while guns play
 - [ ] Pass over every gun (body, tail, silenced, near/far, indoor/outdoor, auto loops)
 - [ ] Final check of the headset's compressor
+
+## E · Final echo tuning and optimising (last)
+- [ ] Tune how many echoes each sound gets (own shots, bots, grenades)
+- [ ] Tune tail length
+- [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
+- [ ] Test on Factory and Labs (the most echoes at once)
 
 ---
 

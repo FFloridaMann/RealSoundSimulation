@@ -27,6 +27,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 14 | 6b | SEB recordings on full-auto guns | Planned |
 | 15 | C | Supersonic crack by calibre | Planned |
 | 16 | 7 | Gun audio overhaul, every gun | Planned, long |
+| 17 | E | Final echo tuning and optimising | Planned, last |
 | any time | – | Distant obstruction; server settings | Planned |
 
 Not in this roadmap: **GC and spawn stutters**. That's a separate project, likely separate mods (user, 8 Nov 2026), on branch `claude/gc-and-spawn-stutters`. Its two pieces that belong to Real Sound Simulation's own logging (garbage-free container rows, backing off after spawns) moved here as 0.6.19.
@@ -110,7 +111,6 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 ### 6.3 · Echoes for bot gunshots and grenades
 - **What:** bot echoes under the voice budget (below): per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling; two tiers.
 - **Grenades and other explosions** (user, 8 Nov 2026; raid 35: three grenades in a stairwell got only the game's own sound while your gunshots there got echoes): a few echoes per explosion, through the same queue. Explosions are rare and loud, so they pass the audibility gate and cost few voices. They must play on a mixer that Bring Back Concussion's cut-off reaches, as gun echoes do, so they duck with everything else. Needs finding the explosion's play path in the game code.
-- **First, free up voices:** an echo holds its voice for the whole recording (2.5–5 s) although it is quiet and fades into the room long before that. Raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices. End echoes early, with a short fade, once they are too quiet to hear. Cuts the voices each echo costs without changing what you hear.
 - **Why here:** needs 6.1's source positions and 6.0a's measured ceiling. It's the one addition that grows with the size of the fight.
 
 ---
@@ -165,6 +165,14 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   - full-auto loops and tails.
 - **Needs** a way to measure the recordings' real loudness. The game keeps them compressed, so measure the output while they play.
 - **Why last:** after the environment work (4b–6) and the headset, so every gun is judged in the finished acoustics. It changes guns' loudness, so the headset's compressor thresholds get a final check afterwards.
+
+### E · Final echo tuning and optimising (last)
+- **What** (user, 8 Nov 2026): once everything that makes echoes exists, tune it all together:
+  - how many echoes each sound gets (own shots, bots, grenades);
+  - how long the tails ring;
+  - optimising voices: an echo holds its voice for the whole 2.5–5 s recording though it is too quiet to hear long before that, so end quiet ones early with a short fade (raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices).
+- **Test on Factory and Labs.** Small, hard, enclosed maps will have the most echoes going at any one time (user, 8 Nov 2026).
+- **Why last:** echo amounts and tail lengths depend on everything before it, so they only need tuning once.
 
 ---
 
@@ -233,7 +241,7 @@ Worst case under the budget: 8 audible shooters × 2 + 4 through-wall + the own-
 
 What scales and what does not: beds and body sounds are constant (8–12, up to ~25 with everything on); footsteps, gear and voices grow slowly with nearby characters; game gunshots grow with the fight; per-round bot echoes would grow with fight × fire rate, which is the only row that explodes and the one the rules above are for. Per-round gun playback (6b, SEB takes on full auto) adds about one voice per gun while it is bursting, provided the previous take fades when the next starts and overlap is capped at 2–3 takes; echoes stay per burst, never per round.
 
-**Measure before raising anything.** Three or four raids on Streets and Factory with bots, `Source scan interval s` at 2 (not 15) so `sources.csv` catches peaks, plus the listener block timing from the Phase 0 list, because the real ceiling is the audio thread (HRTF and filters per voice inside each 20 ms block), not the 196 slots. Then set the pool (96), the reserve and the bot share from the measured peak and the block slack rather than from the arithmetic above. Caveat (8 Nov 2026 review): the source scan costs ~56 ms per run (raid 31, FrameDiag), so at 2 s it puts a hitch into the raid every 2 s. Use it only on raids that measure voices, not on raids that compare frame times. The block timing is its own roadmap row (audio-thread block timing, above), and so is the worker-thread wait.
+**Measure before raising anything.** Three or four raids on Streets, Factory and Labs with bots (Factory and Labs should have the most echoes at once), `Source scan interval s` at 2 (not 15) so `sources.csv` catches peaks, plus the listener block timing from the Phase 0 list, because the real ceiling is the audio thread (HRTF and filters per voice inside each 20 ms block), not the 196 slots. Then set the pool (96), the reserve and the bot share from the measured peak and the block slack rather than from the arithmetic above. Caveat (8 Nov 2026 review): the source scan costs ~56 ms per run (raid 31, FrameDiag), so at 2 s it puts a hitch into the raid every 2 s. Use it only on raids that measure voices, not on raids that compare frame times. The block timing is its own roadmap row (audio-thread block timing, above), and so is the worker-thread wait.
 
 ## History and evidence
 
