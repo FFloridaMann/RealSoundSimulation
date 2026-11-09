@@ -127,6 +127,8 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Shock wave: pressure hit, closer thump, dip in other sounds (`6.9`-`6.9c`, 0.6.53; by ear)
 - [x] Long baked routes checked against the corner search; clear windows play from the window (0.6.57; hand-set limits)
 - [ ] Raid: a grenade in a building you're outside of; check blast.csv and glass.csv `reason` and `pathM`
+- [x] Concussion by blast pressure, with an ears level and a concussion level (`6.9k`-`6.9m`, 0.6.60; hand-set)
+- [ ] Raid: grenades in the same room, a small room, a big hall, through an open door and behind a solid wall; check concdose.csv and set `6.9l` and `6.9m` by ear
 - [x] Soft concussion cut: world goes at once, blast tail fades, felt layers survive (`6.9h`-`6.9j`, 0.6.58; by ear)
 - [ ] Raid: a grenade inside 6.5 m, `6.9h` off and on; set `6.9i` and `6.9j` by ear; check concussion.csv
 - [ ] Ask harmony how he wants the credit and year written (`THIRD_PARTY_NOTICES.md`)

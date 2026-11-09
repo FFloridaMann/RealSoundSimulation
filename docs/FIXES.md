@@ -660,6 +660,18 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 - **Enclosed.** By how shut in the blast point is (the rays from `6.6`): up to `6.9e` dB, `6.9f` repeat hits spaced by twice the room's mean hit distance over the speed of sound (6 to 50 ms) at −5, −9, −13, −17 dB, and a 55 to 36 Hz swell of 0.25 to 0.7 s (`6.9g`), longer in a small or shut room. Corridors aren't treated specially.
 - **Dip.** Applied on top of whatever else sets the control each frame, and put back only on a control nobody else has moved. Its depth follows the way.
 
+## 6.9k: Concussion by blast pressure (0.6.60)
+
+**Problem.** Bring Back Concussion scales by straight-line distance, up to a 7 m radius, and gives every concussion the same strength and length. Walls, rooms and doors don't count.
+
+**Research** (abstracts and summaries). Bus bombings caused blast injury in about 78% of survivors against 34% in the open, put down to reflections lasting longer (four events; another study found no difference in ear symptoms). Confined breaching charges measured only 1.2 to 1.4 times the open-air peak. Gas pressure decay depends on room volume and vent area together. Being behind a corner cut peak pressure by 43 to 60% in one study. Low-level exposure is treated as separate from concussion, with hearing symptoms that clear.
+
+**Fix.** `ShockWave.Dose`: the pressure over the way it reached you, using the same route, corner and door rules as `6.9`, plus 0.5 dB (very big room, 14 m) to 5 dB (very small, 3 m), scaled by how enclosed the blast is. Duration from enclosure and room size, broken windows counting as open, divided by the detour. `ConcussionProof` turns the dose into the open-air distance with the same pressure and calls that mod's `ExplosionProximityPatch` with the blast moved to that distance. Ears reach `6.9l` dB further: the sound cut and, when only the ears are reached, ringing of 1.5 to 4 s.
+
+**Limits.** Hand-set levels, no real thresholds for a grenade. Corridors aren't treated specially. Room size comes from rays from the blast's upper half. The concussion waits about a frame for the blast sound, which the game queues. It hooks that mod by name; if that changes, its distance rule runs.
+
+**Check.** concdose.csv against where you stood: same room, next room with an open door, behind a solid wall, a big hall, a small room.
+
 ## Long routes checked against the world (0.6.57)
 
 **Problem.** `BestRoute` takes the shortest baked route, however long. raid_20261109_131528: a window and a blast at the car dealer 30 to 33 m away took 75 m routes and were placed towards the Capital.

@@ -2,6 +2,21 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.60 — 9 Nov 2026 (6.9k: concussion by blast pressure)
+**Run in game:** not yet. Levels are hand-set; the research gives the shape, not thresholds for a grenade.
+- **New `6.9k Concussion by blast pressure`** (on, live), `6.9l Ears reach` (+6 dB, 0 to 18) and `6.9m Concussion strength` (0 dB, −12 to +12). User: "shouldnt it be more concussive indoors", "a wall may protect but the blast through a door delivers concussive effects ... room indoors but very big? very small? lots of windows no windows". Bring Back Concussion used straight-line distance only: in raid_20261109_140020 a blast 3.3 m away through a wall was the strongest of the raid, and one 6.1 m away in the same room barely registered.
+- A blast's dose comes from the way it reached you (route, corners, shut doors, walls) plus up to 5 dB for a very small enclosed room and 0.5 dB for a very big one. Its duration comes from how small and shut in the room is, with broken windows counting as open, and less for a detour. Inside 2.5 m it never falls below −2 dB.
+- That dose becomes the open-air distance with the same pressure, and that mod's explosion patch is called with the blast moved there, so its radius and closeness still decide.
+- **Two levels:** ears (sound cut and ringing) reach `6.9l` further than the full concussion. Concussion length and strength, and the sound cut's hold, scale with duration and closeness.
+- The concussion waits for the blast sound, which the game plays a frame later. If that doesn't come within 0.25 s, or for flashbangs and smoke, that mod's distance rule is used.
+- New concdose.csv; the CONCUSSION SOUND CUT summary line counts them.
+- Version 0.6.60. F12 now has 147 settings.
+
+## 0.6.59 — 9 Nov 2026 (explosion echoes fade out)
+**Run in game:** not yet.
+- **Bug fix: explosion echoes (`6.3`) ended dead at `6.3c`.** User: "the end tail on concussion grenade explosions is still cutting out sharply". They were the one blast layer with no fade. raid_20261109_140020: echoes up to +1 dB, while the concussion cut only took Guns down 7 to 13 dB on four of its five blasts. They now fade over the second half of `6.3c`, like the thump and room echoes. That this was the sound heard is likely, not proven.
+- Version 0.6.59. F12 still has 144 settings.
+
 ## 0.6.58 — 9 Nov 2026 (6.9h: soft concussion cut)
 **Run in game:** not yet. Starting values, set by ear.
 - **`6.9h Soft concussion cut`** (on, live), **`6.9i Blast tail fade s`** (0.8, 0.1 to 3) and new **`6.9j Felt blast through concussion dB`** (0, −24 to +12), replacing 0.6.57's delay. User: "better if the hearing cuts out with concussion when the effect is applied. but we find a way to keep the feeling of the blast wave alive and no sharp cut offs for tails". Bring Back Concussion's cut is taken over and copied (same depth, cut time, hold, fade-back and tinnitus check). World sounds still go at its speed, but the Guns channel fades over `6.9i`, so the bang, echoes and tails melt away. Inside the part of its radius where it cuts, the thump, pressure hit, repeat hits and slow push go to the Master group and survive.

@@ -201,6 +201,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.58: **concussion.csv**, one row per soft cut: `t`, `closeness` (0 to 1), `endDb`, `cutS` (world sounds), `tailS` (Guns), `holdS`, `fadeS`, `tinnitus` (1 = the game's ringing was playing, so it drives Main and Guns).
 
+0.6.60: **concdose.csv**, one row per explosion rated by pressure: `t`, `doseDb` (against open air at 5 m, −999 = no way through), `equivalentM`, `earsEquivalentM`, `earsCloseness`, `concussed`, `duration` (0 to 1), `ringOnly`.
+
 ### blast.csv (0.6.41, one row per explosion)
 `t`, `moved` (1 = 6.4 moved it), `reason` (why it stayed: `same room`, `both outdoors`, `no route`, `no room`, `no container`, `no route data`, `no usable route`; empty when a route was used), `distM`, `pathM` (length of the route), `openings`, `turnDeg` (between the opening and the true direction), `movedDeg` (how far the sound was actually moved), `lineBlocked`, `cutoffHz` (6.4b, 0 = not dulled), `closure` (shut-door total on the route). The summary's BLAST FROM THE OPENING line has the totals, including how many grenades had their bounces moved (0.6.42). Bounces have no rows of their own. thump.csv: an explosion with `walls` 0 now plays (0.6.42).
 

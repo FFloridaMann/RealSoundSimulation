@@ -177,7 +177,7 @@ namespace RealSoundSimulation.Fixes
 
             double start = now + delay, length = Mathf.Min(clip.length, maxLen);
             // 0.6.44: an explosion's thump fades out over the second half of its length ("6.2j"), so a short setting doesn't cut off. User, 9 Nov 2026.
-            bool felt = kind == "explosion" && ConcussionProof.WillCut(dist); // 0.6.58: the thump survives the concussion cut ("6.9j")
+            bool felt = kind == "explosion" && ConcussionProof.WillCut(dist, ShockWave.PeekDose(pos, dist, m.Walls, m.LossDb, fade)); // 0.6.58: the thump survives the concussion cut ("6.9j")
             if (felt) ConcussionProof.FeltOn();
             try
             {

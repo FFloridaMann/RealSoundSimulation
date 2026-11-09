@@ -167,6 +167,8 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        private const float FadeShare = 0.5f;
+
         private static void PlayPicks(object owner, AudioClip clip, Vector3 l, Vector3 fwd)
         {
             float trim = Plugin.ExplosionEchoDb.Value, length = Mathf.Min(clip.length, Plugin.ExplosionEchoLengthS.Value);
@@ -177,7 +179,7 @@ namespace RealSoundSimulation.Fixes
                 float delay = t.Path / OwnEchoes.SpeedOfSound;
                 float lvl = Mathf.Min(t.LevelDb + trim, MaxLevelDb + Mathf.Max(0f, trim));
                 float cutoff = t.Cutoff * OwnEchoes.HeadShadow(l, fwd, t.Pos);
-                bool stole = EchoVoices.Play(owner, clip, t.Pos, now + delay, length, false, Mathf.Pow(10f, lvl / 20f), 1f, cutoff, delay);
+                bool stole = EchoVoices.Play(owner, clip, t.Pos, now + delay, length, false, Mathf.Pow(10f, lvl / 20f), 1f, cutoff, delay, fadeS: length * FadeShare); // 0.6.59: these ended dead at "6.3c"; the thump and room echoes already fade
                 if (EchoVoices.LastDropped) { Dropped++; continue; }
                 Played++;
                 if (t.Kind == OwnEchoes.Kind.Spec) Mirror++; else Scattered++;

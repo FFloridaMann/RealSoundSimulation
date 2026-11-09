@@ -28,6 +28,7 @@ namespace RealSoundSimulation.Fixes
         private const float FullAtM = 5f, ChargeRoot = 0.464f, AirKPa = 101.3f, MinVolume = 0.002f, ThroughWallHz = 200f, OpenHz = 22000f, RouteHz = 3000f, LeanToBlast = 0.25f, HeadStartM = 1.5f, DoorDb = 20f, SameM = 0.2f, HeldMaxS = 0.2f;
         private const float RiseS = 0.002f, PushS = 0.014f, LengthS = 0.45f, BodyShare = 0.8f, BodyDecayS = 0.09f, BodyLowHz = 42f, BodyHighHz = 80f, SweepS = 0.03f;
         private const float AttackS = 0.015f, HoldS = 0.08f, TotalS = 0.38f, DuckRangeDb = 24f, MovedByOther = 0.05f, TooQuietDb = -60f;
+        private const float SmallRoomM = 3f, BigRoomM = 14f, RightNextToM = 2.5f, RightNextToDb = -2f;
         private const float EnclosedFrom = 0.2f, RepeatMinS = 0.006f, RepeatMaxS = 0.05f, RepeatDull = 0.7f, PushOffDb = -24f;
         private static readonly float[] RepeatAt = { 1f, 1.7f, 2.5f, 3.4f }, RepeatDb = { -5f, -9f, -13f, -17f };
 
@@ -135,11 +136,11 @@ namespace RealSoundSimulation.Fixes
             _way = default;
             float extra = _lastExtra;
             _lastExtra = 0f;
-            if (!Plugin.ShockOn.Value) return;
+            if (!Plugin.ShockOn.Value) { ConcussionProof.DeliverPlain(pos); return; }
             if (w.Kind != WayKind.None && (w.At - pos).sqrMagnitude >= SameM * SameM) w = default;
             string name = sound != null ? sound.name.Replace(',', ';') : "";
-            if (name.IndexOf("flash", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("smoke", StringComparison.OrdinalIgnoreCase) >= 0) { Skip("not a blast", dist, walls, lossDb, name); return; }
-            if (dist >= Plugin.ShockReachM.Value) { Skip("out of reach", dist, walls, lossDb, name); return; }
+            if (name.IndexOf("flash", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("smoke", StringComparison.OrdinalIgnoreCase) >= 0) { Skip("not a blast", dist, walls, lossDb, name); ConcussionProof.DeliverPlain(pos); return; }
+            if (dist >= Plugin.ShockReachM.Value) { Skip("out of reach", dist, walls, lossDb, name); ConcussionProof.DeliverPlain(pos); return; }
             if (_hasHeld) { _hasHeld = false; Fire(_held, default); }
             var h = new Held { Listener = listener, Pos = pos, Dist = dist, LossDb = lossDb, WallFade = wallFade, Delay = delay, Extra = extra, Walls = walls, Played = AudioSettings.dspTime, Name = name };
             if (w.Kind == WayKind.Waiting) { _held = h; _hasHeld = true; return; } // the corner search answers in a frame or two; the sound is still on its way
@@ -157,13 +158,77 @@ namespace RealSoundSimulation.Fixes
         // 0.6.58: inside the concussion cut, everything played here is felt rather than heard, so it goes past that cut.
         private static void Fire(Held h, Way w)
         {
-            bool felt = ConcussionProof.WillCut(h.Dist);
+            Measure(h.Pos);
+            Dose(h.Dist, h.Walls, h.LossDb, h.WallFade, w, out float dose, out float duration);
+            ConcussionProof.Deliver(h.Pos, dose, duration);
+            bool felt = ConcussionProof.WillCut(h.Dist, dose);
             if (felt) { ConcussionProof.FeltOn(); ConcussionProof.Felt++; }
-            try { FireCore(h, w); }
+            try { FireCore(h, w, dose); }
             finally { if (felt) ConcussionProof.FeltOff(); }
         }
 
-        private static void FireCore(Held h, Way w)
+        // 0.6.60: how hard a blast hits you, for concussion. Same way through the building as the hit, but on the research (FIXES.md): a confined space raises the peak only a little and mostly makes the pressure last.
+        //   dose      dB against open air at 5 m. The way's pressure, plus up to 5 dB in a very small enclosed room and 0.5 dB in a very big one. Inside 2.5 m it never falls below -2 dB, so a thin wall right next to a grenade still rattles you.
+        //   duration  0 to 1, how long it lasts: by how shut in and how small the blast's room is, broken windows counting as open, and less the more of a detour it took to reach you.
+        private static void Dose(float dist, int walls, float lossDb, float wallFade, Way w, out float db, out float duration)
+        {
+            float through = wallFade > 0f ? PressureDb(dist) - lossDb * Plugin.ThumpWallLoss.Value : float.NegativeInfinity;
+            float via = float.NegativeInfinity, bends = 0f, closure = 0f;
+            bool open = walls == 0 || w.Kind == WayKind.Clear;
+            if (open) via = PressureDb(dist);
+            else if (w.Kind == WayKind.Route)
+            {
+                bends = Mathf.Min(w.Turn, 135f) / 90f + 0.5f * Mathf.Max(w.Openings - 1, 0);
+                closure = w.Closure;
+                via = PressureDb(Mathf.Max(w.Path, dist)) - bends * Plugin.ShockCornerDb.Value - closure * DoorDb;
+            }
+            bool usesWay = via >= through;
+            float best = usesWay ? via : through;
+            db = best; duration = 0f;
+            if (float.IsNegativeInfinity(best)) return;
+            float openShare = _measuredOpen, room = _measuredRoom;
+            float enclosed = usesWay ? 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(BlastRecording.AllIndoorBelow, Plugin.BlastOutdoorShare.Value, openShare)) : 0f;
+            float small = Mathf.InverseLerp(BigRoomM, SmallRoomM, room);
+            db = best + enclosed * Mathf.Lerp(0.5f, 5f, small) + Plugin.ConcussionPressureDb.Value;
+            if (dist < RightNextToM) db = Mathf.Max(db, RightNextToDb);
+            duration = Mathf.Clamp01(enclosed * Mathf.Lerp(0.4f, 1f, small) * (open ? 1f : usesWay ? 1f / (1f + bends + closure) : 0.25f));
+        }
+
+        // For 6.2's thump, which runs before the shock wave and may not have the corner search's answer yet.
+        public static float PeekDose(Vector3 pos, float dist, int walls, float lossDb, float wallFade)
+        {
+            Way w = _way.Kind != WayKind.None && (_way.At - pos).sqrMagnitude < SameM * SameM ? _way : default;
+            Measure(pos);
+            Dose(dist, walls, lossDb, wallFade, w, out float db, out float _);
+            return db;
+        }
+
+        private static int _measuredFrame = -1;
+        private static Vector3 _measuredAt;
+        private static float _measuredOpen, _measuredRoom;
+
+        private static void Measure(Vector3 pos)
+        {
+            if (_measuredFrame == Time.frameCount && (_measuredAt - pos).sqrMagnitude < SameM * SameM) return;
+            _measuredOpen = BlastRecording.MeasureAt(pos, out _measuredRoom);
+            _measuredFrame = Time.frameCount; _measuredAt = pos;
+        }
+
+        // The open-air distance with this much pressure.
+        internal static float EquivalentM(float db)
+        {
+            if (float.IsNegativeInfinity(db)) return float.PositiveInfinity;
+            float target = PressureKPa(FullAtM) * Mathf.Pow(10f, db / 20f), lo = 0.5f, hi = 500f;
+            if (PressureKPa(lo) <= target) return lo;
+            for (int i = 0; i < 28; i++)
+            {
+                float m = (lo + hi) * 0.5f;
+                if (PressureKPa(m) > target) lo = m; else hi = m;
+            }
+            return lo;
+        }
+
+        private static void FireCore(Held h, Way w, float dose)
         {
             if (h.Listener == null) return;
             float reach = Plugin.ShockReachM.Value;
@@ -187,7 +252,8 @@ namespace RealSoundSimulation.Fixes
             float best = usesWay ? via : through;
             if (float.IsNegativeInfinity(best)) { Skip("stopped by walls", h.Dist, h.Walls, h.LossDb, h.Name); return; }
 
-            float openShare = BlastRecording.MeasureAt(h.Pos, out float roomM);
+            Measure(h.Pos);
+            float openShare = _measuredOpen, roomM = _measuredRoom;
             float enclosed = usesWay ? 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(BlastRecording.AllIndoorBelow, Plugin.BlastOutdoorShare.Value, openShare)) : 0f;
             float boosted = best + Plugin.ShockEnclosedDb.Value * enclosed;
             float level = boosted + Plugin.ShockLevelDb.Value;
@@ -235,7 +301,7 @@ namespace RealSoundSimulation.Fixes
             }
 
             float duck = Plugin.ShockDuckDb.Value * Mathf.Clamp01(1f + boosted / DuckRangeDb) * fade;
-            if (ConcussionProof.CutActive || ConcussionProof.WillCut(h.Dist)) duck = 0f; // the concussion cut is doing this job
+            if (ConcussionProof.CutActive || ConcussionProof.WillCut(h.Dist, dose)) duck = 0f; // the concussion cut is doing this job
             if (duck >= 0.1f) { _armed = true; _armAt = start; _armDepth = duck; Ducks++; }
             if (DiagLog.IsOpen) Row("1", "", way, h.Dist, path, bends, usesWay && w.Kind == WayKind.Route ? w.Closure : 0f, h.Walls, h.LossDb, enclosed, roomM, level, vol, cutoff, delay, h.Extra, duck, repeats, h.Name);
         }
