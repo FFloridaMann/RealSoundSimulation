@@ -55,6 +55,7 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset()
         {
+            Levels.Clear();
             Blasts = ChangedRecording = Layers = LayersMissed = 0;
             _openSum = _weightSum = 0;
         }
@@ -115,12 +116,40 @@ namespace RealSoundSimulation.Fixes
                 if (layered) Layers++; else LayersMissed++;
             }
             if (__result == null) return;
+            if (DiagLog.IsOpen) Levels.Add(new LevelCheck { S = __result, At = Time.time + distance / OwnEchoes.SpeedOfSound + LevelAfterS, Dist = distance, Pre = __result.source1 != null ? __result.source1.volume : 0f });
             Blasts++;
             if (_mainEnv != _gameEnv) ChangedRecording++;
             _openSum += _open; _weightSum += _weight;
             if (!DiagLog.IsOpen) return;
             DiagLog.Row("blastrec.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(position.x, "0.0"), DiagLog.F(position.y, "0.0"), DiagLog.F(position.z, "0.0"), DiagLog.F(distance, "0.0"),
                 _gameEnv.ToString(), DiagLog.F(_open, "0.00"), DiagLog.F(_weight, "0.00"), _mainEnv.ToString(), DiagLog.F(_mainGain, "0.00"), DiagLog.F(_layerGain, "0.00"), layered ? "1" : "0", DiagLog.F(Plugin.BlastCloseReachM.Value, "0"), DiagLog.F(_enclosure, "0.00"), DiagLog.F(_floor, "0.00")));
+        }
+
+        // 0.6.57: the level a blast's recording really played at, once the game's occlusion has been applied. raid_20261109_131528: a blast the user called "very quiet" had nothing that showed this.
+        public const string LevelHeader = "t,distM,volumeAtStart,volumeNow,occlusionFactor,gunsDb,mainDb,group";
+        private const float LevelAfterS = 0.15f;
+        private class LevelCheck { public BetterSource S; public float At, Dist, Pre; }
+        private static readonly System.Collections.Generic.List<LevelCheck> Levels = new System.Collections.Generic.List<LevelCheck>();
+
+        public static void TickLevels()
+        {
+            if (Levels.Count == 0) return;
+            float now = Time.time;
+            for (int i = Levels.Count - 1; i >= 0; i--)
+            {
+                LevelCheck l = Levels[i];
+                if (now < l.At) continue;
+                Levels.RemoveAt(i);
+                if (l.S == null || l.S.source1 == null || !DiagLog.IsOpen) continue;
+                float guns = float.NaN, main = float.NaN;
+                if (MonoBehaviourSingleton<BetterAudio>.Instantiated)
+                {
+                    BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
+                    if (ba.Master != null && ba.AudioMixerData != null) { ba.Master.GetFloat(ba.AudioMixerData.GunsMixerVolume, out guns); ba.Master.GetFloat(ba.AudioMixerData.MainMixerVolume, out main); }
+                }
+                AudioMixerGroup g = l.S.source1.outputAudioMixerGroup;
+                DiagLog.Row("blastlevel.csv", string.Join(",", DiagLog.F(now - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(l.Dist, "0.0"), DiagLog.F(l.Pre, "0.000"), DiagLog.F(l.S.source1.volume, "0.000"), DiagLog.F(l.S.OcclusionVolumeFactor, "0.000"), DiagLog.F(guns, "0.0"), DiagLog.F(main, "0.0"), g != null ? g.name : ""));
+            }
         }
 
         private static Exception Finalizer(Exception __exception)

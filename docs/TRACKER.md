@@ -125,10 +125,12 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Outdoor recording when you're outside (`6.6c`, 0.6.53; starting value)
 - [ ] Raid: beside a garage with a grenade inside, `6.6c` at 0 and 0.75
 - [x] Shock wave: pressure hit, closer thump, dip in other sounds (`6.9`-`6.9c`, 0.6.53; by ear)
+- [x] Long baked routes checked against the corner search; clear windows play from the window (0.6.57; hand-set limits)
+- [ ] Raid: a grenade in a building you're outside of; check blast.csv and glass.csv `reason` and `pathM`
+- [x] Bring Back Concussion's cut delayed instead of avoided (`6.9h`, `6.9i`, 0.6.57; by ear)
+- [ ] Raid: a grenade inside 7 m, `6.9h` off and on; check blastlevel.csv and the CONCUSSION SOUND CUT line
 - [x] Fragment pass-bys along the real flight path, with cracks up close (`6.7f`-`6.7i`, 0.6.56; by ear)
 - [ ] Raid: your own grenade and a bot's through a door, `6.7f` off and on; check passby.csv and the audio thread's late blocks
-- [x] Blast and echoes play past the concussion cut (`6.9h`, `6.9i`, 0.6.55; level by ear)
-- [ ] Raid: a grenade inside 7 m, `6.9h` off and on; set `6.9i` by ear
 - [x] Fragment hits from other rooms by route (`6.7c`-`6.7e`, 0.6.55; starting values)
 - [ ] Raid: a grenade in another room, `6.7c` off and on; check fragments.csv
 - [x] Shock wave through the building: by route, corners, enclosed boost, repeat hits, slow push (`6.9d`-`6.9g`, 0.6.54; by ear)

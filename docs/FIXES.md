@@ -660,15 +660,25 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 - **Enclosed.** By how shut in the blast point is (the rays from `6.6`): up to `6.9e` dB, `6.9f` repeat hits spaced by twice the room's mean hit distance over the speed of sound (6 to 50 ms) at −5, −9, −13, −17 dB, and a 55 to 36 Hz swell of 0.25 to 0.7 s (`6.9g`), longer in a small or shut room. Corridors aren't treated specially.
 - **Dip.** Applied on top of whatever else sets the control each frame, and put back only on a control nobody else has moved. Its depth follows the way.
 
+## Long routes checked against the world (0.6.57)
+
+**Problem.** `BestRoute` takes the shortest baked route, however long. raid_20261109_131528: a window and a blast at the car dealer 30 to 33 m away took 75 m routes and were placed towards the Capital.
+
+**Fix.** A window with nothing solid on a ray stopping 1.5 m short of it plays from the window (`clear to the window`). A route longer than 1.5 × the straight line + 6 m goes to the corner search (`6.8`): the shorter of the two is used. With no way found, the sound keeps its true direction, dulled and quieter as if around two corners. Bounces, which re-read every 0.1 s, skip the search, keep their true spot and are dulled. Hand-set limits.
+
+**Limits.** The corner search finds at most two corners, so a route needing more falls back to the true direction. The game's own route muffling is unchanged.
+
+**Check.** A grenade inside a building you're outside of; blast.csv and glass.csv `reason`, `pathM`.
+
 ## 6.9h: The blast survives concussion (0.6.55)
 
 **Problem.** Bring Back Concussion's `Cut Off Sound On Explosion`, for a blast inside its radius (7 m by default): Main, Guns, World and both ambience volumes go to as low as −80 dB, by closeness, in 0.05 to 0.3 s from the moment the grenade goes off, hold for 0.2 to 1.5 s, then fade back. Explosions and this mod's thumps, hits and echoes are on the Guns bus. User: "the echo and grenade background sounds bad it cuts out".
 
-**Fix.** `Fixes/ConcussionProof.cs`. Inside that mod's radius + 1 m, read from its own live setting, the blast's own voices go to the Master group, as the game's tinnitus ring does. The world still drops out around the bang. `6.9c`'s dip isn't used there, and any dip in progress ends before that mod reads the volumes it later restores.
+**Fix (0.6.57).** `Fixes/ConcussionProof.cs` holds back that mod's `ExplosionSoundCutoff.Trigger` by `6.9i` seconds, so the bang, thump and early echoes play at their normal level and then the world drops away. A later blast during the wait keeps the first time and the stronger cut. Any `6.9c` dip ends before that mod reads the volumes it later restores. 0.6.55 instead sent the blast to the Master group, as the game's tinnitus ring does, but that loses the Guns bus's gain.
 
-**Limits.** Master skips the Guns bus's own effects, so `6.9i` is by ear. Without that mod, or with `6.9h` off, nothing changes. Fragment hits and gunfire are still cut.
+**Limits.** The delay is by ear, and the last of the tail is still cut. It patches that mod's code by name; if that changes, the summary says not found and the cut happens at its normal time. The game's own ringing (no headset) isn't delayed.
 
-**Check.** A grenade inside 7 m, `6.9h` off and on; summary BLAST THROUGH CONCUSSION.
+**Check.** A grenade inside 7 m, `6.9h` off and on; summary CONCUSSION SOUND CUT; blastlevel.csv.
 
 ## 6.7c: Fragment hits by route (0.6.55)
 

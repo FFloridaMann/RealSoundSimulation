@@ -637,10 +637,7 @@ namespace RealSoundSimulation.Acoustics
         }
 
         // Returns true if a busy voice had to be stopped to make room.
-        public static bool LastDropped; public static int CapDropped;
-        public static UnityEngine.Audio.AudioMixerGroup OutputOverride; // 0.6.55: set by Fixes.ConcussionProof while a blast's own voices start
-        public static float VolumeTrim = 1f;
-        private static int _realVoices = -1;
+        public static bool LastDropped; public static int CapDropped;        private static int _realVoices = -1;
         private const int ReserveVoices = 32; // 0.6.37 (voice budget for step 6, was 16); the mod's own opening sounds are counted too
         public static int Allowed()
         {
@@ -671,11 +668,11 @@ namespace RealSoundSimulation.Acoustics
                 stole = true;
             }
             var ba = MonoBehaviourSingleton<BetterAudio>.Instantiated ? MonoBehaviourSingleton<BetterAudio>.Instance : null;
-            if (ba != null) pick.Src.outputAudioMixerGroup = OutputOverride != null ? OutputOverride : ba.GunshotMixerGroup; // 0.6.55: "6.9h"
+            if (ba != null) pick.Src.outputAudioMixerGroup = ba.GunshotMixerGroup;
             pick.Go.transform.position = pos;
             pick.Src.clip = clip;
             pick.Src.loop = loop;
-            pick.Src.volume = Mathf.Clamp01(volume * (OutputOverride != null ? VolumeTrim : 1f));
+            pick.Src.volume = Mathf.Clamp01(volume);
             pick.Src.pitch = pitch > 0f ? pitch : 1f;
             pick.Lp.cutoffFrequency = Mathf.Clamp(cutoff, minCutoff, 22000f);
             pick.Src.time = clipOffset > 0f && clip != null && clip.length > 0f ? Mathf.Repeat(clipOffset, clip.length) : 0f; // 0.6.14: late loop echoes

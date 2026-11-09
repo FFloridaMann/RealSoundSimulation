@@ -14,14 +14,14 @@ namespace RealSoundSimulation.Fixes
     // The game gives a whoosh only for shots from someone else whose gun isn't muffled to you, so never for your own grenades or a bot behind cover, and fragments never get a crack.
     //   path     each fragment's real flight is followed, so one out of a door is heard from that side and one that hit a wall makes none. A pass counts when the path's nearest point to you is within "6.7h" m with nothing solid between (one ray, only for those).
     //   sound    generated whizzes from high to a low bass, each pitched differently (soldiers' accounts: each fragment its own note, whiz to bass, screech, tearing), louder and brighter the closer it is; inside 1.5 m a short sharp crack too.
-    //   limit    "6.7i" per grenade (1.5 s), the last place kept for a close one. Inside the concussion radius they go past that cut too (6.9h). They obey the echo voice cap, so the game's own sounds keep their voices.
+    //   limit    "6.7i" per grenade (1.5 s), the last place kept for a close one. They obey the echo voice cap, so the game's own sounds keep their voices.
     // Fragments are told by speed (90 to 100 m/s in the item data). That's slower than real ones, so a pass lands later than it would. Sound shapes and levels are by ear. The game's own whoosh is left alone: it also drives the screen effect.
     [DefaultExecutionOrder(32000)]
     internal class FragmentPassBy : MonoBehaviour
     {
         public const string Header = "t,played,reason,missM,crack,volume,pitch,cutoffHz,clip";
 
-        private const float MaxFragmentSpeed = 150f, CrackM = 1.5f, WindowS = 1.5f, MinMissM = 0.4f, MinVolume = 0.002f, CrackDb = -3f;
+        private const float MaxFragmentSpeed = 150f, CrackM = 1.5f, WindowS = 1.5f, MinMissM = 0.4f, MinVolume = 0.05f, CrackDb = -3f;
         private class Entry { public int Index; public bool Done; }
 
         private static readonly Dictionary<Shot, Entry> Seen = new Dictionary<Shot, Entry>();
@@ -129,37 +129,30 @@ namespace RealSoundSimulation.Fixes
             if (now >= _windowEnd) { _windowEnd = now + WindowS; _windowCount = 0; }
             int budget = Plugin.FragmentPassCount.Value;
             bool close = miss <= CrackM;
+            float db = Plugin.FragmentPassDb.Value - 6f * Mathf.Log(Mathf.Max(miss, MinMissM), 2f);
+            float vol = Mathf.Clamp01(Mathf.Pow(10f, db / 20f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(reach * 0.7f, reach, miss)));
+            if (vol < MinVolume) { Skip("too quiet", miss); return; } // 0.6.57: before the limit, so a near-silent one can't use up a place
             if (_windowCount >= budget || (!close && _windowCount >= budget - 1)) { Skip("over the limit", miss); return; }
 
             BuildClips();
-            float db = Plugin.FragmentPassDb.Value - 6f * Mathf.Log(Mathf.Max(miss, MinMissM), 2f);
-            float vol = Mathf.Clamp01(Mathf.Pow(10f, db / 20f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(reach * 0.7f, reach, miss)));
-            if (vol < MinVolume) { Skip("too quiet", miss); return; }
-
-            bool set = ConcussionProof.RecentBlast && !ConcussionProof.Active;
-            if (set) ConcussionProof.Set();
-            try
+            AudioClip clip = _whiz[Rng.Next(_whiz.Length)];
+            float pitch = 0.8f + (float)Rng.NextDouble() * 0.45f;
+            float cutoff = Mathf.Lerp(12000f, 3000f, Mathf.InverseLerp(MinMissM, reach, miss));
+            double start = AudioSettings.dspTime + 0.005;
+            Vector3 at = miss > 0.05f ? near : listener + Vector3.forward;
+            EchoVoices.Play(clip, clip, at, start, clip.length / pitch, false, vol, pitch, cutoff, 0f);
+            if (EchoVoices.LastDropped) { Skip("no voice free", miss); return; }
+            bool cracked = false;
+            if (close)
             {
-                AudioClip clip = _whiz[Rng.Next(_whiz.Length)];
-                float pitch = 0.8f + (float)Rng.NextDouble() * 0.45f;
-                float cutoff = Mathf.Lerp(12000f, 3000f, Mathf.InverseLerp(MinMissM, reach, miss));
-                double start = AudioSettings.dspTime + 0.005;
-                Vector3 at = miss > 0.05f ? near : listener + Vector3.forward;
-                EchoVoices.Play(clip, clip, at, start, clip.length / pitch, false, vol, pitch, cutoff, 0f);
-                if (EchoVoices.LastDropped) { Skip("no voice free", miss); return; }
-                bool cracked = false;
-                if (close)
-                {
-                    float cv = Mathf.Clamp01(Mathf.Pow(10f, (db + CrackDb) / 20f));
-                    EchoVoices.Play(_crack, _crack, at, start, _crack.length, false, cv, 1f, 22000f, 0f);
-                    cracked = !EchoVoices.LastDropped;
-                    if (cracked) Cracks++;
-                }
-                _windowCount++;
-                Passes++; _missSum += miss;
-                if (DiagLog.IsOpen) Row("1", "", miss, cracked ? "1" : "0", vol, pitch, cutoff, clip.name);
+                float cv = Mathf.Clamp01(Mathf.Pow(10f, (db + CrackDb) / 20f));
+                EchoVoices.Play(_crack, _crack, at, start, _crack.length, false, cv, 1f, 22000f, 0f);
+                cracked = !EchoVoices.LastDropped;
+                if (cracked) Cracks++;
             }
-            finally { if (set) ConcussionProof.Clear(); }
+            _windowCount++;
+            Passes++; _missSum += miss;
+            if (DiagLog.IsOpen) Row("1", "", miss, cracked ? "1" : "0", vol, pitch, cutoff, clip.name);
         }
 
         private static void Skip(string why, float miss)

@@ -200,7 +200,8 @@ namespace RealSoundSimulation.Fixes
             if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why))
             {
                 if (why == "same room" && !BlastRecording.InLayer) ShockWave.NoteClear(blast, "same room"); // 0.6.54: "6.9"
-                if (why != "both outdoors" || !Corner(sas, c, source, listener, blast, straight)) Skip(why, straight);
+                bool tooLong = why == TooLong;
+                if ((why != "both outdoors" && !tooLong) || !Corner(sas, c, source, listener, blast, straight, tooLong ? path : 0f, near, openings)) Skip(why, straight);
                 return;
             }
 
@@ -276,11 +277,11 @@ namespace RealSoundSimulation.Fixes
         private static double _cornerMovedSum;
         private static bool _cBlocked;
         private static CornerSearch.Job _cJob;
-        private class CornerVoice { public CornerSearch.Job J; public int Serial; public BetterSource S; public AudioSourceContainer C; public Vector3 Listener, Blast; public float Straight; public bool Layer; public double Dsp; }
+        private class CornerVoice { public CornerSearch.Job J; public int Serial; public BetterSource S; public AudioSourceContainer C; public Vector3 Listener, Blast, BakedNear; public float Straight, BakedPath; public int BakedOpenings; public bool Layer; public double Dsp; }
         private static readonly List<CornerVoice> CornerVoices = new List<CornerVoice>();
 
         // True when this blast was dealt with here. The second recording (6.6) comes straight after the first and uses the same search.
-        private static bool Corner(SpatialAudioSystem sas, AudioSourceContainer c, BetterSource source, Vector3 listener, Vector3 blast, float straight)
+        private static bool Corner(SpatialAudioSystem sas, AudioSourceContainer c, BetterSource source, Vector3 listener, Vector3 blast, float straight, float bakedPath, Vector3 bakedNear, int bakedOpenings)
         {
             if (!Plugin.BlastCornerOn.Value || straight < 0.01f) return false;
             bool layer = BlastRecording.InLayer;
@@ -300,11 +301,11 @@ namespace RealSoundSimulation.Fixes
             if (!_cBlocked) return false;
 
             double dsp = AudioSettings.dspTime;
-            if (_cJob == null || _cJob.Done) ApplyCorner(source, c, listener, blast, straight, _cJob, layer, dsp);
+            if (_cJob == null || _cJob.Done) ApplyCorner(source, c, listener, blast, straight, _cJob, layer, dsp, bakedPath, bakedNear, bakedOpenings);
             else
             {
                 if (!layer) ShockWave.NoteWaiting(blast); // 0.6.54: "6.9" waits for the answer too
-                CornerVoices.Add(new CornerVoice { J = _cJob, Serial = _cJob.Serial, S = source, C = c, Listener = listener, Blast = blast, Straight = straight, Layer = layer, Dsp = dsp });
+                CornerVoices.Add(new CornerVoice { J = _cJob, Serial = _cJob.Serial, S = source, C = c, Listener = listener, Blast = blast, Straight = straight, Layer = layer, Dsp = dsp, BakedPath = bakedPath, BakedNear = bakedNear, BakedOpenings = bakedOpenings });
             }
             return true;
         }
@@ -316,16 +317,19 @@ namespace RealSoundSimulation.Fixes
                 CornerVoice v = CornerVoices[i];
                 if (v.J.Serial == v.Serial && !v.J.Done) continue;
                 CornerVoices.RemoveAt(i);
-                if (v.S != null) ApplyCorner(v.S, v.C, v.Listener, v.Blast, v.Straight, v.J.Serial == v.Serial ? v.J : null, v.Layer, v.Dsp);
+                if (v.S != null) ApplyCorner(v.S, v.C, v.Listener, v.Blast, v.Straight, v.J.Serial == v.Serial ? v.J : null, v.Layer, v.Dsp, v.BakedPath, v.BakedNear, v.BakedOpenings);
             }
         }
 
-        private static void ApplyCorner(BetterSource source, AudioSourceContainer c, Vector3 listener, Vector3 blast, float straight, CornerSearch.Job job, bool layer, double playedDsp)
+        private static void ApplyCorner(BetterSource source, AudioSourceContainer c, Vector3 listener, Vector3 blast, float straight, CornerSearch.Job job, bool layer, double playedDsp, float bakedPath, Vector3 bakedNear, int bakedOpenings)
         {
             bool found = job != null && job.Found;
+            // 0.6.57: a long baked route only wins if the search found nothing shorter
+            bool useBaked = found && bakedPath > 0f && job.Path >= bakedPath;
+            Vector3 foundNear = useBaked ? bakedNear : found ? job.Near : Vector3.zero;
             Vector3 toBlast = blast - listener;
-            Vector3 toNear = found ? job.Near - listener : toBlast;
-            float nearM = toNear.magnitude, movedDeg = 0f, path = found ? job.Path : 0f;
+            Vector3 toNear = found ? foundNear - listener : toBlast;
+            float nearM = toNear.magnitude, movedDeg = 0f, path = useBaked ? bakedPath : found ? job.Path : 0f;
             if (found && nearM > 0.01f)
             {
                 float blend = Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.BlastOpeningStrength.Value);
@@ -341,13 +345,13 @@ namespace RealSoundSimulation.Fixes
                 }
             }
 
-            int corners = found ? job.Corners : 2;
+            int corners = useBaked ? bakedOpenings : found ? job.Corners : 2;
             float cut = PortalPositioning.DullHzFor(toBlast, toNear, true, corners, Plugin.BlastDullStrength.Value);
             FilterVoice(source, cut);
             float lossDb = Mathf.Min(Plugin.BlastCornerLossDb.Value * (found ? corners : 2f), CornerMaxLossDb);
             ScaleVoice(source, Mathf.Pow(10f, -lossDb / 20f));
 
-            if (!layer) ShockWave.NoteCorner(blast, found, path, corners, Vector3.Angle(toBlast, toNear), found ? job.Near : Vector3.zero); // 0.6.54: "6.9"
+            if (!layer) ShockWave.NoteCorner(blast, found, path, corners, Vector3.Angle(toBlast, toNear), foundNear); // 0.6.54: "6.9"
             if (!layer && found) { CornerFound++; _cornerMovedSum += movedDeg; }
             if (!layer) CornerRow(found ? "1" : "0", found ? "around a corner" : job == null ? "search busy" : "no way round", straight, path, found ? corners : 0, Vector3.Angle(toBlast, toNear), movedDeg, cut, lossDb);
         }
@@ -428,7 +432,14 @@ namespace RealSoundSimulation.Fixes
             string clip = source.source1 != null && source.source1.clip != null ? source.source1.clip.name : "";
             if (straight < 0.01f) return;
             if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { GlassSkip("no container", at, straight, clip); return; }
-            if (!FindRoute(sas, c, at, listener, out Vector3 near, out float path, out int openings, out float _, out string why)) { GlassSkip(why, at, straight, clip); return; }
+            int rayMask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            // 0.6.57: nothing solid between you and the window: you're hearing the pane, whatever the room map's routes say.
+            if (straight > PaneShortM && !CountedRay.Raycast(listener, toGlass / straight, straight - PaneShortM, rayMask, QueryTriggerInteraction.Ignore)) { GlassSkip("clear to the window", at, straight, clip); return; }
+            if (!FindRoute(sas, c, at, listener, out Vector3 near, out float path, out int openings, out float _, out string why))
+            {
+                if (why != TooLong) { GlassSkip(why, at, straight, clip); return; }
+                ResolveLong(listener, at, rayMask, ref near, ref path, ref openings);
+            }
 
             Vector3 toNear = near - listener;
             float nearM = toNear.magnitude;
@@ -481,7 +492,7 @@ namespace RealSoundSimulation.Fixes
         private static double _fragCutLogSum, _fragLossSum;
         private static ISpatialAudioRoom _fragRoom;
         private static float _fragUntil, _fragPath;
-        private static bool _fragFound;
+        private static bool _fragFound, _fragTrueSpot;
         private static Vector3 _fragNear;
         private static int _fragOpenings;
         private static string _fragWhy = "";
@@ -515,7 +526,7 @@ namespace RealSoundSimulation.Fixes
             float straight = toHit.magnitude;
             if (straight < 0.01f) return;
             if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { FragmentSkip("no container", at, straight); return; }
-            if (!FragmentRoute(sas, c, at, listener, out Vector3 near, out float path, out int openings, out string why)) { FragmentSkip(why, at, straight); return; }
+            if (!FragmentRoute(sas, c, at, listener, straight, out Vector3 near, out float path, out int openings, out string why)) { FragmentSkip(why, at, straight); return; }
 
             Vector3 toNear = near - listener;
             float nearM = toNear.magnitude;
@@ -539,7 +550,7 @@ namespace RealSoundSimulation.Fixes
             FragmentRow("1", "", at, straight, path, openings, blocked ? "1" : "0", cut, lossDb);
         }
 
-        private static bool FragmentRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 at, Vector3 listener, out Vector3 near, out float path, out int openings, out string why)
+        private static bool FragmentRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 at, Vector3 listener, float straight, out Vector3 near, out float path, out int openings, out string why)
         {
             near = Vector3.zero; path = 0f; openings = 0; why = "";
             ISpatialAudioRoom room = c.CurrentAudioRoom;
@@ -550,10 +561,19 @@ namespace RealSoundSimulation.Fixes
             if (!ReferenceEquals(room, _fragRoom) || now >= _fragUntil)
             {
                 _fragFound = FindRoute(sas, c, at, listener, out _fragNear, out _fragPath, out _fragOpenings, out float _, out _fragWhy);
+                _fragTrueSpot = false;
+                if (!_fragFound && _fragWhy == TooLong)
+                {
+                    int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+                    Vector3 before = _fragNear;
+                    ResolveLong(listener, at, mask, ref _fragNear, ref _fragPath, ref _fragOpenings);
+                    _fragTrueSpot = _fragNear == at && _fragNear != before;
+                    _fragFound = true;
+                }
                 _fragRoom = room;
                 _fragUntil = now + FragmentCacheS;
             }
-            near = _fragNear; path = _fragPath; openings = _fragOpenings; why = _fragWhy;
+            near = _fragTrueSpot ? at : _fragNear; path = _fragTrueSpot ? straight : _fragPath; openings = _fragOpenings; why = _fragWhy;
             return _fragFound;
         }
 
@@ -588,6 +608,21 @@ namespace RealSoundSimulation.Fixes
                    $"; left at the window: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; no occlusion pass (your own room, or not played) {GlassNoPass}  (glass.csv)\n";
         }
 
+        private const float MaxDetourRatio = 1.5f, MaxDetourExtraM = 6f, PaneShortM = 1.5f;
+        private const string TooLong = "route too long";
+
+        // A baked route that looks wrong, checked against the real world (0.6.57). A shorter way found by rays replaces it; one the search can't beat stays. With no way found the sound keeps its true direction, dulled and quieter as if around two corners.
+        private static void ResolveLong(Vector3 listener, Vector3 at, int mask, ref Vector3 near, ref float path, ref int openings)
+        {
+            CornerSearch.Job j = CornerSearch.Get(listener, at + Vector3.up * CornerLiftM, mask, false);
+            if (j != null && j.Done && j.Found)
+            {
+                if (j.Path < path) { near = j.Near; path = j.Path; openings = j.Corners; }
+                return;
+            }
+            near = at; path = Vector3.Distance(at, listener); openings = 2;
+        }
+
         private static bool FindRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 source, Vector3 listener, out Vector3 near, out float path, out int openings, out float closure, out string why)
         {
             near = Vector3.zero; path = 0f; openings = 0; closure = 0f; why = "";
@@ -598,6 +633,9 @@ namespace RealSoundSimulation.Fixes
             if (!sas.TryGetMatchingRoomPair(room, out RoomPair pair, out bool reversed) || pair == null || pair.Routes == null || pair.Routes.Length == 0) { why = "no route"; return false; }
             if (!DataProvider.TryGetData<SpatialAudioDataContainer>(out SpatialAudioDataContainer data) || data == null) { why = "no route data"; return false; }
             if (!BestRoute(data, pair, reversed, source, listener, out near, out path, out openings, out closure)) { why = "no usable route"; return false; }
+            // 0.6.57: raid_20261109_131528, a window at the car dealer 32 m away with a baked route of 75 m: it was heard from the Capital. User: "i threw a grenade at the cardealer adn heard glass break in the capital".
+            // A route this much longer than the straight line is suspect, so the callers check it against the corner search (6.8). Bounces, which re-read every 0.1 s, just keep their true spot and get dulled.
+            if (path > Vector3.Distance(source, listener) * MaxDetourRatio + MaxDetourExtraM) { why = TooLong; return false; }
             return true;
         }
 
@@ -657,7 +695,11 @@ namespace RealSoundSimulation.Fixes
             b.NextScan = now + BounceScanS;
             b.HasRoute = false;
             if (!GoContainersRef(sas).TryGetValue(b.G.gameObject.GetInstanceID(), out AudioSourceContainer c) || c == null) return;
-            if (!FindRoute(sas, c, b.G.transform.position, listener, out Vector3 near, out float path, out int openings, out float _, out string _)) return;
+            if (!FindRoute(sas, c, b.G.transform.position, listener, out Vector3 near, out float path, out int openings, out float _, out string why))
+            {
+                if (why != TooLong) return;
+                near = b.G.transform.position; path = straight; openings = 2;
+            }
             b.Near = near; b.Path = path; b.HasRoute = true;
             if (!Plugin.BlastDullOn.Value) return;
             int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
@@ -747,7 +789,7 @@ namespace RealSoundSimulation.Fixes
         private void LateUpdate()
         {
             Perf.Begin();
-            try { CornerSearch.Tick(); TickCornerVoices(); }
+            try { CornerSearch.Tick(); TickCornerVoices(); BlastRecording.TickLevels(); }
             catch (Exception e) { DiagRunner.ReportOnce("6.8 corner search", e); }
             finally { Perf.End(Perf.Part.BlastFromOpening); }
             if (Bouncers.Count > 0)

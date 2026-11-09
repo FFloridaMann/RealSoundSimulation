@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.57 — 9 Nov 2026 (long routes checked against the world; concussion cut delayed)
+**Run in game:** not yet.
+- **Bug fix: a long baked route no longer moves a sound on its own say-so.** raid_20261109_131528: a window at the car dealer, 32 m away, took a 75 m route and was heard towards the Capital; the blast there did the same. User: "i threw a grenade at the cardealer adn heard glass break in the capital". A window with nothing solid between you and it plays from the window. A route longer than 1.5 x the straight line + 6 m is checked against the corner search: blasts, glass and fragments use the shorter of the two; with no way found they keep the true direction, dulled and quieter as if around two corners. Bounces keep their true spot and are dulled. `reason` can be `clear to the window`.
+- **`6.9h` reworked: Bring Back Concussion's cut is delayed instead of avoided.** `6.9h Delay concussion sound cut` (on) and `6.9i Concussion cut delay s` (0.8, 0 to 3), replacing 0.6.55's Master routing, which lost the Guns bus's gain: a blast at 6.9 m was heard as "very quiet". That cause is likely, not proven. Everything stays on its normal channel, and that mod's cut starts after the delay. It patches that mod's cut by name, and if the mod changes the cut just happens at its normal time. The game's own ringing isn't delayed.
+- New blastlevel.csv: the level each blast's recording really played at, once the game's occlusion is applied.
+- Fragment pass-bys under volume 0.05 no longer play or use up a place.
+- Version 0.6.57. F12 still has 143 settings.
+
 ## 0.6.56 — 9 Nov 2026 (6.7f: fragment pass-bys)
 **Run in game:** not yet. Sound shapes and levels are by ear; the voice and CPU cost are estimates until a raid.
 - **New `6.7f Fragment pass-bys`** (on, live; `Fixes/FragmentPassBy.cs`), `6.7g` level (0 dB, −24 to +12), `6.7h` reach (5 m, 1 to 15) and `6.7i` per grenade (4, 1 to 12). User: "what if 1 fragment comes out the door at me", "grenade fragments do make alot of noise though and cracks". Each fragment's real flight is followed. A path within reach with nothing solid between plays a generated whiz, high to low bass and pitched per fragment, and inside 1.5 m a short crack. Works for your own grenades and for bots behind cover, which the game's whoosh skips. The game's own whoosh is left alone.
