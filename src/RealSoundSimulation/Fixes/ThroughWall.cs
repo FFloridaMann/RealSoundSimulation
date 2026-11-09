@@ -126,7 +126,7 @@ namespace RealSoundSimulation.Fixes
 
         private static void ExplosionPostfix(Vector3 position, SoundBank bank)
         {
-            if (!Plugin.ThumpOn.Value || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
+            if (BlastRecording.InLayer || !Plugin.ThumpOn.Value || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
             Perf.Begin();
             try
             {

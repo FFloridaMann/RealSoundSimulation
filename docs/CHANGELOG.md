@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.49 — 9 Nov 2026 (6.6, 6.7: blast recording by how open it is; glass by route)
+**Run in game:** not yet. All values are starting values.
+- **New `6.6 Blast recording by how open it is`** (on, live; `Fixes/BlastRecording.cs`) and `6.6a Open share for all outdoor` (0.4, 0.15 to 0.9). User, 9 Nov 2026: a grenade at the mouth of a garage "sounded fully indoors but the garage opens to the front to full open air". The game plays its indoor or outdoor recording, all or nothing, by its own indoor boxes. Now 48 rays from the blast measure how open it is and the two recordings blend, the weaker on a second voice that follows the same distance, delay, occlusion, opening and dulling. That second voice adds no second thump or echoes.
+- **New `6.6b Close recording reach m`** (25, 10 to 60, live; 10 = the game). The game fades to its distant recording between 10 and 30 m, so a blast 27 m away was about 85% distant. User: "grenades are still not violent enough".
+- **New `6.7 Glass from other rooms by route`** (on, live), `6.7a` dulling (1, 0 to 2) and `6.7b` loss per opening (4 dB, 0 to 12, 16 at most). User: glass broke "a few walls and turns" away and "sounded a bit loud". It now comes from the opening, dulled and quieter by the route. A window of your own room is untouched.
+- New blastrec.csv and glass.csv; BLAST RECORDING and GLASS BY ROUTE summary lines.
+- Not proven: that the game chose its indoor recording in raid_20261109_105838. Nothing logged it; blastrec.csv `gameEnv` does now. The open-air thump (`6.2i`) is unchanged.
+- Version 0.6.49. F12 now has 121 settings.
+
 ## 0.6.48 — 9 Nov 2026 (6.3e: room echoes from the opening)
 **Run in game:** not yet. Levels are worked out by hand, not measured.
 - **New `6.3e Room echoes from the opening`** (on, live), `6.3f` level (0 dB, −24 to +12) and `6.3g` count (4, 1 to 6). raid_20261109_102037: 8 of 11 explosions had no echo, because one bounce needs a wall both the blast and you can reach. An explosion in another room now also sends reflections out through the opening it reaches you by: path = route + 6, 12, 20, 32 m; level +3 − 20 log10(path / 2) − 2 dB per echo; each duller than the last. They fade out over the second half of `6.3c`.

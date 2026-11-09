@@ -6,6 +6,7 @@ using RealSoundSimulation.Acoustics;
 using RealSoundSimulation.Diagnostics;
 using EFT;
 using EFT.DataProviding;
+using EFT.Interactive;
 using HarmonyLib;
 using UnityEngine;
 
@@ -28,6 +29,10 @@ namespace RealSoundSimulation.Fixes
     // 0.6.42: the grenade's bounces too. User, 9 Nov 2026: "grenades bouncing on the ground noise still coming from true direction". Each grenade has its own
     // voice that the game keeps on the grenade every frame (Update), so it's re-placed here in LateUpdate, like 6.1, with the route re-read every 0.1 s while
     // the grenade moves or the voice plays. The game's occlusion for it follows the grenade's own transform, not the voice, so it needs no offset.
+    //
+    // 0.6.49 "6.7": a window breaking in another room. User, 9 Nov 2026: a grenade in the hallway broke glass "a few walls and turns" away and "it sounded a bit loud".
+    // The game plays glass at the pane, and only if the window isn't part of your room does it run the one-shot occlusion, route loss only. That pass is the hook
+    // here, so a window of your own room is never touched. Same route, placement and dulling rule as a blast (strength "6.7a"), plus "6.7b" dB per opening, 16 at most.
     [DefaultExecutionOrder(32000)]
     internal class BlastFromOpening : MonoBehaviour
     {
@@ -80,6 +85,10 @@ namespace RealSoundSimulation.Fixes
             h.Patch(AccessTools.Method(typeof(AudioSourceContainer), nameof(AudioSourceContainer.Clear)), postfix: new HarmonyMethod(typeof(BlastFromOpening), nameof(ClearPostfix)));
             h.Patch(AccessTools.Method(typeof(Grenade), nameof(Grenade.InitAudioSource)), postfix: new HarmonyMethod(typeof(BlastFromOpening), nameof(GrenadeInitPostfix)));
             h.Patch(AccessTools.Method(typeof(Grenade), nameof(Grenade.ReleaseAudioSource)), prefix: new HarmonyMethod(typeof(BlastFromOpening), nameof(GrenadeReleasePrefix)));
+            var glassPre = new HarmonyMethod(typeof(BlastFromOpening), nameof(GlassPrefix));
+            var glassFin = new HarmonyMethod(typeof(BlastFromOpening), nameof(GlassFinalizer));
+            h.Patch(AccessTools.Method(typeof(WindowBreaker), nameof(WindowBreaker.PlayHitSound)), prefix: glassPre, finalizer: glassFin);
+            h.Patch(AccessTools.Method(typeof(WindowBreaker), nameof(WindowBreaker.PlayPieceSound)), prefix: glassPre, finalizer: glassFin);
         }
 
         public static void Reset()
@@ -87,6 +96,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Filters) if (kv.Value.Lp != null && kv.Value.Lp.enabled) kv.Value.Lp.enabled = false;
             Filters.Clear(); Skips.Clear(); Bouncers.Clear();
             _pending = _anyOn = false;
+            _glass = false; GlassMoved = GlassLeft = GlassNoPass = 0; GlassSkips.Clear(); _glassCutLogSum = _glassLossSum = 0;
             Moved = Dulled = BounceGrenades = RoomPlayed = RoomDropped = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = _roomLevelSum = 0;
         }
 
@@ -137,6 +147,16 @@ namespace RealSoundSimulation.Fixes
 
         private static void OcclusionPostfix(SpatialAudioSystem __instance, BetterSource source, int __result)
         {
+            if (_glass)
+            {
+                _glass = false;
+                if (!Plugin.GlassRouteOn.Value) return;
+                Perf.Begin();
+                try { HandleGlass(__instance, source, __result); }
+                catch (Exception e) { DiagRunner.ReportOnce("6.7 glass by route", e); }
+                finally { Perf.End(Perf.Part.BlastFromOpening); }
+                return;
+            }
             if (!_pending) return;
             _pending = false;
             if (!Wanted && !Plugin.RoomEchoOn.Value) return;
@@ -171,11 +191,11 @@ namespace RealSoundSimulation.Fixes
                     c.SetPositionOffset(blast - placed); // the game's occlusion stays at the true spot
                     movedDeg = Vector3.Angle(toBlast, dir);
                     moved = true;
-                    Moved++; _movedSum += movedDeg;
+                    if (!BlastRecording.InLayer) { Moved++; _movedSum += movedDeg; }
                 }
             }
 
-            bool dull = Plugin.BlastDullOn.Value, room = Plugin.RoomEchoOn.Value;
+            bool dull = Plugin.BlastDullOn.Value, room = Plugin.RoomEchoOn.Value && !BlastRecording.InLayer;
             if ((dull || room) && straight > 0.01f)
             {
                 int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
@@ -185,7 +205,7 @@ namespace RealSoundSimulation.Fixes
                 {
                     cutoff = cut;
                     FilterVoice(source, cutoff);
-                    Dulled++; _cutLogSum += Mathf.Log(cutoff);
+                    if (!BlastRecording.InLayer) { Dulled++; _cutLogSum += Mathf.Log(cutoff); }
                 }
                 if (room)
                 {
@@ -217,6 +237,99 @@ namespace RealSoundSimulation.Fixes
                 if (DiagLog.IsOpen)
                     DiagLog.Row("echoes.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), "explosion", count.ToString(), i.ToString(), "Room", "", DiagLog.F(p, "0.0"), DiagLog.F(delay * 1000f, "0"), DiagLog.F(lvl, "0.0"), "0", DiagLog.F(c, "0"), "", "", stole ? "1" : "0"));
             }
+        }
+
+        // ---- 6.7: glass (0.6.49)
+        private const float GlassMaxLossDb = 16f;
+        public const string GlassHeader = "t,x,y,z,moved,reason,distM,pathM,openings,lineBlocked,cutoffHz,lossDb,clip";
+        private static readonly AccessTools.FieldRef<BetterSource, float> PreVolumeRef = AccessTools.FieldRefAccess<BetterSource, float>("PreOcclusionVolume");
+        private static readonly AccessTools.FieldRef<SuperSource, float> SecondPreRef = AccessTools.FieldRefAccess<SuperSource, float>("_secondPreEffectsVolume");
+        private static readonly Dictionary<string, int> GlassSkips = new Dictionary<string, int>();
+        private static bool _glass;
+        private static Vector3 _glassAt;
+        public static int GlassMoved, GlassLeft, GlassNoPass;
+        private static double _glassCutLogSum, _glassLossSum;
+
+        private static void GlassPrefix(ref Vector3 hitPoint)
+        {
+            _glass = true;
+            _glassAt = hitPoint;
+        }
+
+        // Still set: the game ran no occlusion for this one, so it's a window of your own room or the sound didn't play (out of range, too many at once).
+        private static Exception GlassFinalizer(Exception __exception)
+        {
+            if (_glass)
+            {
+                _glass = false;
+                GlassNoPass++;
+                GlassRow("0", "no occlusion pass", _glassAt, 0f, 0f, 0, "", 0f, 0f, "");
+            }
+            return __exception;
+        }
+
+        private static void HandleGlass(SpatialAudioSystem sas, BetterSource source, int containerId)
+        {
+            Transform lt = sas.ListenerTransform;
+            if (lt == null || source == null) return;
+            Vector3 listener = lt.position, at = _glassAt, toGlass = at - listener;
+            float straight = toGlass.magnitude;
+            string clip = source.source1 != null && source.source1.clip != null ? source.source1.clip.name : "";
+            if (straight < 0.01f) return;
+            if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { GlassSkip("no container", at, straight, clip); return; }
+            if (!FindRoute(sas, c, at, listener, out Vector3 near, out float path, out int openings, out float _, out string why)) { GlassSkip(why, at, straight, clip); return; }
+
+            Vector3 toNear = near - listener;
+            float nearM = toNear.magnitude;
+            if (nearM > 0.01f)
+            {
+                float blend = Mathf.Clamp01(nearM / NearFadeM);
+                Vector3 dir = Vector3.Slerp(toGlass / straight, toNear / nearM, blend).normalized;
+                Vector3 placed = listener + dir * Mathf.Lerp(straight, Mathf.Max(path, straight), blend);
+                source.Position = placed;
+                c.SetPositionOffset(c._positionOffset + (at - placed)); // keeps the game's own 1 m shift into the room
+            }
+
+            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            bool blocked = CountedRay.Raycast(listener, toGlass / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
+            float cut = PortalPositioning.DullHzFor(toGlass, toNear, blocked, openings, Plugin.GlassDullStrength.Value);
+            FilterVoice(source, cut);
+
+            float lossDb = Mathf.Min(Plugin.GlassLossDb2.Value * openings, GlassMaxLossDb);
+            float gain = Mathf.Pow(10f, -lossDb / 20f);
+            PreVolumeRef(source) *= gain;
+            if (source.source1 != null) source.source1.volume *= gain;
+            if (source is SuperSource s)
+            {
+                SecondPreRef(s) *= gain;
+                if (s.source2 != null) s.source2.volume *= gain;
+            }
+
+            GlassMoved++; _glassCutLogSum += Mathf.Log(cut); _glassLossSum += lossDb;
+            GlassRow("1", "", at, straight, path, openings, blocked ? "1" : "0", cut, lossDb, clip);
+        }
+
+        private static void GlassSkip(string why, Vector3 at, float dist, string clip)
+        {
+            GlassLeft++;
+            GlassSkips.TryGetValue(why, out int n); GlassSkips[why] = n + 1;
+            GlassRow("0", why, at, dist, 0f, 0, "", 0f, 0f, clip);
+        }
+
+        private static void GlassRow(string moved, string why, Vector3 at, float dist, float path, int openings, string blocked, float cut, float lossDb, string clip)
+        {
+            if (!DiagLog.IsOpen) return;
+            DiagLog.Row("glass.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(at.x, "0.0"), DiagLog.F(at.y, "0.0"), DiagLog.F(at.z, "0.0"), moved, why,
+                DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), openings.ToString(), blocked, DiagLog.F(cut, "0"), DiagLog.F(lossDb, "0.0"), clip));
+        }
+
+        public static string GlassSummary()
+        {
+            var parts = new List<string>();
+            foreach (var kv in GlassSkips) parts.Add($"{kv.Key} {kv.Value}");
+            return $"GLASS BY ROUTE (6.7 {(Plugin.GlassRouteOn.Value ? "ON" : "off")}): moved and dulled {GlassMoved}" +
+                   (GlassMoved > 0 ? $", typical cutoff {Mathf.Exp((float)(_glassCutLogSum / GlassMoved)):0} Hz, mean loss {_glassLossSum / GlassMoved:0.0} dB" : "") +
+                   $"; left at the window: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; no occlusion pass (your own room, or not played) {GlassNoPass}  (glass.csv)\n";
         }
 
         private static bool FindRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 source, Vector3 listener, out Vector3 near, out float path, out int openings, out float closure, out string why)
@@ -399,13 +512,14 @@ namespace RealSoundSimulation.Fixes
 
         private static void Skip(string why, float dist)
         {
+            if (BlastRecording.InLayer) return;
             Skips.TryGetValue(why, out int n); Skips[why] = n + 1;
             Row("0", why, dist, 0f, 0, 0f, 0f, "", 0f, 0f);
         }
 
         private static void Row(string moved, string why, float dist, float path, int openings, float turn, float movedDeg, string blocked, float cutoff, float closure)
         {
-            if (!DiagLog.IsOpen) return;
+            if (!DiagLog.IsOpen || BlastRecording.InLayer) return;
             DiagLog.Row("blast.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), moved, why, DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), openings.ToString(),
                 DiagLog.F(turn, "0"), DiagLog.F(movedDeg, "0"), blocked, DiagLog.F(cutoff, "0"), DiagLog.F(closure, "0.00")));
         }

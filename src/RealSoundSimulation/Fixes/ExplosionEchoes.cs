@@ -49,7 +49,7 @@ namespace RealSoundSimulation.Fixes
 
         private static void Postfix(Vector3 position, SoundBank bank)
         {
-            if (!Plugin.ExplosionEchoOn.Value || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
+            if (BlastRecording.InLayer || !Plugin.ExplosionEchoOn.Value || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
             Perf.Begin();
             try
             {

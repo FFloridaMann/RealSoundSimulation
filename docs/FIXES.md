@@ -605,6 +605,26 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** A closed door with a grenade or a bot behind it, `6.5` off and on; summary CLOSED DOORS for the materials read; `untagged` or `door elsewhere` there means those doors get the 0.7.
 
+## 6.6: Blast recording by how open it is (0.6.49)
+
+**Problem.** The game has indoor and outdoor grenade recordings and picks one, with no in-between, by its own indoor boxes at the blast point. Those are a separate map from the room map. raid_20261109_105838: two grenades near a garage front, room map outdoors, no occlusion and no dulling, and the user heard them as fully indoors. Which recording played wasn't logged, so this is the likely cause rather than a measured one. At 27 m the game also plays about 85% of its distant recording.
+
+**Fix.** `Fixes/BlastRecording.cs`, on `BetterAudio.PlayAtPointDistant`. 48 rays over the upper half of the sphere, 30 m long, from 0.6 m above the blast. Share open: 0.08 or less is all indoor, `6.6a` or more is all outdoor, a smooth equal-power blend between. The stronger recording takes the game's voice; the weaker is a second call to the same game method, so it has the same distance, delay, occlusion, opening and dulling, and 6.2, 6.3 and 6.3e skip it. Under −16 dB it isn't played. `6.6b` widens the close recording's reach for that call only.
+
+**Limits.** Starting values. A hall with a very high roof or a yard hemmed in by tall walls can read wrong. Beyond 200 m there's no indoor recording. The open-air thump (`6.2i`) is separate and still adds low end.
+
+**Check.** blastrec.csv: `gameEnv` against `outdoorWeight` at a garage front, deep inside and in the open. `6.6` off and on; `6.6b` at 10 and 25.
+
+## 6.7: Glass from other rooms by route (0.6.49)
+
+**Problem.** A window breaking in another room plays from the pane, with route loss only. User: "a few walls and turns" away and "it sounded a bit loud".
+
+**Fix.** `BlastFromOpening`, in the game's one-shot occlusion pass for the window sound, which the game skips for a window of your own room. Same route, placement and dulling rule as a blast (`6.7a`), plus `6.7b` dB per opening, 16 at most.
+
+**Limits.** Starting values. Only where a baked route exists.
+
+**Check.** Break a window from another room, `6.7` off and on; glass.csv shows the route, cutoff and loss.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

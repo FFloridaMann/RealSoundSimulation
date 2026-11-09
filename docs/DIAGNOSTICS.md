@@ -185,6 +185,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.47: the summary's CLOSED DOORS line lists the doors read by material, plus `untagged`, `no door` and `door elsewhere` (those get the 0.7 value).
 
+0.6.49: **blastrec.csv**, one row per explosion: `t`, `x,y,z` (the blast), `distM`, `gameEnv` (the recording the game chose), `openShare` (0 to 1, the rays that got out), `outdoorWeight`, `mainEnv` (the one on the main voice), `mainGain`, `layerGain` (0 = no second recording), `layerPlayed`, `closeReachM`. **glass.csv**, one row per window sound: `t`, `x,y,z`, `moved`, `reason` (why it stayed: `same room`, `both outdoors`, `no route`..., or `no occlusion pass`: your own room or it did not play), `distM`, `pathM`, `openings`, `lineBlocked`, `cutoffHz`, `lossDb`, `clip`. Summary: BLAST RECORDING and GLASS BY ROUTE lines.
+
 ### blast.csv (0.6.41, one row per explosion)
 `t`, `moved` (1 = 6.4 moved it), `reason` (why it stayed: `same room`, `both outdoors`, `no route`, `no room`, `no container`, `no route data`, `no usable route`; empty when a route was used), `distM`, `pathM` (length of the route), `openings`, `turnDeg` (between the opening and the true direction), `movedDeg` (how far the sound was actually moved), `lineBlocked`, `cutoffHz` (6.4b, 0 = not dulled), `closure` (shut-door total on the route). The summary's BLAST FROM THE OPENING line has the totals, including how many grenades had their bounces moved (0.6.42). Bounces have no rows of their own. thump.csv: an explosion with `walls` 0 now plays (0.6.42).
 

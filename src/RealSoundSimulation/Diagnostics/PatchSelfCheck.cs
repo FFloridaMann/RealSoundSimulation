@@ -20,6 +20,14 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly Target[] Targets =
         {
             // setting 0 gun sounds (SPT or SEB)
+            new Target("6.6", "BetterAudio", "PlayAtPointDistant", "M"),
+            new Target("6.6", "EFT.SoundBank", "BlendOptions", "F"),
+            new Target("6.6", "EFT.SoundBank", "HasEnvironment", "F"),
+            new Target("6.6", "EFT.DistanceBlendOptions", "Values", "F"),
+            new Target("6.7", "EFT.Interactive.WindowBreaker", "PlayHitSound", "M"),
+            new Target("6.7", "EFT.Interactive.WindowBreaker", "PlayPieceSound", "M"),
+            new Target("6.7", "BetterSource", "PreOcclusionVolume", "F"),
+            new Target("6.7", "SuperSource", "_secondPreEffectsVolume", "F"),
             new Target("6.2", "BetterAudio", "PlayAtPoint", "M"),
             new Target("6.2", "BetterAudio", "PlayAtPointDistant", "M"),
             new Target("6.3", "BetterAudio", "PlayAtPoint", "M"),

@@ -120,6 +120,10 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Raid: `6.3e` off and on with a grenade in the next room; `6.3f` by ear
 - [x] Closed doors muffle by material (`6.5`, `6.5a`, 0.6.47; hand-set values)
 - [ ] Raid: `6.5` off and on behind closed doors; check the CLOSED DOORS line reads real materials
+- [x] Explosion recording by how open the blast is; close recording reaches further (`6.6`-`6.6b`, 0.6.49; starting values)
+- [ ] Raid: grenades at a garage front, deep inside and in the open; check blastrec.csv `gameEnv` against `outdoorWeight`
+- [x] Glass from other rooms by route (`6.7`-`6.7b`, 0.6.49; starting values)
+- [ ] Raid: break a window from another room, `6.7` off and on; glass.csv
 - [x] Blasts dulled less than gunshots (`6.4c`, 0.6.46; starting value)
 - [ ] Try Bring Back Concussion's `Explosion Effect Radius` above 7 m (raid_20261109_100114: every blast 10 m or more away got no concussion)
 - [ ] Raid: `6.4` on and off with grenades in another room; `6.4a` at 0.5 if disorienting; `6.2h`, `6.2i` and `6.2j` (length and fade, 0.6.43-0.6.44) by ear, close blasts first
@@ -187,7 +191,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 115 settings, what each does, and what still reads it
+- [ ] List all 121 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
