@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.46 — 9 Nov 2026 (6.4c: blasts dulled less than gunshots)
+**Run in game:** not yet.
+- **New `6.4c Blast dulling strength`** (0.5, 0 to 2, live). raid_20261109_100114 (Ground Zero): the gunshot rule took four blasts 10 m away, behind two walls, to about 1.5 kHz; user: not "loud enough or concussive enough especially indoors". At 0.5 those go to about 5 kHz. Grenade bounces still use `6.1c`.
+- The same raid: every one of those blasts was beyond Bring Back Concussion's `Explosion Effect Radius` (7 m), so none concussed. That's the other mod's setting and wasn't changed.
+- Version 0.6.46. F12 now has 110 settings.
+
 ## 0.6.45 — 9 Nov 2026 (grenade thump and echoes in the hideout)
 **Run in game:** not yet.
 - **An explosion's thump (`6.2`) and echoes (`6.3`) now work in the hideout.** User, 9 Nov 2026: "can we make it work in the hide out?" The game only creates its spatial audio system when it loads a raid, so these fall back to the game's listener. If the sound probe hasn't run yet, walls are found on the HighPolyCollider and Terrain layers (LowPolyCollider if wall-sized); not checked against the hideout's own layers.

@@ -542,7 +542,7 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 - Right after the game sets up the blast's one-shot occlusion, it has already found the blast's room. Of the baked routes between that room and yours, the shortest is used; a shut door counts as 15 m. Guns read the game's finished route (6.1), but for a one-shot that only arrives after the sound starts.
 - The voice goes to `listener + direction(opening nearest you) × route length`, by `6.4a`, fading out within 1 m of the opening. It stays there while it rings.
 - The game's occlusion follows the voice's transform, so the container gets an offset back to the true spot (`SetPositionOffset`). The game doesn't clear that offset when a container is reused, so a postfix on `AudioSourceContainer.Clear` does.
-- `6.4b` dulls it with the rule from 6.1b. Our own filter goes back to neutral when the sound ends.
+- `6.4b` dulls it with the rule from 6.1b, at its own strength `6.4c` (0.5 since 0.6.46: raid_20261109_100114's blasts went to 1.5 kHz at the gunshot strength and felt weak; now about 5 kHz). Our own filter goes back to neutral when the sound ends.
 - `6.2h` raises only the explosion's thump, which stays at the true spot and still needs a wall on the straight line.
 
 | Grenade in raid_20261109_083938 | Thump now | With `6.2h` +12 |

@@ -21,7 +21,8 @@ namespace RealSoundSimulation.Fixes
     //   where    listener + direction(opening nearest you) x route length, as 6.1, by "6.4a". Fades out within 1 m of the opening. Stays there while it rings.
     //   occlusion the game's maths follows the voice's transform, so the container gets an offset back to the true spot (the game's own SetPositionOffset).
     //            The game doesn't clear that offset when a container is reused, so a postfix on Clear does.
-    //   tone     the same rule as 6.1b ("6.4b", strength and floor from 6.1c and 6.1d), on our own filter, back to neutral when the sound ends
+    //   tone     the same rule as 6.1b ("6.4b", floor from 6.1d), on our own filter, back to neutral when the sound ends. 0.6.46: blasts have their own strength
+    //            "6.4c" (0.5). Raid 20261109_100114: the gun rule took four blasts 10 m away to 1.5 kHz; user: not "loud enough or concussive enough especially indoors"
     // Same room, both outdoors or no baked route: left at the true spot. No raid numbers behind the 15 m or the levels yet: blast.csv records each blast.
     //
     // 0.6.42: the grenade's bounces too. User, 9 Nov 2026: "grenades bouncing on the ground noise still coming from true direction". Each grenade has its own
@@ -171,7 +172,7 @@ namespace RealSoundSimulation.Fixes
             {
                 int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
                 blocked = CountedRay.Raycast(listener, toBlast / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
-                cutoff = PortalPositioning.DullHzFor(toBlast, toNear, blocked, openings);
+                cutoff = PortalPositioning.DullHzFor(toBlast, toNear, blocked, openings, Plugin.BlastDullStrength.Value);
                 FilterVoice(source, cutoff);
                 Dulled++; _cutLogSum += Mathf.Log(cutoff);
             }
@@ -253,7 +254,7 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.BlastDullOn.Value) return;
             int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
             bool blocked = CountedRay.Raycast(listener, toGrenade / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
-            b.Cut = PortalPositioning.DullHzFor(toGrenade, near - listener, blocked, openings);
+            b.Cut = PortalPositioning.DullHzFor(toGrenade, near - listener, blocked, openings, Plugin.RouteDullStrength.Value);
         }
 
         // PortalIDs run from the pair's first room to its second. Reversed = the listener is in the first room.
@@ -375,7 +376,7 @@ namespace RealSoundSimulation.Fixes
             var parts = new List<string>();
             foreach (var kv in Skips) parts.Add($"{kv.Key} {kv.Value}");
             string state = Plugin.BlastOpeningOn.Value ? $"ON, strength {Plugin.BlastOpeningStrength.Value:0.00}" : "off";
-            return $"BLAST FROM THE OPENING (6.4 {state}, 6.4b dulling {(Plugin.BlastDullOn.Value ? "ON" : "off")}, 6.2h thump level {Plugin.ThumpExplosionDb.Value:+0;-0;0} dB): moved {Moved}" +
+            return $"BLAST FROM THE OPENING (6.4 {state}, 6.4b dulling {(Plugin.BlastDullOn.Value ? $"ON x{Plugin.BlastDullStrength.Value:0.00}" : "off")}, 6.2h thump level {Plugin.ThumpExplosionDb.Value:+0;-0;0} dB): moved {Moved}" +
                    (Moved > 0 ? $", on average {_movedSum / Moved:0} deg from the true direction" : "") + $"; dulled {Dulled}" + (Dulled > 0 ? $", typical cutoff {Mathf.Exp((float)(_cutLogSum / Dulled)):0} Hz" : "") +
                    $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; grenade bounces moved for {BounceGrenades} grenades, {BounceFrames} frames" +
                    (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") + "  (blast.csv)\n";

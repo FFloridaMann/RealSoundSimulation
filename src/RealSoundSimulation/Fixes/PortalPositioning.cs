@@ -232,15 +232,15 @@ namespace RealSoundSimulation.Fixes
                 StepAsideFrames++;
                 return DullOffHz; // the game has already muffled this shot
             }
-            return DullHzFor(g.W.WeaponPosition - listener, g.Near - listener, g.Blocked, g.Portals);
+            return DullHzFor(g.W.WeaponPosition - listener, g.Near - listener, g.Blocked, g.Portals, Plugin.RouteDullStrength.Value);
         }
 
-        // The rule for how dull a route makes a sound; 6.4 uses it for explosions too.
-        internal static float DullHzFor(Vector3 toSource, Vector3 toNear, bool blocked, int openings)
+        // The rule for how dull a route makes a sound; 6.4 uses it for explosions ("6.4c") and grenade bounces ("6.1c") too.
+        internal static float DullHzFor(Vector3 toSource, Vector3 toNear, bool blocked, int openings, float strength)
         {
             float bend = Mathf.Min(Vector3.Angle(toSource, toNear), DullBendMaxDeg) / DullBendFullDeg * Mathf.Clamp01(toNear.magnitude / NearFadeM);
             float steps = (blocked ? 1f : 0f) + bend + DullExtraOpening * Mathf.Max(openings - 1, 0);
-            return Mathf.Clamp(DullTopHz * Mathf.Pow(2f, -DullOctavesPerStep * steps * Plugin.RouteDullStrength.Value), Plugin.RouteDullMinHz.Value, DullTopHz);
+            return Mathf.Clamp(DullTopHz * Mathf.Pow(2f, -DullOctavesPerStep * steps * strength), Plugin.RouteDullMinHz.Value, DullTopHz);
         }
 
         private static void SetVoices(SuperBetterAudioQueue q, float cutoff, bool on)

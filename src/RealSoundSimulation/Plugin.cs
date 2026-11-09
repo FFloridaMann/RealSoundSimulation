@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.45")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.46")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -115,7 +115,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> ThumpGunReach, ThumpExplosionReach; // 0.6.38 "6.2f", "6.2g"
         internal static ConfigEntry<bool> ExplosionEchoOn; // 0.6.39 "6.3"
         internal static ConfigEntry<bool> BlastOpeningOn, BlastDullOn; // 0.6.41 "6.4"
-        internal static ConfigEntry<float> BlastOpeningStrength, ThumpExplosionDb, ThumpOpenDb, ThumpExplosionLengthS;
+        internal static ConfigEntry<float> BlastOpeningStrength, ThumpExplosionDb, ThumpOpenDb, ThumpExplosionLengthS, BlastDullStrength;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
         internal static ConfigEntry<int> ExplosionEchoCount;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
@@ -181,7 +181,8 @@ namespace RealSoundSimulation
             ThumpExplosionLengthS = Config.Bind(fix, "6.2j Explosion thump length s", 1.5f, new ConfigDescription("0.6.43: how long an explosion's thump plays. It fades out over the second half of this, so a short setting doesn't cut off. It can't run past the end of the recording. Live.", new AcceptableValueRange<float>(0.2f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastOpeningOn = Config.Bind(fix, "6.4 Blast from the opening", true, new ConfigDescription("0.6.41: an explosion in another room comes from the doorway, window or stairwell it reaches you through, at the length of that route. Since 0.6.42 the grenade's bounces do too. The thump (6.2) stays at the true spot. Same room, both outdoors, or no baked route = the true position. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             BlastOpeningStrength = Config.Bind(fix, "6.4a Blast opening strength", 1f, new ConfigDescription("How far towards the opening the blast is moved: 1 = all the way, 0.5 = halfway between the true direction and the opening. Live.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 93 }));
-            BlastDullOn = Config.Bind(fix, "6.4b Dull the blast by its route", true, new ConfigDescription("0.6.41: the blast loses its highs by the way it got to you, with the same rule, strength and floor as gunshots (6.1c, 6.1d). Works with 6.4 off. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            BlastDullOn = Config.Bind(fix, "6.4b Dull the blast by its route", true, new ConfigDescription("0.6.41: the blast loses its highs by the way it got to you, with the same rule and floor as gunshots (6.1d). Strength is 6.4c. Works with 6.4 off. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            BlastDullStrength = Config.Bind(fix, "6.4c Blast dulling strength", 0.5f, new ConfigDescription("0.6.46: how strongly the route dulls an explosion, separate from gunshots (6.1c). 1 = the gunshot rule, 0.5 = half as many octaves, 0 = no dulling. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoOn = Config.Bind(fix, "6.3 Explosion echoes", true, new ConfigDescription("0.6.39: an explosion echoes off walls that it and you can both reach, from you or a bot. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoDb = Config.Bind(fix, "6.3a Explosion echo level dB", 0f, new ConfigDescription("How loud the echoes are. Try +12 to hear exactly what they do, then bring it down. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoCount = Config.Bind(fix, "6.3b Echoes per explosion", 6, new ConfigDescription("The loudest this many play. Live.", new AcceptableValueRange<int>(1, 12), new ConfigurationManagerAttributes { Order = 93 }));
@@ -297,7 +298,7 @@ namespace RealSoundSimulation
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")}, 6.1b route dulling {(RouteDullOn.Value ? $"ON (x{RouteDullStrength.Value:0.00}, floor {RouteDullMinHz.Value:0} Hz)" : "off")} | " +
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
-            $"6.4 blast from the opening {(BlastOpeningOn.Value ? $"ON ({BlastOpeningStrength.Value:0.00})" : "off")}, dulled {(BlastDullOn.Value ? "ON" : "off")}, explosion thump level {ThumpExplosionDb.Value:+0;-0;0} dB, open-air {ThumpOpenDb.Value:+0;-0;0} dB, length {ThumpExplosionLengthS.Value:0.0} s | " +
+            $"6.4 blast from the opening {(BlastOpeningOn.Value ? $"ON ({BlastOpeningStrength.Value:0.00})" : "off")}, dulled {(BlastDullOn.Value ? $"ON (x{BlastDullStrength.Value:0.00})" : "off")}, explosion thump level {ThumpExplosionDb.Value:+0;-0;0} dB, open-air {ThumpOpenDb.Value:+0;-0;0} dB, length {ThumpExplosionLengthS.Value:0.0} s | " +
             $"6.3 explosion echoes {(ExplosionEchoOn.Value ? $"ON ({ExplosionEchoDb.Value:+0;-0;0} dB, {ExplosionEchoCount.Value} per blast, {ExplosionEchoLengthS.Value:0.0} s, {ExplosionEchoRangeM.Value:0} m)" : "off")} | " +
             $"10a footsteps and handling {FoleyPresets.State} | 10b routes {ExtraRoutes.State} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
