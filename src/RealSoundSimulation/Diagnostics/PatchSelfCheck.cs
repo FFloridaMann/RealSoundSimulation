@@ -20,6 +20,13 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly Target[] Targets =
         {
             // setting 0 gun sounds (SPT or SEB)
+            new Target("10a", "BetterAudio", "LoadGroupPreset", "M"),
+            new Target("10a", "BetterSource", "CheckBinauralAllowed", "M"),
+            new Target("10a", "BetterSource", "_forceStereo", "F"),
+            new Target("10a", "BetterSource", "Preset", "F"),
+            new Target("10b", "Audio.SpatialSystem.SpatialAudioDataLoader", "LoadBakeDataAsync", "M"),
+            new Target("10b", "Audio.SpatialSystem.SpatialAudioDataLoader", "DataLoadedHandler", "M"),
+            new Target("10b", "Audio.SpatialSystem.SpatialAudioDataLoader", "_fullPath", "F"),
             new Target("0", "WeaponSoundPlayer", "FireBullet", "M"),
             new Target("0", "WeaponSoundPlayer", "Body", "F"),
             new Target("0", "WeaponSoundPlayer", "BodySilenced", "F"),

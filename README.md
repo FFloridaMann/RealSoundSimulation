@@ -1,6 +1,6 @@
 # Real Sound Simulation
 
-A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.34**: a gun sounds switch at the top of F12 (setting 0: SPT or Sound Engine Backport's EFT 1.0 recordings), diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots) (0.6.4–0.6.5: measured room build-up, guided rays, smoothing by confidence, direction by what you hear; 0.6.6: ray quality setting `9g`; 0.6.7: roof rain traced from the roof, direction strength `9h`; 0.6.8: exit points, rain from openings `9j`, distant gunfire through openings `9k`), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md); checklist: [docs/TRACKER.md](docs/TRACKER.md).
+A ground-up rebuild of the SPT audio mods, based on the game-file study (`01_How_SPT_Tarkov_Audio_Works.md`, `02_Solutions_and_Feasibility.md`). Current version **0.6.35**: a gun sounds switch at the top of F12 (setting 0: SPT or Sound Engine Backport's EFT 1.0 recordings), diagnostics, an enclosure probe, an outdoor-exposure probe, and fixes 1, 2, 3, 3c, 4, 5, 6 (echoes for your own gunshots) 7 (rain cutting out), 8 (outdoor sound indoors from openings) and the acoustic probe v2 with its test switches 9 (ambience) and 9a (gunshots) (0.6.4–0.6.5: measured room build-up, guided rays, smoothing by confidence, direction by what you hear; 0.6.6: ray quality setting `9g`; 0.6.7: roof rain traced from the roof, direction strength `9h`; 0.6.8: exit points, rain from openings `9j`, distant gunfire through openings `9k`), all switchable live in F12. Since 0.5.8 the defaults are the tested setup (every fix on); turning every fix off gives the game's own audio. Plan: [docs/ROADMAP.md](docs/ROADMAP.md); checklist: [docs/TRACKER.md](docs/TRACKER.md).
 
 ## Documentation
 
@@ -63,3 +63,7 @@ The project is a git repository (branch `main`, first commit 6 Nov 2026 at 0.5.7
 - **BepInEx setting names (section and key) never contain `=` `'` `"` `\` `[` `]`, tabs or newlines.** BepInEx throws on them and the whole plugin silently fails to load. Descriptions can contain anything. After every deploy, confirm the plugin loaded: `BepInEx/RealSoundSimulationLogs/selfcheck.txt` must have a fresh timestamp.
 - **Every feature is switchable in F12** and logs what it decided, so it can be A/B'd in raid and checked from logs.
 - **Docs are updated in the same change as the code.**
+
+## Credits
+
+Footstep and handling settings (`10a`) and room routes (`10b`) come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox, MIT licence. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

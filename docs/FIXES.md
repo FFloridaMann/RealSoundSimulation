@@ -471,6 +471,14 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **0.6.34.** `9t` is one level instead of a minimum, so the game's per-room value can't move the rain (0 = the game's value). **`9u` (1 dB/m):** a bounced path to the roof fades with distance after 6 m. `9s` no longer checks direction. Under 8 escaping paths a rise keeps the long average. Check: walk up and down a concrete stairwell in rain with `9u` at 0 and 1, and read `roofLossDb` in probe2.csv.
 
+## 10a, 10b: taken from Sound Engine Backport (0.6.35)
+
+**10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.
+
+**10b.** `Acoustics/ExtraRoutes.cs` swaps the path of the game's route file (`SpatialAudioDataLoader`) when `seb_routes/AudioBakeData/<map>.audiobakedata` exists and the `.scene` list matches the map. Install: copy SEB's `acoustics/AudioBakeData` to `BepInEx/plugins/FFloridaMann-RealSoundSimulation/seb_routes/AudioBakeData`.
+
+**Check.** Footsteps and reloads with `10a` on and off, restarting between. Summary "Fixes at end" for the routes line; routes.csv for fewer `noRoute`.
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

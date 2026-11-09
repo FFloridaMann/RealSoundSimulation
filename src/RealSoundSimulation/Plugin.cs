@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.34")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.35")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -105,6 +105,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ProbeChangeDetect; // 0.6.32 "9s"
         internal static ConfigEntry<float> RoofRainLevel; // 0.6.33 "9t"
         internal static ConfigEntry<float> RoofRainShaftLoss; // 0.6.34 "9u"
+        internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
+        internal static ConfigEntry<bool> ExtraRoutesOn; // 0.6.35 "10b"
 
         private void Awake()
         {
@@ -198,6 +200,8 @@ namespace RealSoundSimulation
             ProbeChangeDetect = Config.Bind(fix, "9s Sound reacts to real changes", true, new ConfigDescription("0.6.32: probe v2 forgets what it measured when the last moments clearly disagree with it, instead of by how fast you are moving. Rooms change at any speed, and standing still stays steady. Off = memory by speed, as before. Live.", null, new ConfigurationManagerAttributes { Order = 25 }));
             RoofRainLevel = Config.Bind(fix, "9t Roof rain level", 0.3f, new ConfigDescription("0.6.34: how loud roof rain plays while it rains, before the roof, floors and material are applied, times the game's own factor for how hard it rains. Replaces the game's value for the room, which ranges from 0 to 1 and made the rain jump between rooms. 0 = the game's value. Live.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 24 }));
             RoofRainShaftLoss = Config.Bind(fix, "9u Roof rain fades down shafts", 1f, new ConfigDescription("0.6.34: dB of roof rain lost per metre on a path that bounces its way to the roof (down a stair shaft), after the first 6 m. A path straight up doesn't fade. 0 = off. Live.", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 24 }));
+            FoleyPresetsOn = Config.Bind(fix, "10a Footsteps and handling like EFT 1.0", true, new ConfigDescription("0.6.35: footsteps, gear and weapon handling use EFT 1.0's distance curves, stereo spread and 3D ear processing, taken from Sound Engine Backport by red_the_fox. Levels stay as they are. Off = SPT's settings. Restart the game to switch.", null, new ConfigurationManagerAttributes { Order = 23 }));
+            ExtraRoutesOn = Config.Bind(fix, "10b Sound routes between rooms from EFT 1.0", true, new ConfigDescription("0.6.35: routes sound takes between rooms (through doors, windows, stairs), from Sound Engine Backport by red_the_fox. Each map is checked first, and if it differs the game's own routes are used. Off = the game's routes. Applies at the next raid.", null, new ConfigurationManagerAttributes { Order = 23 }));
             RoofBedMode = Config.Bind(fix, "9m Roof rain directional mode", BedDirection.Mode.UnityPanner, new ConfigDescription("Fix 9: like 9c, for the roof rain only (9c now sets the outdoor sounds: wind, rain, background). UnityPanner keeps the recording's width and steers it; MetaHrtf gives up/down placement. Up versus down only matters for the roof rain, so this is where to try HRTF. Either way the roof rain is muffled by how its paths reach you (down a stair shaft duller than overhead).", null, new ConfigurationManagerAttributes { Order = 31 }));
             MuzzleLobe = Config.Bind(fix, "3k Muzzle lobe", 1f, new ConfigDescription("Fix 3c: the room measured at the muzzle counts the directions in front of it more (a forward lobe around where you aim, ((1 + cos) / 2)^k). Out of a window the muzzle then reads mostly outdoor even though half of its sphere looks back into the room; into a room from a doorway, more indoor. 0 = the whole sphere (before 0.6.11), 1 = default, 2 = tighter.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 69 }));
             OutdoorTailOn = Config.Bind(fix, "3m Outdoor tail from the opening", true, new ConfigDescription("Fix 3c: when your shot is mixed mostly indoor but you fire out of a window or door, the gun's outdoor tail also plays from that opening, a beat later (it adds; nothing of the shot is taken away). Single shots and the tail at the end of a burst. Uses fix 6's voices (needs 6 on). Off = as before.", null, new ConfigurationManagerAttributes { Order = 68 }));
@@ -233,6 +237,8 @@ namespace RealSoundSimulation
             Safe("fix 6 own gun echoes", () => OwnEchoes.Apply(Harmony));
             Safe("fix 7 rain dropout", () => RainDropoutFix.Apply(Harmony));
             Safe("fix 8 ambience mix", () => AmbienceMix.Apply(Harmony));
+            Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
+            Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
             gameObject.AddComponent<DiagRunner>();
             gameObject.AddComponent<DoorwayBlend>();
             gameObject.AddComponent<EnclosureProbe>();
@@ -249,6 +255,7 @@ namespace RealSoundSimulation
         internal static string FixState() =>
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")} | " +
+            $"10a footsteps and handling {FoleyPresets.State} | 10b routes {ExtraRoutes.State} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
             $"fix3 doorways {(DoorwayOn.Value ? $"ON (in {DoorwayInside.Value:0.0} m / out {DoorwayOutside.Value:0.0} m)" : "off")} | " +
             $"fix3c own gunshot blend {(GunEnvBlendOn.Value ? $"ON ({OwnShotSource.Value}, aim {OwnShotAimWeight.Value:0.00}, thin {ThinSurfaceCount.Value:0.00}, muzzle {MuzzleWeight.Value:0.00}, small space {SmallSpace.Value}, open sky {OpenSkyLowersIndoor.Value:0.00}, ring follows turn {ShotRingFollowsTurn.Value:0.00})" : "off")} | " +

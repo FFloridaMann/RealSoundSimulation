@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.35 — 8 Nov 2026 (footsteps and handling like EFT 1.0; routes between rooms from SEB)
+**Run in game:** not yet. From a raid on Sound Engine Backport and True Acoustics (8 Nov): no blending between inside and outside and shots not as good, but footsteps and gun inspections were better, and its path work is worth having. Taken with credit: README, THIRD_PARTY_NOTICES.md.
+- **New `10a Footsteps and handling like EFT 1.0`** (on, needs a game restart): the Character and Weaponary sound groups use SEB's EFT 1.0 distance curves, stereo spread, occlusion radius and 3D ear processing, kept on at any distance. Weapon handling also fades 3D processing by distance, angle and height. Not SEB's mixer, and levels stay SPT's, so this may not be all of what was heard. No new recordings. Whether the inspection sounds are in the Weaponary group is unconfirmed.
+- **New `10b Sound routes between rooms from EFT 1.0`** (on, next raid): loads SEB's route file for maps that have one, after checking every room and portal is where the file expects, within 5 cm; otherwise the game's routes. The files (530 MB) are in `plugins/FFloridaMann-RealSoundSimulation/seb_routes/AudioBakeData`, copied from SEB's `acoustics/AudioBakeData`, and not in git.
+- Summary "Fixes at" lines show what SPT had for those groups and which routes loaded.
+- Version 0.6.35.
+
 ## 0.6.34 — 8 Nov 2026 (roof rain holds its level and fades down shafts; 9s without direction)
 **Run in game:** not yet. From raid 43 (raid_20261108_221708, Ground Zero).
 - **`9t` is now one level** (renamed "9t Roof rain level", 0.3, live): while it rains, the game's value for the room no longer counts. "At least 0.3" still jumped, because the game's value is 1 in some rooms and 0 in others (tag 4: 0.74 and 0.225 with the roof unchanged). The level is multiplied by the game's factor for how hard it rains. 0 = the game's value.

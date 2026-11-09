@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.34 (`9t` one level, `9u`, `9s` without direction) waiting for a rainy raid; SEB compared, Real Sound Simulation continues · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.35 (`10a` footsteps and handling, `10b` routes) and 0.6.34 (`9t`, `9u`, `9s`) waiting for a raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -83,9 +83,14 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Roof rain fades down shafts (`9u`, 0.6.34; raid 43 tag 6)
 - [ ] Raid: rainy stairwell with `9u` at 0 and 1
 - [x] Raid: one raid on SEB + True Acoustics (Real Sound Simulation out), 8 Nov: no blending between inside and outside; some general audio better; Real Sound Simulation continues
-- [ ] Decide which pieces to take from SEB or True Acoustics (route files, `live_mastermixer`, non-gun sounds, through-wall by material for 6.2)
-- [ ] Credit red_the_fox (SEB, MIT) and Kaan (True Acoustics, MIT) in the README, and keep their licence notice with anything copied
-- [ ] Decide: bake maps (big), or load SEB's route files (small, only adds routes between rooms)
+- [x] Take SEB's footstep and handling settings (`10a`, 0.6.35) and route files (`10b`, 0.6.35)
+- [ ] Raid: `10a` on and off (restart between), footsteps and inspections
+- [ ] Raid: `10b` on and off: fights in other rooms, routes.csv `noRoute`
+- [ ] Decide: SEB's 1.0 mixer if `10a` isn't what was heard
+- [ ] Look at True Acoustics' through-wall by material for 6.2
+- [x] Credit red_the_fox (SEB, MIT): README and THIRD_PARTY_NOTICES.md
+- [ ] Credit Kaan (True Acoustics, MIT) if anything of theirs is used
+- [x] Decide: load SEB's route files (`10b`) instead of baking
 - [x] Roof material (4b phase 3): floors above take off their material's loss (`9p`, 0.6.29)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 
@@ -153,7 +158,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 83 settings, what each does, and what still reads it
+- [ ] List all 85 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
