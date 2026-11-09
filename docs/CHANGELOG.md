@@ -2,6 +2,20 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.38 — 9 Nov 2026 (6.2: walls can stop a sound)
+**Run in game:** not yet, and neither has 0.6.37. Reach and earth are starting values set from physics, with no raid behind them.
+- **New `6.2e Walls can stop a sound`** (on, live). A sound has a reach: gunshot 60 dB (`6.2f`), explosion 80 (`6.2g`), suppressed gun 20 less. Distance past 5 m (6 dB per doubling) and the full wall loss use it up. With none left there's no thump; the last 6 dB fade out. User, 9 Nov 2026: "not every gunshot and explosion should get through". They chose these numbers over a stricter set (40 / 65).
+- At these numbers one concrete wall carries to full range, however thick. Two 0.3 m concrete floors stop a gunshot past 9 m and a grenade past 88 m. Three stop both. Earth stops every gunshot and a grenade past 9 m.
+- `6.2d` (still 0.5) now only sets how much quieter a wall makes a thump that gets through.
+- **Earth is 75 dB flat.** Before, soil, mud, gravel, grass and snow fell back to the untagged 20 dB, terrain had no tag so it read as untagged too, and forest ground read as foliage, 0 dB. Terrain's thickness can't be measured, so earth ignores thickness.
+- **Thick metal is 15 dB for the thump,** not the table's 6, so a bunker door isn't as thin as a sheet.
+- **Fences, grates and broken glass aren't walls.** They cost 20 dB before.
+- **Thickness fix:** when one mesh holds two walls, the first took the far side of the last, up to the 1.5 m limit. Now each wall uses its nearest far side.
+- **Layered walls** (hits under 0.6 m apart) count as the heaviest material among them, not the first.
+- thump.csv: new `spentDb` and `reachDb`, reason `stopped by walls`, `earth` in `materials`. The summary counts stopped gun and explosion thumps.
+- Known risk: where terrain runs under a building, a shot in the basement heard from the ground floor counts as earth. thump.csv will show it.
+- Version 0.6.38. F12 now has 95 settings.
+
 ## 0.6.37 — 8 Nov 2026 (step 6.2: gunshots and explosions through walls)
 **Run in game:** not yet, and the levels are starting values with no raid behind them. Needs bots and a fight on the other side of a wall.
 - **New `6.2 Through-wall thump`** (on, live; `Fixes/ThroughWall.cs`). A bot gunshot within 60 m in another room, or an explosion within 100 m behind a wall, also plays as a low thump from its true direction. The clear sound still comes from the opening (`6.1`). Walls are measured with rays from you to the source and back: material, and thickness where a collider is hit from both sides. Loss per wall = the material's 125 Hz loss + 6 dB per doubling above 0.2 m, up to +12. At most 4 at once, ahead of echoes in the voice pool; full-auto is a 0.3 s slice at most every 0.25 s per shooter.

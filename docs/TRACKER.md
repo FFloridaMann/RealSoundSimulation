@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 6.2 (through walls, 0.6.37) built; the next raid needs bots and tests it plus 0.6.34 to 0.6.36 · **Next:** retune from that raid, then 6.3. Further rain tuning is in step E
+**Now:** 6.2 (through walls, 0.6.37, walls can stop a sound 0.6.38) built; the next raid needs bots and tests it plus 0.6.34 to 0.6.36 · **Next:** retune from that raid, then 6.3. Further rain tuning is in step E
 
 ---
 
@@ -105,9 +105,11 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Through-wall loss by material and thickness (0.6.37; starting values)
 - [x] Through-wall thump layer + cutoff slider, default 50 Hz (`6.2`, 0.6.37)
 - [x] Separate cutoffs: explosions vs gunshots (`6.2c`, 0.6.37)
+- [x] Walls can stop a sound: reach by distance and wall, earth 75 dB (`6.2e`-`6.2g`, 0.6.38; starting values)
 - [ ] Raid with bots: a fight behind a wall or on another floor, `6.2` on and off; read thump.csv
 - [ ] Raid: explosions behind a wall (their hook isn't proven yet)
-- [ ] Tune `6.2a`, `6.2b`, `6.2d` by ear
+- [ ] Raid: does terrain under a building count as `earth` for shots in the basement?
+- [ ] Tune `6.2a`, `6.2b`, `6.2d`, `6.2f`, `6.2g` by ear
 - [ ] Decide: where there's no route, drop the game's muffled voice so the thump plays alone
 
 ## 6.3 · Echoes for bot gunshots and grenades
@@ -168,7 +170,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 92 settings, what each does, and what still reads it
+- [ ] List all 95 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

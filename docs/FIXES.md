@@ -479,7 +479,18 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Fix.** `Fixes/ThroughWall.cs` plays one extra low-passed voice from the true direction for blocked bot shots (within 60 m, another room) and explosions (within 100 m, a wall between). Level = `6.2a` − distance (0 dB at 5 m or closer) − wall loss × `6.2d`. It uses fix 6's voice pool, past the headroom cap, at most 4 at once.
 
-**Check (bots on).** A fight on another floor or behind a wall, with `6.2` on and off; thump.csv for walls, materials and thickness. Tune `6.2a`, `6.2b` and `6.2d` by ear.
+**0.6.38, walls can stop a sound (`6.2e`, on, live).** A gunshot has a reach of 60 dB (`6.2f`), an explosion 80 (`6.2g`), a suppressed gun 20 less. Spent = distance + full wall loss (not scaled by `6.2d`, which only sets the level now). Spent at or past the reach: no thump, reason `stopped by walls`. The last 6 dB fade. Per wall: the material's 125 Hz loss, or 15 dB for thick metal, plus 6 dB per doubling above 0.2 m, up to +12. Earth (soil, mud, gravel, grass, snow, terrain) is 75 dB flat. Fences, grates and broken glass aren't walls.
+
+| In the way | Wall loss | Gunshot heard up to | Grenade heard up to |
+|---|---|---|---|
+| Thin wood, curtain, thin metal | 4–7 dB | 60 m (full range) | 100 m (full range) |
+| Drywall, thick wood, thick metal | 15 dB | 60 m | 100 m |
+| One concrete wall, 0.2 to 0.8 m | 24–36 dB | 60 m | 100 m |
+| Two concrete floors, 0.3 m each | 55 dB | 9 m | 88 m |
+| Three concrete floors, 0.3 m each | 83 dB | never | never |
+| Earth or terrain | 75 dB | never | 9 m |
+
+**Check (bots on).** A fight on another floor or behind a wall, with `6.2` on and off; thump.csv for walls, materials, thickness and `stopped by walls`. Look for `earth` on shots from a basement directly below you: that would be terrain running under the building. Tune `6.2a`, `6.2b`, `6.2d`, `6.2f` and `6.2g` by ear.
 
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 

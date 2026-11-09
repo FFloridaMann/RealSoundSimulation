@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.37")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.38")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -109,6 +109,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> RoofRainNoRainRooms; // 0.6.36 "9w"
         internal static ConfigEntry<bool> ThumpOn; // 0.6.37 "6.2"
         internal static ConfigEntry<float> ThumpDb, ThumpCutoffHz, ThumpExplosionCutoffHz, ThumpWallLoss;
+        internal static ConfigEntry<bool> ThumpWallsStop; // 0.6.38 "6.2e"
+        internal static ConfigEntry<float> ThumpGunReach, ThumpExplosionReach; // 0.6.38 "6.2f", "6.2g"
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
         internal static ConfigEntry<bool> ExtraRoutesOn; // 0.6.35 "10b"
 
@@ -160,7 +162,10 @@ namespace RealSoundSimulation
             ThumpDb = Config.Bind(fix, "6.2a Thump level dB", 0f, new ConfigDescription("How loud the thump is before distance and wall loss. Live.", new AcceptableValueRange<float>(-30f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpCutoffHz = Config.Bind(fix, "6.2b Thump cutoff Hz", 50f, new ConfigDescription("Low-pass for gunshots through walls. Lower = deeper. Depends on your headset. Live.", new AcceptableValueRange<float>(20f, 400f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpExplosionCutoffHz = Config.Bind(fix, "6.2c Explosion thump cutoff Hz", 80f, new ConfigDescription("Low-pass for explosions through walls. Higher than gunshots because low frequencies pass walls better. Live.", new AcceptableValueRange<float>(20f, 400f), new ConfigurationManagerAttributes { Order = 93 }));
-            ThumpWallLoss = Config.Bind(fix, "6.2d Wall loss strength", 0.5f, new ConfigDescription("How much of each wall's material and thickness loss is applied. 1 = the full table, 0 = walls make no difference. Live.", new AcceptableValueRange<float>(0f, 1.5f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpWallLoss = Config.Bind(fix, "6.2d Wall loss strength", 0.5f, new ConfigDescription("How much quieter walls make a thump that gets through. 1 = the full table, 0 = no quieter. Whether it gets through at all is 6.2e to 6.2g. Live.", new AcceptableValueRange<float>(0f, 1.5f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpWallsStop = Config.Bind(fix, "6.2e Walls can stop a sound", true, new ConfigDescription("0.6.38: with enough wall in the way, or earth, a sound plays no thump at all. Off = every blocked sound in range plays. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpGunReach = Config.Bind(fix, "6.2f Gunshot reach dB", 60f, new ConfigDescription("How much distance and wall a gunshot's thump can get through. Distance past 5 m costs 6 dB per doubling; one concrete wall about 24 to 36 dB; earth 75. Suppressed guns get 20 less. Live.", new AcceptableValueRange<float>(0f, 120f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpExplosionReach = Config.Bind(fix, "6.2g Explosion reach dB", 80f, new ConfigDescription("The same for explosions. Live.", new AcceptableValueRange<float>(0f, 120f), new ConfigurationManagerAttributes { Order = 93 }));
             ObstructionModeCfg = Config.Bind(fix, "2 Obstruction score", ObstructionMode.ParallelPaths, new ConfigDescription("How the through-wall, around-corner and echo checks are combined. Game = average (a failed check counts as fully blocked). IgnoreFailedPaths = average of the checks that found a path. ParallelPaths = blocked only if every path is.", null, new ConfigurationManagerAttributes { Order = 90 }));
             DoorwayOn = Config.Bind(fix, "3 Smooth doorways", true, new ConfigDescription("Blend the indoor/outdoor mix and ambience by distance to the doorway instead of switching.", null, new ConfigurationManagerAttributes { Order = 80 }));
             DoorwayInside = Config.Bind(fix, "3a Blend inside m", 1.5f, new ConfigDescription("Distance inside the doorway over which the blend happens.", new AcceptableValueRange<float>(0.25f, 6f), new ConfigurationManagerAttributes { Order = 79 }));
@@ -267,7 +272,7 @@ namespace RealSoundSimulation
         internal static string FixState() =>
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")} | " +
-            $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00})" : "off")} | " +
+            $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
             $"10a footsteps and handling {FoleyPresets.State} | 10b routes {ExtraRoutes.State} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
             $"fix3 doorways {(DoorwayOn.Value ? $"ON (in {DoorwayInside.Value:0.0} m / out {DoorwayOutside.Value:0.0} m)" : "off")} | " +

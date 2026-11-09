@@ -17,22 +17,28 @@ namespace RealSoundSimulation.Fixes
     //
     //   who      bot gunshots within 60 m in another room (not the same room, not both outdoors); explosions within 100 m with a wall between
     //   wall     rays from you to the source and back. A collider hit from both sides gives its thickness (the game's own transmission check does
-    //            the same); hit from one side only, 0.2 m. Hits under 0.6 m apart are one wall. Low-detail colliders count only if wall-sized.
-    //   loss     per wall: the material's loss at 125 Hz (Materials) + 6 dB per doubling above 0.2 m, up to +12; x "6.2d"
-    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss; explosions +6 dB, suppressed guns -10 dB
+    //            the same); hit from one side only, 0.2 m. Hits under 0.6 m apart are one wall, counted as the heaviest material among them.
+    //            Low-detail colliders count only if wall-sized. Chain fences, grates and broken glass aren't walls.
+    //   loss     per wall: the material's loss at 125 Hz (Materials) + 6 dB per doubling above 0.2 m, up to +12. Thick metal 15 dB, not the table's 6.
+    //            Earth is 75 dB flat: soil, mud, gravel, grass, snow and terrain. Terrain has no bullet tag and no back side, so its thickness can't be read.
+    //   reach    0.6.38 ("6.2e"): gunshot "6.2f", explosion "6.2g", suppressed gun 20 less. Distance + full wall loss use it up; none left, no thump.
+    //            Fades over the last 6 dB. User, 9 Nov 2026: "not every gunshot and explosion should get through", then chose numbers set from physics
+    //            (one concrete wall rarely stops a shot; several heavy walls or earth do).
+    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss x "6.2d"; explosions +6 dB, suppressed guns -10 dB
     //   voice    at most 4 at once, from fix 6's pool, past its headroom cap; full-auto: a 0.3 s slice at most every 0.25 s per shooter
-    // Adds a voice; the game's own sound for the shot is left alone. No raid numbers behind the levels yet: thump.csv records each decision.
+    // Adds a voice; the game's own sound for the shot is left alone. No raid numbers behind the levels or reach yet: thump.csv records each decision.
     internal static class ThroughWall
     {
         private const float GunRangeM = 60f, ExplosionRangeM = 100f, RefM = 5f, MergeM = 0.6f, DefaultThickM = 0.2f, RefThickM = 0.2f, MaxThickDb = 12f,
-            UntaggedDb = 20f, MeasureEveryS = 0.25f, AutoGapS = 0.25f, AutoSliceS = 0.3f, MaxLengthS = 1.5f, ExplosionDb = 6f, SilencedDb = -10f, MinVolume = 0.002f,
+            UntaggedDb = 20f, EarthDb = 75f, ThickMetalDb = 15f, SilencedReachDb = 20f, ReachFadeDb = 6f,
+            MeasureEveryS = 0.25f, AutoGapS = 0.25f, AutoSliceS = 0.3f, MaxLengthS = 1.5f, ExplosionDb = 6f, SilencedDb = -10f, MinVolume = 0.002f,
             WallLongM = 4f, WallWideM = 2f;
         private const int MaxCasts = 8, MaxAtOnce = 4;
 
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
             AccessTools.FieldRefAccess<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge>("playersBridge");
 
-        private struct Hit { public int Id; public Vector3 P; public MaterialType M; public float D; public bool Tagged; }
+        private struct Hit { public int Id; public MaterialType M; public float D, Db; public bool Tagged, Earth; }
         private class Measure { public float Time, LossDb, ThickM; public int Walls; public string Text = ""; }
         private class Shooter { public Measure M = new Measure { Time = -100f }; public float LastThump = -100f; }
 
@@ -43,10 +49,10 @@ namespace RealSoundSimulation.Fixes
         private static readonly StringBuilder Sb = new StringBuilder(64);
         private static readonly float[] Sides = new float[3];
 
-        public static int PlayedGun, PlayedExplosion, AtOnceMax, NoRoute;
+        public static int PlayedGun, PlayedExplosion, AtOnceMax, NoRoute, StoppedGun, StoppedExplosion;
         private static double _lossSum;
 
-        public const string Header = "t,kind,played,reason,distM,walls,materials,thickM,lossDb,volume,cutoffHz,delayMs,hasRoute,clip";
+        public const string Header = "t,kind,played,reason,distM,walls,materials,thickM,lossDb,spentDb,reachDb,volume,cutoffHz,delayMs,hasRoute,clip";
 
         public static void Apply(Harmony h)
         {
@@ -59,7 +65,7 @@ namespace RealSoundSimulation.Fixes
         public static void Reset()
         {
             Shooters.Clear(); Skips.Clear(); Array.Clear(Ends, 0, Ends.Length);
-            PlayedGun = PlayedExplosion = AtOnceMax = NoRoute = 0; _lossSum = 0;
+            PlayedGun = PlayedExplosion = AtOnceMax = NoRoute = StoppedGun = StoppedExplosion = 0; _lossSum = 0;
         }
 
         private static void FirePostfix(WeaponSoundPlayer __instance, Vector3 shotPosition)
@@ -91,9 +97,10 @@ namespace RealSoundSimulation.Fixes
                 SoundBank bank = __instance.IsSilenced && __instance.BodySilenced != null ? __instance.BodySilenced : __instance.Body;
                 AudioClip clip = bank != null ? bank.PickSingleClip(0) : null;
                 float extra = __instance.IsSilenced ? SilencedDb : 0f;
+                float reach = Plugin.ThumpGunReach.Value - (__instance.IsSilenced ? SilencedReachDb : 0f);
                 bool route = PortalPositioning.HasRoute(__instance);
                 if (!route) NoRoute++;
-                if (Thump("gun", __instance, clip, shotPosition, dist, s.M, Plugin.ThumpCutoffHz.Value, extra, auto ? AutoSliceS : MaxLengthS, route ? "1" : "0")) s.LastThump = now;
+                if (Thump("gun", __instance, clip, shotPosition, dist, s.M, Plugin.ThumpCutoffHz.Value, extra, reach, auto ? AutoSliceS : MaxLengthS, route ? "1" : "0")) s.LastThump = now;
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (gun)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }
@@ -112,25 +119,37 @@ namespace RealSoundSimulation.Fixes
                 if (dist > ExplosionRangeM) return;
                 var m = new Measure();
                 MeasureWalls(lt.position, position, m);
-                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb, MaxLengthS, "");
+                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb, Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (explosion)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }
         }
 
-        private static bool Thump(string kind, object owner, AudioClip clip, Vector3 pos, float dist, Measure m, float cutoff, float extraDb, float maxLen, string route)
+        private static bool Thump(string kind, object owner, AudioClip clip, Vector3 pos, float dist, Measure m, float cutoff, float extraDb, float reach, float maxLen, string route)
         {
-            if (m.Walls == 0) return Skip(kind, "no wall", dist, m, 0f, cutoff, 0f, route, clip);
-            if (clip == null) return Skip(kind, "no clip", dist, m, 0f, cutoff, 0f, route, clip);
-            float db = Plugin.ThumpDb.Value + extraDb - 20f * Mathf.Log10(Mathf.Max(dist, RefM) / RefM) - m.LossDb * Plugin.ThumpWallLoss.Value;
-            float vol = Mathf.Clamp01(Mathf.Pow(10f, db / 20f));
+            float distDb = 20f * Mathf.Log10(Mathf.Max(dist, RefM) / RefM), spent = distDb + m.LossDb;
+            if (m.Walls == 0) return Skip(kind, "no wall", dist, m, spent, reach, 0f, cutoff, 0f, route, clip);
+            float fade = 1f;
+            if (Plugin.ThumpWallsStop.Value)
+            {
+                if (spent >= reach)
+                {
+                    if (kind == "gun") StoppedGun++; else StoppedExplosion++;
+                    Row(kind, "0", "stopped by walls", dist, m, spent, reach, 0f, cutoff, 0f, route, clip);
+                    return false;
+                }
+                fade = Mathf.Clamp01((reach - spent) / ReachFadeDb);
+            }
+            if (clip == null) return Skip(kind, "no clip", dist, m, spent, reach, 0f, cutoff, 0f, route, clip);
+            float db = Plugin.ThumpDb.Value + extraDb - distDb - m.LossDb * Plugin.ThumpWallLoss.Value;
+            float vol = Mathf.Clamp01(Mathf.Pow(10f, db / 20f)) * fade;
             float delay = dist / OwnEchoes.SpeedOfSound;
-            if (vol < MinVolume) return Skip(kind, "too quiet", dist, m, vol, cutoff, delay, route, clip);
+            if (vol < MinVolume) return Skip(kind, "too quiet", dist, m, spent, reach, vol, cutoff, delay, route, clip);
 
             double now = AudioSettings.dspTime;
             int free = -1, busy = 0;
             for (int i = 0; i < MaxAtOnce; i++) { if (Ends[i] > now) busy++; else if (free < 0) free = i; }
-            if (free < 0) return Skip(kind, "four playing", dist, m, vol, cutoff, delay, route, clip);
+            if (free < 0) return Skip(kind, "four playing", dist, m, spent, reach, vol, cutoff, delay, route, clip);
 
             double start = now + delay, length = Mathf.Min(clip.length, maxLen);
             EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true);
@@ -138,22 +157,22 @@ namespace RealSoundSimulation.Fixes
             if (busy + 1 > AtOnceMax) AtOnceMax = busy + 1;
             if (kind == "gun") PlayedGun++; else PlayedExplosion++;
             _lossSum += m.LossDb;
-            Row(kind, "1", "", dist, m, vol, cutoff, delay, route, clip);
+            Row(kind, "1", "", dist, m, spent, reach, vol, cutoff, delay, route, clip);
             return true;
         }
 
-        private static bool Skip(string kind, string why, float dist, Measure m, float vol, float cutoff, float delay, string route, AudioClip clip)
+        private static bool Skip(string kind, string why, float dist, Measure m, float spent, float reach, float vol, float cutoff, float delay, string route, AudioClip clip)
         {
             Skips.TryGetValue(why, out int n); Skips[why] = n + 1;
-            Row(kind, "0", why, dist, m, vol, cutoff, delay, route, clip);
+            Row(kind, "0", why, dist, m, spent, reach, vol, cutoff, delay, route, clip);
             return false;
         }
 
-        private static void Row(string kind, string played, string why, float dist, Measure m, float vol, float cutoff, float delay, string route, AudioClip clip)
+        private static void Row(string kind, string played, string why, float dist, Measure m, float spent, float reach, float vol, float cutoff, float delay, string route, AudioClip clip)
         {
             if (!DiagLog.IsOpen) return;
             DiagLog.Row("thump.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), kind, played, why, DiagLog.F(dist, "0.0"), m.Walls.ToString(), m.Text,
-                DiagLog.F(m.ThickM, "0.00"), DiagLog.F(m.LossDb, "0.0"), DiagLog.F(vol, "0.000"), DiagLog.F(cutoff, "0"), DiagLog.F(delay * 1000f, "0"), route, clip != null ? clip.name.Replace(',', ';') : ""));
+                DiagLog.F(m.ThickM, "0.00"), DiagLog.F(m.LossDb, "0.0"), DiagLog.F(spent, "0.0"), DiagLog.F(reach, "0"), DiagLog.F(vol, "0.000"), DiagLog.F(cutoff, "0"), DiagLog.F(delay * 1000f, "0"), route, clip != null ? clip.name.Replace(',', ';') : ""));
         }
 
         private static void MeasureWalls(Vector3 listener, Vector3 source, Measure m)
@@ -163,29 +182,50 @@ namespace RealSoundSimulation.Fixes
             if (mask == 0) return;
             int nF = Cast(listener, source, Forward, mask), nB = Cast(source, listener, Back, mask);
             if (nF == 0) return;
+            float len = Vector3.Distance(listener, source);
             Sb.Clear();
             int i = 0;
             while (i < nF)
             {
                 // one wall: hits close together along the ray (a low-detail collider and its detailed surface are the same wall)
                 float start = Forward[i].D, thick = 0f;
-                MaterialType mat = Forward[i].M;
-                bool tagged = Forward[i].Tagged, matched = false;
+                Hit wall = Forward[i];
+                bool matched = false;
                 for (; i < nF && Forward[i].D - start < MergeM; i++)
                 {
-                    if (!tagged && Forward[i].Tagged) { mat = Forward[i].M; tagged = true; }
+                    if (Forward[i].Tagged && (!wall.Tagged || Forward[i].Db > wall.Db)) wall = Forward[i];
+                    // 0.6.38: the nearest far-side hit past this point. One mesh can hold several walls, and the first match could be the last wall.
+                    float gap = float.MaxValue;
                     for (int k = 0; k < nB; k++)
-                        if (Back[k].Id == Forward[i].Id) { thick = Mathf.Max(thick, Vector3.Distance(Forward[i].P, Back[k].P)); matched = true; break; }
+                    {
+                        if (Back[k].Id != Forward[i].Id) continue;
+                        float g = len - Back[k].D - Forward[i].D;
+                        if (g > 0f && g < gap) gap = g;
+                    }
+                    if (gap < float.MaxValue) { thick = Mathf.Max(thick, gap); matched = true; }
                 }
                 thick = matched ? Mathf.Clamp(thick, 0.02f, 1.5f) : DefaultThickM;
-                float baseDb = tagged && Acoustics.Materials.TryGet(mat, out Acoustics.Materials.Surface s) && !float.IsInfinity(s.T125) ? s.T125 : UntaggedDb;
-                m.LossDb += baseDb + Mathf.Clamp(20f * Mathf.Log10(thick / RefThickM), 0f, MaxThickDb);
+                m.LossDb += wall.Earth ? wall.Db : wall.Db + Mathf.Clamp(20f * Mathf.Log10(thick / RefThickM), 0f, MaxThickDb);
                 m.ThickM += thick;
                 m.Walls++;
                 if (Sb.Length > 0) Sb.Append('+');
-                Sb.Append(tagged ? mat.ToString() : "untagged").Append('@').Append(thick.ToString("0.00"));
+                Sb.Append(wall.Earth ? "earth" : wall.Tagged ? wall.M.ToString() : "untagged").Append('@').Append(thick.ToString("0.00"));
             }
             m.Text = Sb.ToString();
+        }
+
+        // One wall's loss before thickness. Earth isn't in the table's finite rows: soil and the like are "no transmission", forest ground reads as foliage (0 dB).
+        private static float WallDb(MaterialType m)
+        {
+            switch (m)
+            {
+                case MaterialType.Soil: case MaterialType.SoilForest: case MaterialType.Mud: case MaterialType.Swamp: case MaterialType.Gravel:
+                case MaterialType.Pebbles: case MaterialType.GrassLow: case MaterialType.GrassHigh: case MaterialType.Snow:
+                    return EarthDb;
+                case MaterialType.MetalThick: case MaterialType.MetalNoDecal:
+                    return ThickMetalDb;
+            }
+            return m != MaterialType.None && Acoustics.Materials.TryGet(m, out Acoustics.Materials.Surface s) && !float.IsInfinity(s.T125) ? s.T125 : UntaggedDb;
         }
 
         private static int Cast(Vector3 from, Vector3 to, Hit[] into, int mask)
@@ -203,7 +243,9 @@ namespace RealSoundSimulation.Fixes
                 t = at + 0.05f;
                 if (!IsWall(h.collider, block)) continue;
                 MaterialType m = Surfaces.Material(h.collider);
-                into[n++] = new Hit { Id = h.collider.GetInstanceID(), P = h.point, M = m, D = at, Tagged = m != MaterialType.None };
+                if (m == MaterialType.Chainfence || m == MaterialType.Grate || m == MaterialType.GlassShattered) continue; // see-through, not a wall
+                float db = h.collider is TerrainCollider ? EarthDb : WallDb(m);
+                into[n++] = new Hit { Id = h.collider.GetInstanceID(), M = m, D = at, Db = db, Earth = db == EarthDb, Tagged = m != MaterialType.None || db == EarthDb };
             }
             return n;
         }
@@ -223,8 +265,9 @@ namespace RealSoundSimulation.Fixes
             var parts = new List<string>();
             foreach (var kv in Skips) parts.Add($"{kv.Key} {kv.Value}");
             int played = PlayedGun + PlayedExplosion;
-            return $"THROUGH-WALL THUMP (6.2 {(Plugin.ThumpOn.Value ? "ON" : "off")}, {Plugin.ThumpCutoffHz.Value:0} Hz, explosions {Plugin.ThumpExplosionCutoffHz.Value:0} Hz, level {Plugin.ThumpDb.Value:+0;-0;0} dB, wall loss x{Plugin.ThumpWallLoss.Value:0.00}): played {PlayedGun} gun, {PlayedExplosion} explosion" +
-                   (played > 0 ? $", mean wall loss before 6.2d {_lossSum / played:0} dB, most at once {AtOnceMax}" : "") + $", gun shots with no route {NoRoute}; not played: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}  (thump.csv)\n";
+            string stop = Plugin.ThumpWallsStop.Value ? $"walls stop ON, reach {Plugin.ThumpGunReach.Value:0} gun, {Plugin.ThumpExplosionReach.Value:0} explosion" : "walls stop off";
+            return $"THROUGH-WALL THUMP (6.2 {(Plugin.ThumpOn.Value ? "ON" : "off")}, {Plugin.ThumpCutoffHz.Value:0} Hz, explosions {Plugin.ThumpExplosionCutoffHz.Value:0} Hz, level {Plugin.ThumpDb.Value:+0;-0;0} dB, wall loss x{Plugin.ThumpWallLoss.Value:0.00}, {stop}): played {PlayedGun} gun, {PlayedExplosion} explosion" +
+                   (played > 0 ? $", mean wall loss before 6.2d {_lossSum / played:0} dB, most at once {AtOnceMax}" : "") + $", gun shots with no route {NoRoute}; stopped by walls {StoppedGun} gun, {StoppedExplosion} explosion; not played otherwise: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}  (thump.csv)\n";
         }
     }
 }

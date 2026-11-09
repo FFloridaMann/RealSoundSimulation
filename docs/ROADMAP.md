@@ -20,7 +20,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Done (raid 34); no fix needed |
 | 8 | **6.1** | **Portal positioning** | **Built for bot gunshots (0.6.24)**, not raided |
 | 9 | M | Realistic materials (+ 4b roof material) | Research done ([MATERIALS.md](MATERIALS.md)); echoes (0.6.25) and probe v2 (0.6.27) use it; retunes need raids |
-| 10 | 6.2 | Through-wall sound by material | Built (0.6.37), not raided |
+| 10 | 6.2 | Through-wall sound by material | Built (0.6.38), not raided |
 | 11 | 6.3 | Echoes for bot gunshots and grenades | Planned |
 | 12 | W | Weather research and retune | Planned |
 | 13 | 5 | Headset simulation | Planned (moved after step 6) |
@@ -184,7 +184,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 
 ## Settings clean-up (S, planned)
 
-Requested by the user, 8 Nov 2026. F12 now has 92 settings (75 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
+Requested by the user, 8 Nov 2026. F12 now has 95 settings (78 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
 
 1. **Inventory.** List every setting with its current value, what it does, and whether anything still reads it.
 2. **Retire A/B switches that have been decided.** Candidates once they have held up in raids: `6g`, `9o`, `9p`, `1d`, `1e`, `3n`, and the old probes behind them. Remove the old code path with the switch.

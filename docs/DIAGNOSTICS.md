@@ -177,6 +177,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.37: thump.csv, one row for each 6.2 decision: `kind` (gun, explosion), `played`, `reason` (why not), `distM`, `walls`, `materials` (material@thickness, joined with +), `thickM`, `lossDb` (before `6.2d`), `volume`, `cutoffHz`, `delayMs`, `hasRoute`, `clip`.
 
+0.6.38: thump.csv adds `spentDb` (distance + `lossDb`) and `reachDb` after `lossDb`. `reason` can be `stopped by walls` (spentDb at or past reachDb, `6.2e` on). `materials` says `earth` for soil-type tags and terrain. The THROUGH-WALL THUMP summary line counts `stopped by walls` by gun and explosion.
+
 0.6.36: probe2.csv ends with `floorsOldNow`, the floors counted on the main solid layers alone (`floorsNow` follows `9v`).
 
 0.6.34: probe2.csv ends with `floorsNow` (floors above the ceiling straight overhead, -1 = none measured) and `roofLossDb` (how much `9u` took off the roof rain reaching you, negative dB).
