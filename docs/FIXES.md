@@ -660,6 +660,26 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 - **Enclosed.** By how shut in the blast point is (the rays from `6.6`): up to `6.9e` dB, `6.9f` repeat hits spaced by twice the room's mean hit distance over the speed of sound (6 to 50 ms) at −5, −9, −13, −17 dB, and a 55 to 36 Hz swell of 0.25 to 0.7 s (`6.9g`), longer in a small or shut room. Corridors aren't treated specially.
 - **Dip.** Applied on top of whatever else sets the control each frame, and put back only on a control nobody else has moved. Its depth follows the way.
 
+## 6.9h: The blast survives concussion (0.6.55)
+
+**Problem.** Bring Back Concussion's `Cut Off Sound On Explosion`, for a blast inside its radius (7 m by default): Main, Guns, World and both ambience volumes go to as low as −80 dB, by closeness, in 0.05 to 0.3 s from the moment the grenade goes off, hold for 0.2 to 1.5 s, then fade back. Explosions and this mod's thumps, hits and echoes are on the Guns bus. User: "the echo and grenade background sounds bad it cuts out".
+
+**Fix.** `Fixes/ConcussionProof.cs`. Inside that mod's radius + 1 m, read from its own live setting, the blast's own voices go to the Master group, as the game's tinnitus ring does. The world still drops out around the bang. `6.9c`'s dip isn't used there, and any dip in progress ends before that mod reads the volumes it later restores.
+
+**Limits.** Master skips the Guns bus's own effects, so `6.9i` is by ear. Without that mod, or with `6.9h` off, nothing changes. Fragment hits and gunfire are still cut.
+
+**Check.** A grenade inside 7 m, `6.9h` off and on; summary BLAST THROUGH CONCUSSION.
+
+## 6.7c: Fragment hits by route (0.6.55)
+
+**Problem.** A fragment is an ordinary bullet to the game, so its hit in another room plays at the hit point with only the game's muffling.
+
+**Fix.** `BlastFromOpening`, like glass (`6.7`). `EffectsCommutator.PlayHitEffect` notes the hit point, because the sound plays later from a queue, and the sound's one-shot occlusion pass finds it by position. Same placement and dulling rule (`6.7d`), plus `6.7e` dB per opening, 16 at most. Fragments are told apart by speed (under 150 m/s; 90 to 100 m/s in the item data). Up to 30 land per grenade, so the route is looked up once per room for 0.5 s.
+
+**Limits.** Only where a baked route exists, so nothing when both are outdoors or in the same room. Flybys and cracks aren't touched.
+
+**Check.** A grenade in another room, `6.7c` off and on; fragments.csv.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

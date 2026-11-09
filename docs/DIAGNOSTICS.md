@@ -193,6 +193,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.53 (columns 0.6.54): **shock.csv**, one row per explosion: `t`, `played`, `reason` (why not: `not a blast`, `out of reach`, `stopped by walls`, `too quiet`), `way` (`open`, `clear`, `same room`, `route`, `corner`, `wall`), `distM`, `pathM`, `bends`, `closure`, `walls`, `lossDb`, `enclosed` (0 to 1), `roomM` (mean hit distance at the blast), `pressureKPa` (worked out, not measured), `levelDb`, `volume`, `cutoffHz`, `delayMs`, `thumpExtra` (the thump's second voice, 0 = none), `duckDb`, `repeats`, `clip`. Summary: SHOCK WAVE line; `controls also moved by something else` counts controls another writer set during a dip, such as Bring Back Concussion's sound cut.
 
+0.6.55: **fragments.csv**, one row per fragment hit matched to its sound: `t`, `x,y,z`, `moved`, `reason` (why it stayed: `same room`, `both outdoors`, `no route`...), `distM`, `pathM`, `openings`, `lineBlocked`, `cutoffHz`, `lossDb`. Summary: FRAGMENT HITS BY ROUTE and BLAST THROUGH CONCUSSION lines.
+
 ### blast.csv (0.6.41, one row per explosion)
 `t`, `moved` (1 = 6.4 moved it), `reason` (why it stayed: `same room`, `both outdoors`, `no route`, `no room`, `no container`, `no route data`, `no usable route`; empty when a route was used), `distM`, `pathM` (length of the route), `openings`, `turnDeg` (between the opening and the true direction), `movedDeg` (how far the sound was actually moved), `lineBlocked`, `cutoffHz` (6.4b, 0 = not dulled), `closure` (shut-door total on the route). The summary's BLAST FROM THE OPENING line has the totals, including how many grenades had their bounces moved (0.6.42). Bounces have no rows of their own. thump.csv: an explosion with `walls` 0 now plays (0.6.42).
 

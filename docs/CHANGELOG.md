@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.55 — 9 Nov 2026 (6.9h: the blast survives concussion; 6.7c: fragment hits by route)
+**Run in game:** not yet. Starting values, set by ear.
+- **New `6.9h Blast survives concussion`** (on, live; `Fixes/ConcussionProof.cs`) and `6.9i` level (0 dB, −24 to +6). User: "when concussions are triggered the echo and grenade background sounds bad it cuts out". Bring Back Concussion, for a blast inside its radius, takes every mixer bus including Guns down by up to 80 dB within 0.05 to 0.3 s of the grenade going off, then fades back over its `Explosion Sound Fade In Time`. Explosions and the mod's thumps, hits and echoes are on Guns, so they were chopped. Inside that mod's radius + 1 m they now go to the Master group, which the cut doesn't touch, as the game's own tinnitus ring does. The dip (`6.9c`) is left to that mod there, and is ended before it reads the volumes it later restores.
+- **New `6.7c Fragment hits by route`** (on, live), `6.7d` dulling (1, 0 to 2) and `6.7e` loss per opening (4 dB, 0 to 12, 16 at most). A grenade fragment hitting something in another room comes from the opening, dulled and quieter. Fragments are told by speed: 90 to 100 m/s in the game's item data. The route is looked up once per room for 0.5 s.
+- New fragments.csv; BLAST THROUGH CONCUSSION and FRAGMENT HITS BY ROUTE summary lines.
+- Version 0.6.55. F12 now has 139 settings.
+
 ## 0.6.54 — 9 Nov 2026 (6.9: the shock wave goes through the building)
 **Run in game:** not yet. Starting values, set by ear; the research behind them is mostly small-scale and was read from abstracts.
 - **The pressure hit now takes the way the wave would.** raid_20261109_121839: every blast in shock.csv had a wall on the straight line, so a hit that only took the straight line averaged volume 0.06, even at 6 m in the same room. User: not getting it "at mid distances and indoors around corners and rooms". It uses the stronger of the way through the openings (or around a corner) and the straight line through the walls; your own room or a clear line counts as open. It comes from the way it arrives and arrives by the length of that way.

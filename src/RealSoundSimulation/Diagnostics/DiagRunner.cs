@@ -162,7 +162,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); BlastFromOpening.Reset(); BlastRecording.Reset(); ShockWave.Reset(); ClosedDoors.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
+            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); BlastFromOpening.Reset(); BlastRecording.Reset(); ShockWave.Reset(); ConcussionProof.Reset(); ClosedDoors.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -537,6 +537,8 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(BlastFromOpening.Summary()); // 0.6.41
             sb.Append(BlastRecording.Summary()); // 0.6.49
             sb.Append(ShockWave.Summary()); // 0.6.53
+            sb.Append(ConcussionProof.Summary()); // 0.6.55
+            sb.Append(BlastFromOpening.FragmentSummary()); // 0.6.55
             sb.Append(Acoustics.CornerSearch.Summary().TrimEnd('\n') + $"; bot shots: answers with a corner {PortalPositioning.GunCornerFound}, without {PortalPositioning.GunCornerNone}\n"); // 0.6.51
             sb.Append(BlastFromOpening.GlassSummary()); // 0.6.49
             sb.Append(ClosedDoors.Summary()); // 0.6.47

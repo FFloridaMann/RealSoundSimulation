@@ -125,6 +125,10 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Outdoor recording when you're outside (`6.6c`, 0.6.53; starting value)
 - [ ] Raid: beside a garage with a grenade inside, `6.6c` at 0 and 0.75
 - [x] Shock wave: pressure hit, closer thump, dip in other sounds (`6.9`-`6.9c`, 0.6.53; by ear)
+- [x] Blast and echoes play past the concussion cut (`6.9h`, `6.9i`, 0.6.55; level by ear)
+- [ ] Raid: a grenade inside 7 m, `6.9h` off and on; set `6.9i` by ear
+- [x] Fragment hits from other rooms by route (`6.7c`-`6.7e`, 0.6.55; starting values)
+- [ ] Raid: a grenade in another room, `6.7c` off and on; check fragments.csv
 - [x] Shock wave through the building: by route, corners, enclosed boost, repeat hits, slow push (`6.9d`-`6.9g`, 0.6.54; by ear)
 - [ ] Raid: `6.9` off and on at 3, 10 and 25 m, in the same room, around a corner and behind a shut door; set `6.9a`, `6.9c`, `6.9e`, `6.9f` and `6.9g` by ear
 - [ ] Raid: grenades at a garage front, deep inside and in the open; check blastrec.csv `gameEnv` against `outdoorWeight`

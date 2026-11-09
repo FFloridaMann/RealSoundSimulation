@@ -5,9 +5,12 @@ using Audio.SpatialSystem;
 using RealSoundSimulation.Acoustics;
 using RealSoundSimulation.Diagnostics;
 using EFT;
+using EFT.Ballistics;
 using EFT.DataProviding;
 using EFT.Interactive;
+using EFT.InventoryLogic;
 using HarmonyLib;
+using Systems.Effects;
 using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
@@ -96,6 +99,7 @@ namespace RealSoundSimulation.Fixes
             var glassFin = new HarmonyMethod(typeof(BlastFromOpening), nameof(GlassFinalizer));
             h.Patch(AccessTools.Method(typeof(WindowBreaker), nameof(WindowBreaker.PlayHitSound)), prefix: glassPre, finalizer: glassFin);
             h.Patch(AccessTools.Method(typeof(WindowBreaker), nameof(WindowBreaker.PlayPieceSound)), prefix: glassPre, finalizer: glassFin);
+            h.Patch(AccessTools.Method(typeof(EffectsCommutator), nameof(EffectsCommutator.PlayHitEffect)), prefix: new HarmonyMethod(typeof(BlastFromOpening), nameof(FragmentHitPrefix)));
         }
 
         public static void Reset()
@@ -105,6 +109,7 @@ namespace RealSoundSimulation.Fixes
             _pending = _anyOn = false;
             CornerFound = CornerClear = CornerLimited = 0; _cornerMovedSum = 0; _cJob = null; CornerVoices.Clear(); CornerSearch.Reset();
             _glass = false; GlassMoved = GlassLeft = GlassNoPass = 0; GlassSkips.Clear(); _glassCutLogSum = _glassLossSum = 0;
+            FragmentHits.Clear(); FragmentSkips.Clear(); FragmentMoved = 0; _fragCutLogSum = _fragLossSum = 0; _fragRoom = null;
             Moved = Dulled = BounceGrenades = RoomPlayed = RoomDropped = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = _roomLevelSum = 0;
         }
 
@@ -165,7 +170,17 @@ namespace RealSoundSimulation.Fixes
                 finally { Perf.End(Perf.Part.BlastFromOpening); }
                 return;
             }
-            if (!_pending) return;
+            if (!_pending)
+            {
+                if (FragmentHits.Count > 0 && Plugin.FragmentRouteOn.Value)
+                {
+                    Perf.Begin();
+                    try { TryFragment(__instance, source, __result); }
+                    catch (Exception e) { DiagRunner.ReportOnce("6.7c fragment hits by route", e); }
+                    finally { Perf.End(Perf.Part.BlastFromOpening); }
+                }
+                return;
+            }
             _pending = false;
             if (!Wanted && !Plugin.RoomEchoOn.Value && !Plugin.BlastCornerOn.Value && !Plugin.ShockOn.Value) return;
             Perf.Begin();
@@ -451,6 +466,117 @@ namespace RealSoundSimulation.Fixes
             if (!DiagLog.IsOpen) return;
             DiagLog.Row("glass.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(at.x, "0.0"), DiagLog.F(at.y, "0.0"), DiagLog.F(at.z, "0.0"), moved, why,
                 DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), openings.ToString(), blocked, DiagLog.F(cut, "0"), DiagLog.F(lossDb, "0.0"), clip));
+        }
+
+        // ---- 6.7c: grenade fragments hitting things in another room (0.6.55)
+        // User, 9 Nov 2026. A fragment is an ordinary bullet to the game, and its hit plays a little later from a queue, so the hit point is noted here and matched when the sound's occlusion pass comes. Same rule as glass.
+        // Fragments are told by their speed: 90 to 100 m/s in the game's item data, far under any bullet. Up to 30 land per grenade: the route is looked up once per room for 0.5 s.
+        private const int MaxFragmentHits = 64;
+        private const float FragmentMaxSpeed = 150f, FragmentKeepS = 0.5f, FragmentMatchM = 0.3f, FragmentMaxLossDb = 16f, FragmentCacheS = 0.5f;
+        public const string FragmentHeader = "t,x,y,z,moved,reason,distM,pathM,openings,lineBlocked,cutoffHz,lossDb";
+        private struct FragmentHit { public Vector3 At; public float T; }
+        private static readonly List<FragmentHit> FragmentHits = new List<FragmentHit>();
+        private static readonly Dictionary<string, int> FragmentSkips = new Dictionary<string, int>();
+        public static int FragmentMoved;
+        private static double _fragCutLogSum, _fragLossSum;
+        private static ISpatialAudioRoom _fragRoom;
+        private static float _fragUntil, _fragPath;
+        private static bool _fragFound;
+        private static Vector3 _fragNear;
+        private static int _fragOpenings;
+        private static string _fragWhy = "";
+
+        private static void FragmentHitPrefix(Shot info)
+        {
+            try
+            {
+                if (!Plugin.FragmentRouteOn.Value || info == null || !(info.Ammo is Ammo a) || a.InitialSpeed >= FragmentMaxSpeed) return;
+                if (FragmentHits.Count >= MaxFragmentHits) FragmentHits.RemoveAt(0);
+                FragmentHits.Add(new FragmentHit { At = info.HitPoint, T = Time.time });
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("6.7c fragment hit", e); }
+        }
+
+        private static void TryFragment(SpatialAudioSystem sas, BetterSource source, int containerId)
+        {
+            if (source == null) return;
+            float now = Time.time;
+            FragmentHits.RemoveAll(x => now - x.T > FragmentKeepS);
+            Vector3 at = source.Position;
+            int match = -1;
+            for (int i = FragmentHits.Count - 1; i >= 0 && match < 0; i--)
+                if ((FragmentHits[i].At - at).sqrMagnitude < FragmentMatchM * FragmentMatchM) match = i;
+            if (match < 0) return;
+            FragmentHits.RemoveAt(match);
+
+            Transform lt = sas.ListenerTransform;
+            if (lt == null) return;
+            Vector3 listener = lt.position, toHit = at - listener;
+            float straight = toHit.magnitude;
+            if (straight < 0.01f) return;
+            if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { FragmentSkip("no container", at, straight); return; }
+            if (!FragmentRoute(sas, c, at, listener, out Vector3 near, out float path, out int openings, out string why)) { FragmentSkip(why, at, straight); return; }
+
+            Vector3 toNear = near - listener;
+            float nearM = toNear.magnitude;
+            if (nearM > 0.01f)
+            {
+                float blend = Mathf.Clamp01(nearM / NearFadeM);
+                Vector3 dir = Vector3.Slerp(toHit / straight, toNear / nearM, blend).normalized;
+                Vector3 placed = listener + dir * Mathf.Lerp(straight, Mathf.Max(path, straight), blend);
+                source.Position = placed;
+                c.SetPositionOffset(c._positionOffset + (at - placed));
+            }
+
+            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            bool blocked = CountedRay.Raycast(listener, toHit / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
+            float cut = PortalPositioning.DullHzFor(toHit, toNear, blocked, openings, Plugin.FragmentDullStrength.Value);
+            FilterVoice(source, cut);
+            float lossDb = Mathf.Min(Plugin.FragmentLossDb.Value * openings, FragmentMaxLossDb);
+            ScaleVoice(source, Mathf.Pow(10f, -lossDb / 20f));
+
+            FragmentMoved++; _fragCutLogSum += Mathf.Log(cut); _fragLossSum += lossDb;
+            FragmentRow("1", "", at, straight, path, openings, blocked ? "1" : "0", cut, lossDb);
+        }
+
+        private static bool FragmentRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 at, Vector3 listener, out Vector3 near, out float path, out int openings, out string why)
+        {
+            near = Vector3.zero; path = 0f; openings = 0; why = "";
+            ISpatialAudioRoom room = c.CurrentAudioRoom;
+            if (room == null || !room.IsValid) { why = "no room"; return false; }
+            if (sas.IsSourceAndListenerInCommonOutdoor(room)) { why = "both outdoors"; return false; }
+            if (sas.IsSourceInListenerRoom(c)) { why = "same room"; return false; }
+            float now = Time.time;
+            if (!ReferenceEquals(room, _fragRoom) || now >= _fragUntil)
+            {
+                _fragFound = FindRoute(sas, c, at, listener, out _fragNear, out _fragPath, out _fragOpenings, out float _, out _fragWhy);
+                _fragRoom = room;
+                _fragUntil = now + FragmentCacheS;
+            }
+            near = _fragNear; path = _fragPath; openings = _fragOpenings; why = _fragWhy;
+            return _fragFound;
+        }
+
+        private static void FragmentSkip(string why, Vector3 at, float dist)
+        {
+            FragmentSkips.TryGetValue(why, out int n); FragmentSkips[why] = n + 1;
+            FragmentRow("0", why, at, dist, 0f, 0, "", 0f, 0f);
+        }
+
+        private static void FragmentRow(string moved, string why, Vector3 at, float dist, float path, int openings, string blocked, float cut, float lossDb)
+        {
+            if (!DiagLog.IsOpen) return;
+            DiagLog.Row("fragments.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(at.x, "0.0"), DiagLog.F(at.y, "0.0"), DiagLog.F(at.z, "0.0"), moved, why,
+                DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), openings.ToString(), blocked, DiagLog.F(cut, "0"), DiagLog.F(lossDb, "0.0")));
+        }
+
+        public static string FragmentSummary()
+        {
+            var parts = new List<string>();
+            foreach (var kv in FragmentSkips) parts.Add($"{kv.Key} {kv.Value}");
+            return $"FRAGMENT HITS BY ROUTE (6.7c {(Plugin.FragmentRouteOn.Value ? "ON" : "off")}): moved and dulled {FragmentMoved}" +
+                   (FragmentMoved > 0 ? $", typical cutoff {Mathf.Exp((float)(_fragCutLogSum / FragmentMoved)):0} Hz, mean loss {_fragLossSum / FragmentMoved:0.0} dB" : "") +
+                   $"; left at the hit: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}  (fragments.csv)\n";
         }
 
         public static string GlassSummary()

@@ -243,6 +243,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.6c` | least outdoor recording when you're outside (0.6.53) | 0.75 |
 | `6.9`, `6.9a`, `6.9b`, `6.9c` | shock wave: on, pressure hit level, reach along its way, dip in other sounds (0.6.53) | on, 0 dB, 60 m, 8 dB |
 | `6.9d`, `6.9e`, `6.9f`, `6.9g` | shock wave in buildings: corner loss, enclosed boost, repeat hits, slow push (0.6.54) | 6 dB, 6 dB, 3, 0 dB |
+| `6.9h`, `6.9i` | blast and echoes play past Bring Back Concussion's cut: on, level (0.6.55) | on, 0 dB |
+| `6.7c`, `6.7d`, `6.7e` | fragment hits from other rooms by route: on, dulling, loss per opening (0.6.55) | on, 1, 4 dB |
 | `6.7`, `6.7a`, `6.7b` | glass from other rooms by route: on, dulling strength, loss per opening (0.6.49) | on, 1, 4 dB |
 | `6.8`, `6.8a` | blasts around a corner where both of you are outdoors: on, corner loss (0.6.50) | on, 4 dB |
 | `6.8b` | bot gunshots around a corner where both of you are outdoors (0.6.51) | on |

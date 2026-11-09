@@ -61,6 +61,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── ExplosionEchoes.cs   6.3 (0.6.39): echoes for explosions off walls the blast and you can both reach
     ├── ClosedDoors.cs       6.5 (0.6.47): holds down a closed door's closure in the game's route data, by the door's material
     ├── BlastRecording.cs    6.6 (0.6.49): blends an explosion's indoor and outdoor recordings by how open the blast point is
+    ├── ConcussionProof.cs   6.9h (0.6.55): a blast inside Bring Back Concussion's radius plays past its sound cut
     ├── ShockWave.cs         6.9 (0.6.53): generated pressure hit by the blast's route, repeat hits and slow push indoors, second thump voice, short dip in other sounds
     │   (Acoustics/CornerSearch.cs, 0.6.51: the way around for a sound with no baked route, batched on worker threads)
     ├── BlastFromOpening.cs  6.4 (0.6.41): an explosion's voice and (0.6.42) a grenade's bounce voice placed at the opening and dulled by the route, from the game's baked routes

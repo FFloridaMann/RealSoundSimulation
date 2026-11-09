@@ -33,7 +33,7 @@ namespace RealSoundSimulation.Fixes
 
         private enum WayKind { None, Clear, Route, Waiting }
         private struct Way { public WayKind Kind; public Vector3 At, Near; public float Path, Turn, Closure; public int Openings; public string Name; }
-        private struct Held { public Transform Listener; public Vector3 Pos; public float Dist, LossDb, WallFade, Delay, Extra; public int Walls; public double Played; public string Name; }
+        private struct Held { public Transform Listener; public Vector3 Pos; public float Dist, LossDb, WallFade, Delay, Extra; public int Walls; public double Played; public string Name; public bool Proof; }
         private struct Slot { public string Key; public float Base, Last; public bool On, Moved; }
 
         private static readonly Slot[] Slots = new Slot[3];
@@ -141,12 +141,29 @@ namespace RealSoundSimulation.Fixes
             if (name.IndexOf("flash", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("smoke", StringComparison.OrdinalIgnoreCase) >= 0) { Skip("not a blast", dist, walls, lossDb, name); return; }
             if (dist >= Plugin.ShockReachM.Value) { Skip("out of reach", dist, walls, lossDb, name); return; }
             if (_hasHeld) { _hasHeld = false; Fire(_held, default); }
-            var h = new Held { Listener = listener, Pos = pos, Dist = dist, LossDb = lossDb, WallFade = wallFade, Delay = delay, Extra = extra, Walls = walls, Played = AudioSettings.dspTime, Name = name };
+            var h = new Held { Listener = listener, Pos = pos, Dist = dist, LossDb = lossDb, WallFade = wallFade, Delay = delay, Extra = extra, Walls = walls, Played = AudioSettings.dspTime, Name = name, Proof = ConcussionProof.Active };
             if (w.Kind == WayKind.Waiting) { _held = h; _hasHeld = true; return; } // the corner search answers in a frame or two; the sound is still on its way
             Fire(h, w);
         }
 
+        // 0.6.55: inside the concussion radius everything here goes past that mod's cut, and the dip is left to it.
         private static void Fire(Held h, Way w)
+        {
+            bool set = h.Proof && !ConcussionProof.Active;
+            if (set) ConcussionProof.Set();
+            try { FireCore(h, w); }
+            finally { if (set) ConcussionProof.Clear(); }
+        }
+
+        public static void EndDipNow()
+        {
+            _armed = false;
+            if (!_active) return;
+            Restore();
+            _active = false;
+        }
+
+        private static void FireCore(Held h, Way w)
         {
             if (h.Listener == null) return;
             float reach = Plugin.ShockReachM.Value;
@@ -218,6 +235,7 @@ namespace RealSoundSimulation.Fixes
             }
 
             float duck = Plugin.ShockDuckDb.Value * Mathf.Clamp01(1f + boosted / DuckRangeDb) * fade;
+            if (h.Proof) duck = 0f;
             if (duck >= 0.1f) { _armed = true; _armAt = start; _armDepth = duck; Ducks++; }
             if (DiagLog.IsOpen) Row("1", "", way, h.Dist, path, bends, usesWay && w.Kind == WayKind.Route ? w.Closure : 0f, h.Walls, h.LossDb, enclosed, roomM, level, vol, cutoff, delay, h.Extra, duck, repeats, h.Name);
         }
