@@ -25,7 +25,7 @@ namespace RealSoundSimulation.Fixes
             MergeDelayS = 0.004f, MergeCos = 0.866f, PlaneCos = 0.9f, PlaneM = 0.75f, MirrorM = 0.6f, OffWallM = 0.05f;
         private const int RingRays = 16, UpperRays = 8, MaxChecks = 54, MaxEchoes = 12;
 
-        private static readonly Vector3[] Dirs = BuildDirs();
+        internal static readonly Vector3[] Dirs = BuildDirs(); // 0.6.61: bot echoes use the same fan
         private static readonly OwnEchoes.Tap[] Cands = new OwnEchoes.Tap[Dirs.Length], Picks = new OwnEchoes.Tap[MaxEchoes];
         private static readonly Vector3[] PlaneN = new Vector3[Dirs.Length];
         private static readonly float[] PlaneH = new float[Dirs.Length];

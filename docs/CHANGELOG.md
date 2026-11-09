@@ -2,6 +2,17 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.61 — 9 Nov 2026 (6.3h: bot gunshot echoes and voice priority)
+**Run in game:** not yet. It compiles; every number is a starting guess.
+- **New `6.3h Bot gunshot echoes`** (on, live). A bot's shot echoes off walls that it and you can both reach. When a wall is in the way and a route is known, the echoes start from the opening nearest you. The search uses the same 25-ray fan as explosion echoes, on the worker threads, and is reused for 1.5 s, so a burst costs one search.
+- **One set per shooter at most every 0.25 s.** A shot or the end of a burst gets the full set. A full-auto burst running past 0.2 s gets its loudest echo, looping, until it stops. `6.3i` level (0 dB), `6.3j` echoes per bot (3), `6.3l` range (120 m), `6.3m` audibility (−42 dB), `6.3o` length (2.5 s).
+- **Echo voice priority.** User: "prioritizes the players1 guns shots and echos first", "without allowign the cracks to show due to voice limits". Only bot echoes can ever lose a voice. `6.3k` is their ceiling (24). `6.3n` keeps voices free for your gun (48, at most half of what's available right now).
+- **`6.3p Replace the quietest echo`** (on, live). At the limit a new echo takes over from the bot echo you can hear least, with a 40 ms fade. Your gun, grenades and everything else can take any bot voice; a bot echo only takes one that ranks below it. A later echo of a shooter's set goes first, so each shooter's first echo outranks another's third, then the quietest by how far through its length it is. Eight spare voices carry the fades, so the new echo starts at once.
+- **A shooter keeps the echo count it started its burst with,** chosen from the bot voices free at that moment, so echoes don't flicker from round to round.
+- No bots firing means no change to anything else: your own echoes, grenades and the rest follow the same limit as before.
+- New botechoes.csv and voices.csv; new BOT ECHOES and ECHO VOICE PRIORITY summary lines.
+- Version 0.6.61. F12 now has 156 settings.
+
 ## 0.6.60 — 9 Nov 2026 (6.9k: concussion by blast pressure)
 **Run in game:** not yet. Levels are hand-set; the research gives the shape, not thresholds for a grenade.
 - **New `6.9k Concussion by blast pressure`** (on, live), `6.9l Ears reach` (+6 dB, 0 to 18) and `6.9m Concussion strength` (0 dB, −12 to +12). User: "shouldnt it be more concussive indoors", "a wall may protect but the blast through a door delivers concussive effects ... room indoors but very big? very small? lots of windows no windows". Bring Back Concussion used straight-line distance only: in raid_20261109_140020 a blast 3.3 m away through a wall was the strongest of the raid, and one 6.1 m away in the same room barely registered.

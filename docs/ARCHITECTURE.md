@@ -59,6 +59,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── OwnShotTurn.cs       3o (0.6.30): your shot's indoor and outdoor recordings shift as you turn
     ├── ThroughWall.cs       6.2 (0.6.37): low thump through walls for blocked bot shots and explosions
     ├── ExplosionEchoes.cs   6.3 (0.6.39): echoes for explosions off walls the blast and you can both reach
+    ├── BotEchoes.cs         6.3h (0.6.61): echoes for bot gunshots; searches on the worker threads, one set per shooter, under the voice priority in EchoVoices
     ├── ClosedDoors.cs       6.5 (0.6.47): holds down a closed door's closure in the game's route data, by the door's material
     ├── BlastRecording.cs    6.6 (0.6.49): blends an explosion's indoor and outdoor recordings by how open the blast point is
     ├── FragmentPassBy.cs    6.7f (0.6.56): generated whizzes and cracks along each grenade fragment's real flight path

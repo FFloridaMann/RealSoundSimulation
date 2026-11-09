@@ -21,13 +21,14 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 8 | **6.1** | **Portal positioning** | **Built for bot gunshots (0.6.24)**, not raided |
 | 9 | M | Realistic materials (+ 4b roof material) | Research done ([MATERIALS.md](MATERIALS.md)); echoes (0.6.25) and probe v2 (0.6.27) use it; retunes need raids |
 | 10 | 6.2 | Through-wall sound by material | Built (0.6.38), first raids 9 Nov; needs tuning. Explosions from the opening (6.4, 0.6.41) built, not raided |
-| 11 | 6.3 | Echoes for bot gunshots and grenades | Explosions built (0.6.39), not raided; bots planned |
+| 11 | 6.3 | Echoes for bot gunshots and grenades | Explosions built (0.6.39); bot echoes and voice priority built (0.6.61), not raided |
 | 12 | W | Weather research and retune | Planned |
 | 13 | 5 | Headset simulation | Planned (moved after step 6) |
 | 14 | 6b | SEB recordings on full-auto guns | Planned |
 | 15 | C | Supersonic crack by calibre | Planned |
 | 16 | 7 | Gun audio overhaul, every gun | Planned, long |
-| 17 | E | Final echo tuning and optimising | Planned, last |
+| 17 | E | Final echo tuning and optimising | Planned |
+| 18 | CO | Co-op: players hear each other's echoes | Planned, after E |
 | any time | G | Ground between you and a distant shooter | Planned |
 | near the end | S | Settings clean-up | Planned |
 | any time | – | Distant obstruction; server settings | Planned |
@@ -113,7 +114,14 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 - **Why here:** needs 6.1's positions, the material tables (M) and the budget changes. Adds up to 4 voices at once.
 
 ### 6.3 · Echoes for bot gunshots and grenades
-- **What:** bot echoes under the voice budget (below): per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling; two tiers.
+- **What:** bot echoes under the voice budget (below): per shooter, not per round; an audibility gate; one loudest-first queue with a ceiling.
+- **Echo priority system, solo first** (user, 9 Nov 2026: prioritise your own gun and echoes first, without "allowing the cracks to show due to voice limits"). It's built with bot echoes because bots are what makes it necessary, and nothing in it depends on co-op. All echoes already go through `EchoVoices.Play`, so one system decides for every type:
+  - **Your gun has a guaranteed share** of the echo voices that nothing else can touch. Your firing alone has reached 95–96 of 96, so bot echoes must never come out of it.
+  - **Everyone else is ranked by how loud they arrive** after distance and walls, under a ceiling (start 24).
+  - **First echo before third:** each shooter's first echo outranks a louder shooter's third. A shooter with no echoes sounds like they're in a different space.
+  - **Consistent through a burst:** a shooter keeps the echo count it started the burst with, so echoes don't flicker from round to round.
+  - **Replace the quietest playing echo** (user, 9 Nov 2026) instead of dropping the new one at the limit, with a fade of about 30–50 ms so there's no click. Ranked by how loud each echo is at that moment, not when it started. Voices in your gun's share are never replaced.
+  - **Evidence:** a replay of the 8 raids that logged bot shots (957 sounds, at most 7 shooters), through the real limits and without the replacing, left about 2% of bot echoes not started with the ceiling at 24. It doesn't show how many of your own echoes bot echoes would push out; the guaranteed share is what makes that zero, and the first raid should confirm it from the logs. The share, the ceiling and the fade length are starting guesses.
 - **Grenades and other explosions** (user, 8 Nov 2026; raid 35: three grenades in a stairwell got only the game's own sound while your gunshots there got echoes): a few echoes per explosion, through the same queue. Explosions are rare and loud, so they pass the audibility gate and cost few voices. They must play on a mixer that Bring Back Concussion's cut-off reaches, as gun echoes do, so they duck with everything else. Built in 0.6.39 on 6.2's explosion hook (`BetterAudio.PlayAtPoint`, `PlayAtPointDistant`), proven by a raid on 9 Nov.
 - **Why here:** needs 6.1's source positions and 6.0a's measured ceiling. It's the one addition that grows with the size of the fight.
 
@@ -141,6 +149,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   - the material and weather retunes.
 
   After all of them, it only needs tuning once. Then the 4b indoor/outdoor mix is re-checked through it, because ear-pro amplifies ambience.
+- **Concussion and hearing protection** (user, 9 Nov 2026: "tune concussion based on ear pro during the hearing protection point"): tune the ears level of the concussion (`6.9k`-`6.9m`, sound cut and ringing, `6.9h`-`6.9j`) by what's worn. Electronic ear-pro should clip the peak, so less ringing and a shallower or shorter sound cut, while the felt hit stays. No ear-pro should be the worst case. Bring Back Concussion only rings without a headset, unless its `Ignore Tinnitus Equipment Checks` is on.
 
 ### 6b · SEB recordings on full-auto guns
 - **Problem:** setting `0 Gun sounds` can use Sound Engine Backport's EFT 1.0 recordings, but they're single shots, and the game loops one Body recording while the trigger is held. So full-auto guns stay on SPT (`0a` off). The user runs SEB on single fire and SPT on full auto (user, 7 Nov).
@@ -177,14 +186,31 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   - optimising voices: an echo holds its voice for the whole 2.5–5 s recording though it is too quiet to hear long before that, so end quiet ones early with a short fade (raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices).
 - **Full-auto: spend the voices on the end of the burst** (user, 8 Nov 2026). During sustained fire each round masks the echoes of the last one; what the shooter really hears is the echo after the final round. So keep the full set of echoes on the first round and the tail, and run only the loudest one or two through the burst. Fix 6 already skips loop echoes on one-round loops and gives the tail its own echoes; this trims the middle of longer bursts. Judge by ear: the mid-burst echoes also carry some of the sense of the room.
 - **Own roof-rain sounds** (user, 8 Nov 2026): generate patter loops per roof material offline (tin, wood, concrete, tarp; three intensities), as a layer over the game's rain. Each drop a tiny impact ringing at that material's frequencies. One voice, listened to as WAVs before going in the game. Could go with step 7 instead. Until then `9r` only changes the level.
+- **Echo priority polish, solo** (split from 6.3, user, 9 Nov 2026), once every echo type exists:
+  - the zero-voice tier (raise the reverb send of the sound already playing, for shooters who miss the ceiling);
+  - give things up in stages: fewer echoes per shooter, then shorter ones, then the zero-voice tier, never a hard stop;
+  - masking: thin out everyone else's echoes while you're firing, when quiet ones can't be heard anyway;
+  - lower the ceiling when the audio thread falls behind. Voice count isn't the only limit: every voice costs that thread (the 9 Nov 14:24 raid had 6.9% of blocks over 1.5× their length, which the log calls marginal).
 - **Test on Factory and Labs.** Small, hard, enclosed maps will have the most echoes going at any one time (user, 8 Nov 2026).
+- **Release build: no logging** (user, 9 Nov 2026: the final mod logs nothing it doesn't need to work). Measured on Factory, this gains no FPS (about 0.04 ms per frame). It removes load-in and raid-end spikes, about 40 MB of allocation and the log files. Do these in order:
+  1. **Fix `9w` first.** `EnvProbe.RoomPostfix` returns when logs are off before it records the room state, so `EnvProbe.GameSaysIndoor` is always false and roof rain stops respecting no-rain rooms. Record the state, then check for logging.
+  2. **One master diagnostics switch.** Off stops the CSV files and `summary.txt`, `patches.txt`, the profiler counter list, the audio-thread probe, `TimingPatches`, `Perf`, `BatchWait`, the overlay and the F9/F10/F11 keys. Do not delete `DiagRunner`: its raid start holds the `Reset()` calls for 26 systems and its `ReportOnce` guards the features. Leave `EnclosureProbe`, `OutdoorExposure` and `AcousticProbe` running; they sit under Diagnostics in F12 but most of the sound depends on them.
+  3. **Keep the voice count on its own.** `OwnEchoes` reads `DiagRunner.LastPlayingInContainers`. Count it separately at the same rate and stop building the container rows.
+  4. **Check in one raid with FrameDiag and logging off:** the raid-start and raid-end `DiagRunner` spikes are gone, and roof rain still fades in no-rain rooms.
 - **Why last:** echo amounts and tail lengths depend on everything before it, so they only need tuning once.
+
+### CO · Co-op: players hear each other's echoes (after E)
+- **What** (user, 9 Nov 2026): two players on one server, each running the mod, hear the echoes of each other's guns. Comes after optimising, as a compatibility step, because it needs "a significant amount of voice and culling optimization for it to work and sound good".
+- **Voices:** the 196 voices and the 96 echo voices belong to each player's own copy of the game, so neither player uses up the other's. The cost on each PC is the other player's echoes on top of that PC's own gun and the bots.
+- **Depends on:** the bot echo system and its voice ceiling (6.3), with your own gun guaranteed priority, and the voice work in E (ending quiet echoes early, fewer echoes through a burst). The other player's gun goes through that system.
+- **Check first:** whether the mod treats another human's gun as a bot's or wrongly as your own. Since 0.6.61 any gun not in first person gets bot echoes, so another human's should too. Never tested; every raid so far has been solo.
+- **Player 2 in the ranking:** one more shooter in the 6.3 priority system, with a bonus in the ranking only (start about +6 dB). It changes who gets a voice, not how loud they sound, so a teammate next to you beats a distant bot, but a teammate behind three walls still loses to a bot shooting at you from 5 m away.
 
 ---
 
 ## Settings clean-up (S, planned)
 
-Requested by the user, 8 Nov 2026. F12 now has 147 settings (130 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
+Requested by the user, 8 Nov 2026. F12 now has 156 settings (130 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
 
 1. **Inventory.** List every setting with its current value, what it does, and whether anything still reads it.
 2. **Retire A/B switches that have been decided.** Candidates once they have held up in raids: `6g`, `9o`, `9p`, `1d`, `1e`, `3n`, and the old probes behind them. Remove the old code path with the switch.
@@ -243,8 +269,8 @@ So about 140 voices of headroom after the game's worst case and the 16 reserve. 
 
 1. **Per shooter, not per round.** As fix 6 already does for your own full-auto loops (one set of echoes runs with the loop, started from the matching point in the recording), a firing bot gets one or two echo voices however fast it fires.
 2. **Audibility gate.** Only shots whose arriving level after occlusion and distance is above a threshold get echoes at all. Most shooters in a big fight fail it.
-3. **One queue, loudest first, hard ceiling.** All extra voices go through one queue ordered by arriving level, with a fixed cap for bot echoes (start at 24). At the cap the quietest candidate is dropped before it starts, as the headroom cap does for own echoes now.
-4. **Two tiers.** Shooters that pass the gate but miss the ceiling get the zero-voice treatment: their existing voice's reverb send raised by the listener's room measure, as fix 5 does for your own shots. Only the top few get discrete echoes.
+3. **One queue, loudest first, hard ceiling.** All extra voices go through one queue ordered by arriving level, with a fixed cap for bot echoes (start at 24). At the cap the quietest echo, new or already playing, gives way (9 Nov 2026; see 6.3): a playing one fades out over about 30–50 ms.
+4. **Two tiers (moved to E, 9 Nov 2026).** Shooters that pass the gate but miss the ceiling get the zero-voice treatment: their existing voice's reverb send raised by the listener's room measure, as fix 5 does for your own shots. Only the top few get discrete echoes.
 5. **Fixed allocation order:** through-wall layer (4 at once, gunshots and explosions within ~60 m) first, then own echoes, then explosion echoes, then bot echoes. Your own shots never lose a voice to a bot's.
 
 **Through-wall tuning note (user, 8 Nov 2026):** for the deep thump/thud of the through-wall layer, a low-pass around **50 Hz** sounds really good on the user's PC and headset. Build it as a slider (through-wall cutoff Hz, default 50) rather than a constant: the right value depends on the headset and on the wall. Explosions keep more below the cutoff than gunshots (low frequencies pass walls more), so the explosion copy should sit at or above that default and the gunshot copy below it, both on the same slider scale.

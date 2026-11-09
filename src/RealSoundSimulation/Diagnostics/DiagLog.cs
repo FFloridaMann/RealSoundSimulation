@@ -30,6 +30,8 @@ namespace RealSoundSimulation.Diagnostics
             ["roomtone.csv"] = Fixes.RoomTone.Header,
             ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["botshots.csv"] = BotShots.Header,
+            ["botechoes.csv"] = Fixes.BotEchoes.Header,
+            ["voices.csv"] = Fixes.BotEchoes.VoicesHeader,
             ["routes.csv"] = RouteLog.Header,
             ["thump.csv"] = Fixes.ThroughWall.Header,
             ["blast.csv"] = Fixes.BlastFromOpening.Header,

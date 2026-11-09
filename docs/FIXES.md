@@ -549,6 +549,31 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** A grenade in the next room, `6.3e` off and on, then `6.3f` by ear; echoes.csv `kind` `Room`.
 
+### 6.3h: Bot gunshot echoes and voice priority (0.6.61)
+
+**Problem.** Bots' shots had no echoes while yours did. Bot echoes are the one sound that grows with the size of the fight, and your own firing alone can reach 95 to 96 of the 96 echo voices, so they couldn't simply be added.
+
+**Fix: the echoes** (`Fixes/BotEchoes.cs`). 25 rays from the gun, on the worker threads, then a check of which walls the source and you can both reach. If a wall is on the straight line and a route is known, the search starts at the opening nearest you, and the path includes the way there. Level = −20 log10(path / 2 m), the surface's loss, scattered −3 dB and × share, −3 dB per opening, `6.3i`. They use the gun's outdoor close recording, because distance is already in the level. The answer is reused for 1.5 s while gun and listener stay within 1.5 m and 1 m.
+
+| Sound | Echoes |
+|---|---|
+| Shot, at most every 0.25 s per shooter | up to `6.3j` |
+| Full-auto burst past 0.2 s | the loudest one, looping, until it stops |
+| End of a burst | up to `6.3j` |
+
+**Fix: the voices** (`EchoVoices.Play`). Every echo already goes through this one function.
+
+- Only bot echoes can lose a voice.
+- Bot echoes get at most `6.3k`, and leave `6.3n` free for your gun, or half of what's available if that's less.
+- At the limit, with `6.3p` on, your gun, grenades and other sounds take over any bot voice. A bot echo only takes one that ranks below it.
+- Rank: an echo's place in its set first (first, then second, then third), then how loud it is now. "Now" is the starting level minus 30 dB over the echo's length, a guess at how a recording's ring dies away.
+- A voice being replaced fades over 40 ms. One that hasn't started is simply cancelled.
+- At the start of a burst, the shooter's echo count is set from the free bot voices (all of `6.3j`, one fewer, or one) and kept until the burst ends.
+
+**Limits.** Starting values. One bounce only, from the gun or the opening. A very close shooter's first shot can be a few ms late, because a search takes two frames. A replay of 8 raids that logged bot shots (957 sounds, at most 7 shooters) left about 2% of bot echoes not started with the ceiling at 24, before replacing existed; a bigger fight is untested.
+
+**Check (needs bots).** A fight indoors, `6.3h` off and on, then `6.3i` by ear. In summary.txt, "your echoes not started ... while a bot echo held a voice" should be 0. botechoes.csv `replaced` and `dropped`; voices.csv for the peaks.
+
 ## 6.4: Explosions from the opening (0.6.41)
 
 **Problem.** raid_20261109_083938: a grenade 15 m away through two walls played from its true spot, with a thump at −25 dB. User: "i sort of wish grenades sounded more from the entrance and (felt (thud from teh source)".

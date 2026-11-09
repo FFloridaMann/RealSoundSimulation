@@ -155,14 +155,18 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Later (user, 9 Nov 2026): the room changes the thump. A shot in a small hard room pushes more through the wall than one in a big hall; with your head next to the wall it's bigger and less pinpointed. Today only total distance and the walls count
 
 ## 6.3 · Echoes for bot gunshots and grenades
-- [ ] One headroom cap counting every echo type; bots get their own share
-- [ ] Log voices over time by type (only peaks exist today; raid 35's peaks summed to 208 of 196)
+- [x] One headroom cap counting every echo type (0.6.61; the thump and shock layers still go first, at most a few)
+- [x] Your gun's guaranteed share of echo voices; nothing else can touch it (`6.3n`, 0.6.61)
+- [x] Log voices over time by type (voices.csv, 0.6.61)
 - [ ] Measure voice peaks (raids that measure voices only)
-- [ ] Echoes per shooter, not per round
-- [ ] Audibility gate
-- [ ] Loudest-first queue with a ceiling (start 24)
-- [ ] Zero-voice tier for the rest
-- [ ] F12 settings: ceiling, threshold, tier switch
+- [x] Echoes per shooter, not per round (`6.3h`, `6.3j`, 0.6.61)
+- [x] Audibility gate (`6.3m`, 0.6.61)
+- [x] Rank bots by arriving level, with a ceiling (`6.3k`, 24, 0.6.61)
+- [x] Each shooter's first echo before another's third (0.6.61)
+- [x] A shooter keeps its echo count through a burst (0.6.61)
+- [x] At the limit, replace the quietest playing echo with a 40 ms fade (`6.3p`, 0.6.61; only bot echoes can be replaced)
+- [x] F12 settings: ceiling, threshold, your gun's share (`6.3k`, `6.3m`, `6.3n`, 0.6.61)
+- [ ] Raid with bots: your own echoes never pushed out by bot echoes; how many bot echoes don't start
 - [x] Grenade and explosion echoes (`6.3`, `6.3a`-`6.3d`, 0.6.39; starting values)
 - [ ] Raid: explosion echoes in a concrete room and outdoors, `6.3` on and off; do they duck with Bring Back Concussion?
 - [ ] Tune `6.3a` to `6.3d` by ear
@@ -175,6 +179,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Retune (after M, before the headset)
 
 ## 5 · Headset (moved after step 6)
+- [ ] Tune the concussion's ears level by the ear-pro worn (`6.9h`-`6.9m`)
 - [x] Headset sound processing + bench (offline)
 - [ ] Bring it into the game
 - [ ] Tune it
@@ -204,7 +209,22 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Short bursts: give a ringing tail its own voice or fade it, instead of the next tail stopping it (two voices per gun, raid 38)
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
 - [ ] Full-auto: full echoes on the first round and the tail, only the loudest 1–2 through the burst
+- [ ] Zero-voice tier for shooters who miss the ceiling, with an F12 switch (moved from 6.3)
+- [ ] Give things up in stages: fewer echoes per shooter, then shorter, then zero-voice, never a hard stop
+- [ ] Masking: thin out everyone else's echoes while you're firing
+- [ ] Lower the echo ceiling when the audio thread falls behind
 - [ ] Test on Factory and Labs (the most echoes at once)
+- [ ] Release build, 1: `9w` no longer depends on logging (`EnvProbe.RoomPostfix` records the room state first)
+- [ ] Release build, 2: one master diagnostics switch; keep `DiagRunner`'s raid resets and the three probes running
+- [ ] Release build, 3: count `LastPlayingInContainers` on its own for `OwnEchoes`, stop building container rows
+- [ ] Release build, 4: one raid with FrameDiag and logging off: `DiagRunner` spikes gone, roof rain still fades in no-rain rooms
+
+## CO · Co-op: players hear each other's echoes (after E)
+- [ ] Check how the mod treats another human's gun (a bot's, or wrongly your own?)
+- [ ] Echoes for the other player's gun, through the bot echo system
+- [ ] Player 2 bonus in the ranking only (start about +6 dB); their loudness doesn't change
+- [ ] Voice and culling work holds up with two players and bots (needs 6.3 and E first)
+- [ ] Co-op raid with both players running the mod: echoes heard, no extra cut-offs
 
 ---
 
@@ -214,7 +234,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 125 settings, what each does, and what still reads it
+- [ ] List all 156 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

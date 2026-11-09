@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.60")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.61")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -138,6 +138,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<int> FragmentPassCount;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
         internal static ConfigEntry<int> ExplosionEchoCount;
+        internal static ConfigEntry<bool> BotEchoOn, EchoReplaceOn; // 0.6.61 "6.3h", "6.3p"
+        internal static ConfigEntry<float> BotEchoDb, BotEchoRangeM, BotEchoGateDb, BotEchoLengthS;
+        internal static ConfigEntry<int> BotEchoCount, BotEchoCeiling, OwnEchoShare;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
         internal static ConfigEntry<bool> ExtraRoutesOn; // 0.6.35 "10b"
 
@@ -199,6 +202,15 @@ namespace RealSoundSimulation
             ThumpExplosionDb = Config.Bind(fix, "6.2h Explosion thump level dB", 12f, new ConfigDescription("0.6.41: extra level for an explosion's thump through walls, on top of 6.2a, so guns stay as they are. Live.", new AcceptableValueRange<float>(-12f, 24f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpOpenDb = Config.Bind(fix, "6.2i Open-air thump dB", -6f, new ConfigDescription("0.6.42: an explosion with no wall in the way gets the thump too, at 6.2h's level plus this. Lower = less. Live.", new AcceptableValueRange<float>(-24f, 6f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpExplosionLengthS = Config.Bind(fix, "6.2j Explosion thump length s", 1.5f, new ConfigDescription("0.6.43: how long an explosion's thump plays. It fades out over the second half of this, so a short setting doesn't cut off. It can't run past the end of the recording. Live.", new AcceptableValueRange<float>(0.2f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoOn = Config.Bind(fix, "6.3h Bot gunshot echoes", true, new ConfigDescription("0.6.61: a bot's gunshot echoes off walls that it and you can both reach; from another room, off the walls around the opening it reaches you through. Needs 6 Own gun echoes on, which runs the echo voices. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoDb = Config.Bind(fix, "6.3i Bot echo level dB", 0f, new ConfigDescription("How loud the echoes are. Try +12 to hear exactly what they do, then bring it down. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoCount = Config.Bind(fix, "6.3j Echoes per bot", 3, new ConfigDescription("At most this many for each shot or burst end. A full-auto burst gets one while it runs. Live.", new AcceptableValueRange<int>(1, 6), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoCeiling = Config.Bind(fix, "6.3k Bot echo voice ceiling", 24, new ConfigDescription("The most voices bot echoes can hold at once. Live.", new AcceptableValueRange<int>(0, 64), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoRangeM = Config.Bind(fix, "6.3l Bot echo range m", 120f, new ConfigDescription("How far away a bot can be and still echo. Live.", new AcceptableValueRange<float>(20f, 250f), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoGateDb = Config.Bind(fix, "6.3m Bot echo audibility dB", -42f, new ConfigDescription("An echo quieter than this on arrival isn't played. Live.", new AcceptableValueRange<float>(-60f, -20f), new ConfigurationManagerAttributes { Order = 93 }));
+            OwnEchoShare = Config.Bind(fix, "6.3n Echo voices kept for your gun", 48, new ConfigDescription("Bot echoes leave this many of the echo voices free for your own gun (at most half of what's available right now). Your gun can also take over any voice a bot echo holds. Live.", new AcceptableValueRange<int>(16, 96), new ConfigurationManagerAttributes { Order = 93 }));
+            BotEchoLengthS = Config.Bind(fix, "6.3o Bot echo length s", 2.5f, new ConfigDescription("How long each echo lasts. It fades out over the second half of this. Live.", new AcceptableValueRange<float>(0.5f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
+            EchoReplaceOn = Config.Bind(fix, "6.3p Replace the quietest echo", true, new ConfigDescription("At the voice limit, a new echo takes over from the bot echo you can hear least, with a 40 ms fade. Off = the new echo just doesn't start. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             RoomEchoOn = Config.Bind(fix, "6.3e Room echoes from the opening", true, new ConfigDescription("0.6.48: an explosion in another room also sends a burst of room reflections out through the opening it reaches you by. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             RoomEchoDb = Config.Bind(fix, "6.3f Room echo level dB", 0f, new ConfigDescription("Level of the room echoes from the opening. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             RoomEchoCount = Config.Bind(fix, "6.3g Room echoes per explosion", 4, new ConfigDescription("How many room echoes come from the opening. Live.", new AcceptableValueRange<int>(1, 6), new ConfigurationManagerAttributes { Order = 93 }));
@@ -334,6 +346,7 @@ namespace RealSoundSimulation
             Safe("fix 8 ambience mix", () => AmbienceMix.Apply(Harmony));
             Safe("6.2 through-wall thump", () => ThroughWall.Apply(Harmony)); // 0.6.37
             Safe("6.3 explosion echoes", () => ExplosionEchoes.Apply(Harmony)); // 0.6.39
+            Safe("6.3h bot echoes", () => BotEchoes.Apply(Harmony)); // 0.6.61
             Safe("6.4 blast from the opening", () => BlastFromOpening.Apply(Harmony)); // 0.6.41
             Safe("6.5 closed doors", () => ClosedDoors.Apply(Harmony)); // 0.6.47
             Safe("6.6 blast recording", () => BlastRecording.Apply(Harmony)); // 0.6.49
@@ -349,6 +362,7 @@ namespace RealSoundSimulation
             gameObject.AddComponent<AmbienceMix>();
             gameObject.AddComponent<DistantThroughOpenings>();
             gameObject.AddComponent<PortalPositioning>(); // 0.6.24
+            gameObject.AddComponent<BotEchoes>(); // 0.6.61; runs after PortalPositioning
             gameObject.AddComponent<BlastFromOpening>(); // 0.6.41
             gameObject.AddComponent<ClosedDoors>(); // 0.6.47
             gameObject.AddComponent<ShockWave>(); // 0.6.53
@@ -362,6 +376,7 @@ namespace RealSoundSimulation
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")}, 6.1b route dulling {(RouteDullOn.Value ? $"ON (x{RouteDullStrength.Value:0.00}, floor {RouteDullMinHz.Value:0} Hz)" : "off")} | " +
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
+            $"6.3h bot echoes {(BotEchoOn.Value ? $"ON ({BotEchoDb.Value:+0;-0;0} dB, {BotEchoCount.Value} per bot, ceiling {BotEchoCeiling.Value}, {BotEchoRangeM.Value:0} m, gate {BotEchoGateDb.Value:0} dB, {BotEchoLengthS.Value:0.0} s)" : "off")}, your gun keeps {OwnEchoShare.Value}, replace quietest {(EchoReplaceOn.Value ? "ON" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
             $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")}, 6.9k concussion by pressure {(ConcussionPressureOn.Value ? $"ON ({ConcussionPressureDb.Value:+0;-0;0} dB, ears +{EarsReachDb.Value:0} dB)" : "off")} | " +

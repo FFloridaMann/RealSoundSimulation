@@ -99,6 +99,15 @@ namespace RealSoundSimulation.Fixes
         // 0.6.37: for 6.2's log: does this gun currently reach you along a route?
         public static bool HasRoute(WeaponSoundPlayer w) => ByKey.TryGetValue(w.GetInstanceID(), out Gun g) && g.HasRoute;
 
+        // 0.6.61, for bot echoes: the opening this gun reaches you through, when something really is in the way.
+        public static bool TryOpening(WeaponSoundPlayer w, out Vector3 near, out float path, out int openings)
+        {
+            near = Vector3.zero; path = 0f; openings = 0;
+            if (!ByKey.TryGetValue(w.GetInstanceID(), out Gun g) || !g.HasRoute || !g.Blocked) return false;
+            near = g.Near; path = g.Path; openings = g.Portals;
+            return true;
+        }
+
         // For routes.csv: how far this gun's voices are from its true direction right now.
         public static float MovedDeg(WeaponSoundPlayer w) => ByKey.TryGetValue(w.GetInstanceID(), out Gun g) ? g.Moved : 0f;
 

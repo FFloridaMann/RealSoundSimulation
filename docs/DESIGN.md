@@ -252,6 +252,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.8b` | bot gunshots around a corner where both of you are outdoors (0.6.51) | on |
 | `6.4d` | an explosion moved to an opening or corner arrives after its longer way (0.6.51) | on |
 | `6.3e`, `6.3f`, `6.3g` | room echoes from the opening for an explosion in another room: on, level, count (0.6.48) | on, 0 dB, 4 |
+| `6.3h`, `6.3i`, `6.3j`, `6.3l`, `6.3m`, `6.3o` | bot gunshot echoes: on, level, echoes per bot, range, audibility, length (0.6.61) | on, 0 dB, 3, 120 m, −42 dB, 2.5 s |
+| `6.3k`, `6.3n`, `6.3p` | echo voice priority: bot ceiling, voices kept for your gun, replace the quietest (0.6.61) | 24, 48, on |
 | `9v` | the roof rain floor count includes large low-detail floors (0.6.36) | on |
 | `9w` | roof rain fades out where the game says indoors with no rain (0.6.36) | on |
 | `10a` | footsteps, gear and handling use EFT 1.0 settings, from SEB (0.6.35) | on |
