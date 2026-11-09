@@ -68,6 +68,24 @@ namespace RealSoundSimulation.Fixes
             PlayedGun = PlayedExplosion = AtOnceMax = NoRoute = StoppedGun = StoppedExplosion = 0; _lossSum = 0;
         }
 
+        // 0.6.45: the hideout has no spatial audio system (the game only creates it when loading a raid), so explosions fall back to the game's listener.
+        // User, 9 Nov 2026: "can we make it work in the hide out?"
+        internal static Transform Listener()
+        {
+            if (MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated)
+            {
+                Transform t = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+                if (t != null) return t;
+            }
+            if (MonoBehaviourSingleton<BetterAudio>.Instantiated && MonoBehaviourSingleton<BetterAudio>.Instance.ListenerTransform != null)
+                return MonoBehaviourSingleton<BetterAudio>.Instance.ListenerTransform;
+            return Camera.main != null ? Camera.main.transform : null;
+        }
+
+        // Before the probe has run (a hideout visit with no raid yet) its masks are empty.
+        private static int FallbackMask => LayerMask.GetMask("HighPolyCollider", "LowPolyCollider", "Terrain");
+        private static int FallbackBlock => LayerMask.GetMask("HighPolyCollider", "Terrain");
+
         private static void FirePostfix(WeaponSoundPlayer __instance, Vector3 shotPosition)
         {
             if (!Plugin.ThumpOn.Value) return;
@@ -112,8 +130,7 @@ namespace RealSoundSimulation.Fixes
             Perf.Begin();
             try
             {
-                if (!MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return;
-                Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+                Transform lt = Listener();
                 if (lt == null) return;
                 float dist = Vector3.Distance(lt.position, position);
                 if (dist > ExplosionRangeM) return;
@@ -180,6 +197,7 @@ namespace RealSoundSimulation.Fixes
         {
             m.Walls = 0; m.LossDb = 0f; m.ThickM = 0f; m.Text = "";
             int mask = AcousticProbe.FullMask;
+            if (mask == 0) mask = FallbackMask;
             if (mask == 0) return;
             int nF = Cast(listener, source, Forward, mask), nB = Cast(source, listener, Back, mask);
             if (nF == 0) return;
@@ -235,7 +253,7 @@ namespace RealSoundSimulation.Fixes
             float len = d.magnitude;
             if (len < 0.1f) return 0;
             d /= len;
-            int n = 0, block = AcousticProbe.BlockMask;
+            int n = 0, block = AcousticProbe.BlockMask != 0 ? AcousticProbe.BlockMask : FallbackBlock;
             float t = 0f;
             for (int i = 0; i < MaxCasts && t < len; i++)
             {

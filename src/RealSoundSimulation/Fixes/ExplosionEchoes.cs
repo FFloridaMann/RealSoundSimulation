@@ -52,8 +52,7 @@ namespace RealSoundSimulation.Fixes
             Perf.Begin();
             try
             {
-                if (!MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) return;
-                Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+                Transform lt = ThroughWall.Listener(); // 0.6.45: works in the hideout too
                 if (lt == null) return;
                 Blasts++;
                 Vector3 l = lt.position, s = position + Vector3.up * BlastLiftM;

@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.45 — 9 Nov 2026 (grenade thump and echoes in the hideout)
+**Run in game:** not yet.
+- **An explosion's thump (`6.2`) and echoes (`6.3`) now work in the hideout.** User, 9 Nov 2026: "can we make it work in the hide out?" The game only creates its spatial audio system when it loads a raid, so these fall back to the game's listener. If the sound probe hasn't run yet, walls are found on the HighPolyCollider and Terrain layers (LowPolyCollider if wall-sized); not checked against the hideout's own layers.
+- `6.4` (from the opening) and bounces can't work there: no rooms or routes exist. Gun thumps need rooms too. The hideout still writes no logs.
+- Version 0.6.45.
+
 ## 0.6.44 — 9 Nov 2026 (6.2j: the thump fades out)
 **Run in game:** not yet.
 - **An explosion's thump now fades out over the second half of `6.2j`**, so a short setting doesn't cut off. User, 9 Nov 2026. At the default 1.5 s it holds for 0.75 s and then fades, so it's a little shorter-sounding than the old hard stop at 1.5 s. Gun thumps are unchanged.
