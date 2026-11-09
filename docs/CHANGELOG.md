@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.42 — 9 Nov 2026 (6.4: grenade bounces from the opening; thump in the open)
+**Run in game:** not yet. Levels are starting values.
+- **Grenade bounces now follow `6.4`, `6.4a` and `6.4b`.** User, 9 Nov 2026: "grenades bouncing on the ground noise still coming from true direction". Each grenade's own voice is re-placed each frame at the opening, with the route re-read every 0.1 s while the grenade moves or the voice plays. No thud for bounces.
+- **Explosions get the thump with no wall in the way.** User: "grenades should also have more thump to them (in general". Same formula with no wall loss, plus new **`6.2i Open-air thump dB`** (−6, −24 to +6, live): full level up to 20 m, −6 dB at 40 m, −12 dB at 80 m, up to 100 m.
+- The summary's BLAST FROM THE OPENING line counts bounces moved. In thump.csv, explosions with `walls` 0 now play.
+- Limit: bounces only. A bot's pin and throw sounds stay where they are.
+- The hideout wrote no logs in the session it was tried, so the mod's in-raid check didn't pass there; test grenades in a raid.
+- Version 0.6.42. F12 now has 108 settings.
+
 ## 0.6.41 — 9 Nov 2026 (6.4: explosions from the opening, with a felt thud)
 **Run in game:** not yet. The 15 m shut-door cost and the levels are starting values. Test with grenades in another room, `6.4` on and off.
 - **New `6.4 Blast from the opening`** (on, live; `Fixes/BlastFromOpening.cs`) and `6.4a Blast opening strength` (1). User, 9 Nov 2026, Ground Zero: "i sort of wish grenades sounded more from the entrance and (felt (thud from teh source)". An explosion in another room plays from the direction of the opening nearest you, at the length of the route. Picks the shortest of the game's baked routes between the two rooms; a shut door counts as 15 m. The game's occlusion stays at the true spot through its own position offset.

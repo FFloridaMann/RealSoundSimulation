@@ -234,7 +234,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.2e`, `6.2f`, `6.2g` | walls can stop a thump: on, gunshot reach, explosion reach (0.6.38) | on, 60 dB, 80 dB |
 | `6.3`, `6.3a`-`6.3d` | explosion echoes: on, level, echoes per blast, length, range (0.6.39) | on, 0 dB, 6, 1.5 s, 120 m |
 | `6.2h` | extra level for an explosion's thump (0.6.41) | +12 dB |
-| `6.4`, `6.4a`, `6.4b` | an explosion in another room comes from the opening: on, how far, dulled by its route (0.6.41) | on, 1, on |
+| `6.2i` | an explosion's thump with no wall in the way, on top of `6.2h` (0.6.42) | −6 dB |
+| `6.4`, `6.4a`, `6.4b` | an explosion or grenade bounce in another room comes from the opening: on, how far, dulled by its route (0.6.41, bounces 0.6.42) | on, 1, on |
 | `9v` | the roof rain floor count includes large low-detail floors (0.6.36) | on |
 | `9w` | roof rain fades out where the game says indoors with no rain (0.6.36) | on |
 | `10a` | footsteps, gear and handling use EFT 1.0 settings, from SEB (0.6.35) | on |

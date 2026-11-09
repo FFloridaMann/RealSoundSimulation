@@ -550,9 +550,22 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 | 75 s, 27.9 m, one wall | −21 dB | −9 dB |
 | 949 s, 15 m, two walls | −25 dB | −13 dB |
 
-**Limits.** The game's grenade group only, so not rockets. Same room, both outdoors or no baked route stay at the true spot. Flight time still uses the straight distance. It may feel disorienting the way 6.1 did on Factory: `6.4` off and `6.4a` at 0.5 are for that.
+**0.6.42, bounces.** Each grenade has its own voice that the game keeps on the grenade every frame, so it's re-placed in LateUpdate like 6.1, with the route re-read every 0.1 s while the grenade moves or the voice plays. It follows `6.4`, `6.4a` and `6.4b`. Its occlusion follows the grenade itself, so it needs no offset. No thud for bounces.
 
-**Check.** Grenades in another room, `6.4` off and on, then `6.2h` by ear; blast.csv `moved`, `reason`, `pathM`, `openings`, `turnDeg`, `movedDeg`, `cutoffHz`; summary BLAST FROM THE OPENING.
+**0.6.42, thump in the open (`6.2i`, −6).** An explosion with no wall in the way gets the thump too: the same formula with no wall loss, plus `6.2i`.
+
+| Distance | Open-air thump |
+|---|---|
+| Up to 20 m | 0 dB (full) |
+| 28 m | −3 dB |
+| 40 m | −6 dB |
+| 60 m | −10 dB |
+| 80 m | −12 dB |
+| 100 m | −14 dB |
+
+**Limits.** The game's grenade group only, so not rockets. Same room, both outdoors or no baked route stay at the true spot. Flight time still uses the straight distance. It may feel disorienting the way 6.1 did on Factory: `6.4` off and `6.4a` at 0.5 are for that. A bot's pin and throw sounds aren't moved. The hideout wrote no logs in the session it was tried, so these may not run there: test in a raid.
+
+**Check.** Grenades in another room, `6.4` off and on, then `6.2h` and `6.2i` by ear, in the open as well; blast.csv `moved`, `reason`, `pathM`, `openings`, `turnDeg`, `movedDeg`, `cutoffHz`; thump.csv explosions with `walls` 0; summary BLAST FROM THE OPENING.
 
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 

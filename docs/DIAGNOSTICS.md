@@ -182,7 +182,7 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 0.6.39: echoes.csv rows with `sample` = `explosion` are explosion echoes; `kind` is `Spec` or `Diff`, `directivityDb` is 0, and `kind` = `none` means a blast with no usable wall. The EXPLOSION ECHOES summary line counts blasts, echoes played by kind, no usable walls, out of range and those dropped by the headroom cap.
 
 ### blast.csv (0.6.41, one row per explosion)
-`t`, `moved` (1 = 6.4 moved it), `reason` (why it stayed: `same room`, `both outdoors`, `no route`, `no room`, `no container`, `no route data`, `no usable route`; empty when a route was used), `distM`, `pathM` (length of the route), `openings`, `turnDeg` (between the opening and the true direction), `movedDeg` (how far the sound was actually moved), `lineBlocked`, `cutoffHz` (6.4b, 0 = not dulled), `closure` (shut-door total on the route). The summary's BLAST FROM THE OPENING line has the totals.
+`t`, `moved` (1 = 6.4 moved it), `reason` (why it stayed: `same room`, `both outdoors`, `no route`, `no room`, `no container`, `no route data`, `no usable route`; empty when a route was used), `distM`, `pathM` (length of the route), `openings`, `turnDeg` (between the opening and the true direction), `movedDeg` (how far the sound was actually moved), `lineBlocked`, `cutoffHz` (6.4b, 0 = not dulled), `closure` (shut-door total on the route). The summary's BLAST FROM THE OPENING line has the totals, including how many grenades had their bounces moved (0.6.42). Bounces have no rows of their own. thump.csv: an explosion with `walls` 0 now plays (0.6.42).
 
 0.6.36: probe2.csv ends with `floorsOldNow`, the floors counted on the main solid layers alone (`floorsNow` follows `9v`).
 

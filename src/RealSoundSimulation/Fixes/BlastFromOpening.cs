@@ -23,24 +23,43 @@ namespace RealSoundSimulation.Fixes
     //            The game doesn't clear that offset when a container is reused, so a postfix on Clear does.
     //   tone     the same rule as 6.1b ("6.4b", strength and floor from 6.1c and 6.1d), on our own filter, back to neutral when the sound ends
     // Same room, both outdoors or no baked route: left at the true spot. No raid numbers behind the 15 m or the levels yet: blast.csv records each blast.
+    //
+    // 0.6.42: the grenade's bounces too. User, 9 Nov 2026: "grenades bouncing on the ground noise still coming from true direction". Each grenade has its own
+    // voice that the game keeps on the grenade every frame (Update), so it's re-placed here in LateUpdate, like 6.1, with the route re-read every 0.1 s while
+    // the grenade moves or the voice plays. The game's occlusion for it follows the grenade's own transform, not the voice, so it needs no offset.
+    [DefaultExecutionOrder(32000)]
     internal class BlastFromOpening : MonoBehaviour
     {
-        private const float ClosedDoorM = 15f, NearFadeM = 1f, ExtraHoldS = 0.25f;
+        private const float ClosedDoorM = 15f, NearFadeM = 1f, ExtraHoldS = 0.25f, BounceScanS = 0.1f, BounceSmoothS = 0.15f, BounceHoldS = 0.5f, MovingSqr = 0.01f;
 
         private static readonly AccessTools.FieldRef<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>> ContainersRef =
             AccessTools.FieldRefAccess<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>>("_allRegisteredSoundContainers");
+        private static readonly AccessTools.FieldRef<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>> GoContainersRef =
+            AccessTools.FieldRefAccess<SpatialAudioSystem, Dictionary<int, AudioSourceContainer>>("_registeredGameObjectContainers");
         private static readonly AccessTools.FieldRef<SuperSourceDistant, AudioSource> Source2Ref =
             AccessTools.FieldRefAccess<SuperSourceDistant, AudioSource>("_source2");
+        private static readonly AccessTools.FieldRef<Grenade, BetterSource> CollisionSourceRef =
+            AccessTools.FieldRefAccess<Grenade, BetterSource>("_collisionSource");
 
         private class Voice { public AudioLowPassFilter Lp; public double End; }
+        private class Bouncer
+        {
+            public Grenade G; public BetterSource S; public Rigidbody Rb;
+            public bool HasRoute, Init, Counted;
+            public Vector3 Near, CurDir;
+            public float Path, CurDist, Cut, NextScan;
+        }
 
         private static readonly Dictionary<GameObject, Voice> Filters = new Dictionary<GameObject, Voice>(); // by object: a filter acts on every source on it
         private static readonly Dictionary<string, int> Skips = new Dictionary<string, int>();
+        private static readonly List<Bouncer> Bouncers = new List<Bouncer>();
         private static bool _pending, _anyOn;
         private static Vector3 _blast;
 
-        public static int Moved, Dulled;
-        private static double _movedSum, _cutLogSum;
+        public static int Moved, Dulled, BounceGrenades;
+        public static long BounceFrames;
+        private static double _movedSum, _cutLogSum, _bounceMovedSum;
+        private static bool Wanted => Plugin.BlastOpeningOn.Value || Plugin.BlastDullOn.Value;
 
         public const string Header = "t,moved,reason,distM,pathM,openings,turnDeg,movedDeg,lineBlocked,cutoffHz,closure";
 
@@ -52,14 +71,46 @@ namespace RealSoundSimulation.Fixes
             h.Patch(AccessTools.Method(typeof(BetterAudio), nameof(BetterAudio.PlayAtPointDistant)), prefix: pre, finalizer: fin);
             h.Patch(AccessTools.Method(typeof(SpatialAudioSystem), nameof(SpatialAudioSystem.RunOneShotPropagationOcclusionTest)), postfix: new HarmonyMethod(typeof(BlastFromOpening), nameof(OcclusionPostfix)));
             h.Patch(AccessTools.Method(typeof(AudioSourceContainer), nameof(AudioSourceContainer.Clear)), postfix: new HarmonyMethod(typeof(BlastFromOpening), nameof(ClearPostfix)));
+            h.Patch(AccessTools.Method(typeof(Grenade), nameof(Grenade.InitAudioSource)), postfix: new HarmonyMethod(typeof(BlastFromOpening), nameof(GrenadeInitPostfix)));
+            h.Patch(AccessTools.Method(typeof(Grenade), nameof(Grenade.ReleaseAudioSource)), prefix: new HarmonyMethod(typeof(BlastFromOpening), nameof(GrenadeReleasePrefix)));
         }
 
         public static void Reset()
         {
             foreach (var kv in Filters) if (kv.Value.Lp != null && kv.Value.Lp.enabled) kv.Value.Lp.enabled = false;
-            Filters.Clear(); Skips.Clear();
+            Filters.Clear(); Skips.Clear(); Bouncers.Clear();
             _pending = _anyOn = false;
-            Moved = Dulled = 0; _movedSum = _cutLogSum = 0;
+            Moved = Dulled = BounceGrenades = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = 0;
+        }
+
+        private static void GrenadeInitPostfix(Grenade __instance)
+        {
+            if (!Wanted) return;
+            try
+            {
+                BetterSource s = CollisionSourceRef(__instance);
+                if (s == null) return;
+                for (int i = 0; i < Bouncers.Count; i++)
+                    if (Bouncers[i].G == __instance) { Bouncers[i].S = s; return; }
+                Bouncers.Add(new Bouncer { G = __instance, S = s, Rb = __instance.GetComponent<Rigidbody>() });
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("6.4 grenade bounce (init)", e); }
+        }
+
+        // The voice goes back to the game's pool: stop touching it now.
+        private static void GrenadeReleasePrefix(BetterSource source)
+        {
+            if (source == null) return;
+            try
+            {
+                for (int i = Bouncers.Count - 1; i >= 0; i--)
+                {
+                    if (Bouncers[i].S != source) continue;
+                    FilterOff(source);
+                    Bouncers.RemoveAt(i);
+                }
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("6.4 grenade bounce (release)", e); }
         }
 
         private static void PlayPrefix(Vector3 position, SoundBank bank)
@@ -95,13 +146,7 @@ namespace RealSoundSimulation.Fixes
             float straight = toBlast.magnitude;
 
             if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { Skip("no container", straight); return; }
-            ISpatialAudioRoom room = c.CurrentAudioRoom;
-            if (room == null || !room.IsValid) { Skip("no room", straight); return; }
-            if (sas.IsSourceAndListenerInCommonOutdoor(room)) { Skip("both outdoors", straight); return; }
-            if (sas.IsSourceInListenerRoom(c)) { Skip("same room", straight); return; }
-            if (!sas.TryGetMatchingRoomPair(room, out RoomPair pair, out bool reversed) || pair == null || pair.Routes == null || pair.Routes.Length == 0) { Skip("no route", straight); return; }
-            if (!DataProvider.TryGetData<SpatialAudioDataContainer>(out SpatialAudioDataContainer data) || data == null) { Skip("no route data", straight); return; }
-            if (!BestRoute(data, pair, reversed, blast, listener, out Vector3 near, out float path, out int openings, out float closure)) { Skip("no usable route", straight); return; }
+            if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why)) { Skip(why, straight); return; }
 
             Vector3 toNear = near - listener;
             float nearM = toNear.magnitude, movedDeg = 0f, cutoff = 0f;
@@ -132,6 +177,83 @@ namespace RealSoundSimulation.Fixes
             }
 
             Row(moved ? "1" : "0", "", straight, path, openings, Vector3.Angle(toBlast, toNear), movedDeg, blocked ? "1" : "0", cutoff, closure);
+        }
+
+        private static bool FindRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 source, Vector3 listener, out Vector3 near, out float path, out int openings, out float closure, out string why)
+        {
+            near = Vector3.zero; path = 0f; openings = 0; closure = 0f; why = "";
+            ISpatialAudioRoom room = c.CurrentAudioRoom;
+            if (room == null || !room.IsValid) { why = "no room"; return false; }
+            if (sas.IsSourceAndListenerInCommonOutdoor(room)) { why = "both outdoors"; return false; }
+            if (sas.IsSourceInListenerRoom(c)) { why = "same room"; return false; }
+            if (!sas.TryGetMatchingRoomPair(room, out RoomPair pair, out bool reversed) || pair == null || pair.Routes == null || pair.Routes.Length == 0) { why = "no route"; return false; }
+            if (!DataProvider.TryGetData<SpatialAudioDataContainer>(out SpatialAudioDataContainer data) || data == null) { why = "no route data"; return false; }
+            if (!BestRoute(data, pair, reversed, source, listener, out near, out path, out openings, out closure)) { why = "no usable route"; return false; }
+            return true;
+        }
+
+        private static void TickBounces(float dt)
+        {
+            if (Bouncers.Count == 0) return;
+            if (!Wanted || !MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated) { Bouncers.Clear(); return; } // the game puts the voices back on the grenades in Update
+            SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
+            Transform lt = sas.ListenerTransform;
+            if (lt == null) return;
+            float now = Time.time;
+            double end = AudioSettings.dspTime + BounceHoldS;
+            for (int i = Bouncers.Count - 1; i >= 0; i--)
+            {
+                Bouncer b = Bouncers[i];
+                if (b.G == null || b.S == null) { Bouncers.RemoveAt(i); continue; }
+                bool playing = b.S.source1 != null && b.S.source1.isPlaying;
+                if (!playing && (b.Rb == null || b.Rb.velocity.sqrMagnitude < MovingSqr)) { b.Init = false; continue; }
+                PlaceBounce(sas, lt.position, b, now, dt, end);
+            }
+        }
+
+        private static void PlaceBounce(SpatialAudioSystem sas, Vector3 listener, Bouncer b, float now, float dt, double end)
+        {
+            Vector3 grenade = b.G.transform.position, toGrenade = grenade - listener;
+            float straight = toGrenade.magnitude;
+            if (straight < 0.01f) return;
+            if (now >= b.NextScan) ScanBounce(sas, listener, b, toGrenade, straight, now);
+            if (!b.HasRoute) { b.Init = false; return; }
+
+            if (Plugin.BlastDullOn.Value) SetVoice(b.S, b.Cut, end);
+            if (!Plugin.BlastOpeningOn.Value) { b.Init = false; return; }
+
+            Vector3 toNear = b.Near - listener;
+            float nearM = toNear.magnitude;
+            Vector3 dirGrenade = toGrenade / straight, dirTarget = dirGrenade;
+            float distTarget = straight, blend = Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.BlastOpeningStrength.Value);
+            if (blend > 0f && nearM > 0.01f)
+            {
+                dirTarget = Vector3.Slerp(dirGrenade, toNear / nearM, blend);
+                distTarget = Mathf.Lerp(straight, Mathf.Max(b.Path, straight), blend);
+            }
+            if (!b.Init) { b.CurDir = dirTarget; b.CurDist = distTarget; b.Init = true; }
+            else
+            {
+                float k = 1f - Mathf.Exp(-dt / BounceSmoothS);
+                b.CurDir = Vector3.Slerp(b.CurDir, dirTarget, k);
+                b.CurDist = Mathf.Lerp(b.CurDist, distTarget, k);
+            }
+            b.S.Position = listener + b.CurDir.normalized * b.CurDist;
+            if (!b.Counted) { b.Counted = true; BounceGrenades++; }
+            BounceFrames++; _bounceMovedSum += Vector3.Angle(b.CurDir, dirGrenade);
+        }
+
+        private static void ScanBounce(SpatialAudioSystem sas, Vector3 listener, Bouncer b, Vector3 toGrenade, float straight, float now)
+        {
+            b.NextScan = now + BounceScanS;
+            b.HasRoute = false;
+            if (!GoContainersRef(sas).TryGetValue(b.G.gameObject.GetInstanceID(), out AudioSourceContainer c) || c == null) return;
+            if (!FindRoute(sas, c, b.G.transform.position, listener, out Vector3 near, out float path, out int openings, out float _, out string _)) return;
+            b.Near = near; b.Path = path; b.HasRoute = true;
+            if (!Plugin.BlastDullOn.Value) return;
+            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            bool blocked = CountedRay.Raycast(listener, toGrenade / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
+            b.Cut = PortalPositioning.DullHzFor(toGrenade, near - listener, blocked, openings);
         }
 
         // PortalIDs run from the pair's first room to its second. Reversed = the listener is in the first room.
@@ -167,16 +289,32 @@ namespace RealSoundSimulation.Fixes
             return bestCost < float.MaxValue;
         }
 
+        private static AudioSource SecondSource(BetterSource source) =>
+            source is SuperSourceDistant d ? Source2Ref(d) : source is SuperSource s ? s.source2 : null;
+
         private static void FilterVoice(BetterSource source, float cutoff)
         {
-            AudioSource a = source.source1, b = null;
-            float delay = 0f;
-            if (source is SuperSourceDistant d) { b = Source2Ref(d); delay = d.Delay; }
-            else if (source is SuperSource s) b = s.source2;
+            AudioSource a = source.source1;
             if (a == null) return;
-            double end = AudioSettings.dspTime + Mathf.Max(a.clip != null ? a.clip.length : 0f, 1f) + delay + ExtraHoldS;
-            SetFilter(a, cutoff, end);
-            SetFilter(b, cutoff, end);
+            float delay = source is SuperSourceDistant d ? d.Delay : 0f;
+            SetVoice(source, cutoff, AudioSettings.dspTime + Mathf.Max(a.clip != null ? a.clip.length : 0f, 1f) + delay + ExtraHoldS);
+        }
+
+        private static void SetVoice(BetterSource source, float cutoff, double end)
+        {
+            SetFilter(source.source1, cutoff, end);
+            SetFilter(SecondSource(source), cutoff, end);
+        }
+
+        private static void FilterOff(BetterSource source)
+        {
+            Off(source.source1);
+            Off(SecondSource(source));
+        }
+
+        private static void Off(AudioSource a)
+        {
+            if (a != null && Filters.TryGetValue(a.gameObject, out Voice v) && v.Lp != null && v.Lp.enabled) v.Lp.enabled = false;
         }
 
         private static void SetFilter(AudioSource a, float cutoff, double end)
@@ -199,6 +337,13 @@ namespace RealSoundSimulation.Fixes
         // Back to neutral when the sound has ended: these voices return to the game's pool.
         private void LateUpdate()
         {
+            if (Bouncers.Count > 0)
+            {
+                Perf.Begin();
+                try { TickBounces(Mathf.Max(Time.unscaledDeltaTime, 0f)); }
+                catch (Exception e) { DiagRunner.ReportOnce("6.4 grenade bounce", e); }
+                finally { Perf.End(Perf.Part.BlastFromOpening); }
+            }
             if (!_anyOn) return;
             double now = AudioSettings.dspTime;
             bool any = false;
@@ -232,7 +377,8 @@ namespace RealSoundSimulation.Fixes
             string state = Plugin.BlastOpeningOn.Value ? $"ON, strength {Plugin.BlastOpeningStrength.Value:0.00}" : "off";
             return $"BLAST FROM THE OPENING (6.4 {state}, 6.4b dulling {(Plugin.BlastDullOn.Value ? "ON" : "off")}, 6.2h thump level {Plugin.ThumpExplosionDb.Value:+0;-0;0} dB): moved {Moved}" +
                    (Moved > 0 ? $", on average {_movedSum / Moved:0} deg from the true direction" : "") + $"; dulled {Dulled}" + (Dulled > 0 ? $", typical cutoff {Mathf.Exp((float)(_cutLogSum / Dulled)):0} Hz" : "") +
-                   $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}  (blast.csv)\n";
+                   $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; grenade bounces moved for {BounceGrenades} grenades, {BounceFrames} frames" +
+                   (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") + "  (blast.csv)\n";
         }
     }
 }

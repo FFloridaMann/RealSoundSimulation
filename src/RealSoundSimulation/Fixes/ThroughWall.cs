@@ -24,7 +24,7 @@ namespace RealSoundSimulation.Fixes
     //   reach    0.6.38 ("6.2e"): gunshot "6.2f", explosion "6.2g", suppressed gun 20 less. Distance + full wall loss use it up; none left, no thump.
     //            Fades over the last 6 dB. User, 9 Nov 2026: "not every gunshot and explosion should get through", then chose numbers set from physics
     //            (one concrete wall rarely stops a shot; several heavy walls or earth do).
-    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss x "6.2d"; explosions +6 dB + "6.2h" (0.6.41), suppressed guns -10 dB
+    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss x "6.2d"; explosions +6 dB + "6.2h" (0.6.41), and "6.2i" with no wall in the way (0.6.42: user, "grenades should also have more thump to them (in general"); suppressed guns -10 dB
     //   voice    at most 4 at once, from fix 6's pool, past its headroom cap; full-auto: a 0.3 s slice at most every 0.25 s per shooter
     // Adds a voice; the game's own sound for the shot is left alone. No raid numbers behind the levels or reach yet: thump.csv records each decision.
     internal static class ThroughWall
@@ -119,7 +119,7 @@ namespace RealSoundSimulation.Fixes
                 if (dist > ExplosionRangeM) return;
                 var m = new Measure();
                 MeasureWalls(lt.position, position, m);
-                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value, Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
+                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (explosion)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }
@@ -128,7 +128,7 @@ namespace RealSoundSimulation.Fixes
         private static bool Thump(string kind, object owner, AudioClip clip, Vector3 pos, float dist, Measure m, float cutoff, float extraDb, float reach, float maxLen, string route)
         {
             float distDb = 20f * Mathf.Log10(Mathf.Max(dist, RefM) / RefM), spent = distDb + m.LossDb;
-            if (m.Walls == 0) return Skip(kind, "no wall", dist, m, spent, reach, 0f, cutoff, 0f, route, clip);
+            if (m.Walls == 0 && kind != "explosion") return Skip(kind, "no wall", dist, m, spent, reach, 0f, cutoff, 0f, route, clip); // 0.6.42: an explosion has its thump with no wall too
             float fade = 1f;
             if (Plugin.ThumpWallsStop.Value)
             {
