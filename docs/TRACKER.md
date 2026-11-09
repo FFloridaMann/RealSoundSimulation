@@ -126,6 +126,10 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Raid: break a window from another room, `6.7` off and on; glass.csv
 - [x] Blasts around a corner where both of you are outdoors (`6.8`, `6.8a`, 0.6.50; starting values)
 - [ ] Raid: a grenade behind a building, front of and behind an entrance, `6.8` off and on; blast.csv `reason`
+- [x] Corner search from both ends, reuse, probe openings, worker threads (0.6.51)
+- [x] Bot gunshots around a corner (`6.8b`, 0.6.51; starting values)
+- [x] Blast arrives by its route, thump first (`6.4d`, 0.6.51)
+- [ ] Raid: bots firing behind buildings outdoors, `6.8b` off and on; thump before bang through a doorway, `6.4d` off and on
 - [x] Blasts dulled less than gunshots (`6.4c`, 0.6.46; starting value)
 - [ ] Try Bring Back Concussion's `Explosion Effect Radius` above 7 m (raid_20261109_100114: every blast 10 m or more away got no concussion)
 - [ ] Raid: `6.4` on and off with grenades in another room; `6.4a` at 0.5 if disorienting; `6.2h`, `6.2i` and `6.2j` (length and fade, 0.6.43-0.6.44) by ear, close blasts first
@@ -193,7 +197,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 123 settings, what each does, and what still reads it
+- [ ] List all 125 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

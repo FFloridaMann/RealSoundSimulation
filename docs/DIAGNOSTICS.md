@@ -185,6 +185,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.47: the summary's CLOSED DOORS line lists the doors read by material, plus `untagged`, `no door` and `door elsewhere` (those get the 0.7 value).
 
+0.6.51: blast.csv `openings` holds the corners used on `around a corner` rows; `reason` can also be `search busy`. New CORNER SEARCH summary line: small and big searches, reused answers, slots busy, found one or two corners or none, how many went through a remembered opening, and bot-shot answers.
+
 0.6.50: blast.csv `reason` can be `around a corner` (moved) or `no way round` (stayed, dulled); new last column `lossDb`, the level taken off by `6.8a`. The BLAST FROM THE OPENING summary line counts found, no way round, search limit and line clear.
 
 0.6.49: **blastrec.csv**, one row per explosion: `t`, `x,y,z` (the blast), `distM`, `gameEnv` (the recording the game chose), `openShare` (0 to 1, the rays that got out), `outdoorWeight`, `mainEnv` (the one on the main voice), `mainGain`, `layerGain` (0 = no second recording), `layerPlayed`, `closeReachM`. **glass.csv**, one row per window sound: `t`, `x,y,z`, `moved`, `reason` (why it stayed: `same room`, `both outdoors`, `no route`..., or `no occlusion pass`: your own room or it did not play), `distM`, `pathM`, `openings`, `lineBlocked`, `cutoffHz`, `lossDb`, `clip`. Summary: BLAST RECORDING and GLASS BY ROUTE lines.

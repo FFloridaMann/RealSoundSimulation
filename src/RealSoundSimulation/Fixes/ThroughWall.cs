@@ -52,6 +52,7 @@ namespace RealSoundSimulation.Fixes
         public static int PlayedGun, PlayedExplosion, AtOnceMax, NoRoute, StoppedGun, StoppedExplosion;
         private static double _lossSum;
 
+        private const float ShockHeadStartM = 1.5f;
         public const string Header = "t,kind,played,reason,distM,walls,materials,thickM,lossDb,spentDb,reachDb,volume,cutoffHz,delayMs,hasRoute,clip";
 
         public static void Apply(Harmony h)
@@ -160,7 +161,8 @@ namespace RealSoundSimulation.Fixes
             if (clip == null) return Skip(kind, "no clip", dist, m, spent, reach, 0f, cutoff, 0f, route, clip);
             float db = Plugin.ThumpDb.Value + extraDb - distDb - m.LossDb * Plugin.ThumpWallLoss.Value;
             float vol = Mathf.Clamp01(Mathf.Pow(10f, db / 20f)) * fade;
-            float delay = dist / OwnEchoes.SpeedOfSound;
+            // 0.6.51: a grenade's shock front only outruns sound for the first few metres, worth 1.1 to 2 m (3 to 6 ms) by 28 m (Kinney-Graham, 60 g to 180 g charges; at 28 m the front is under 1% faster than sound). User: "blasts waves move faster than sound".
+            float delay = (kind == "explosion" ? Mathf.Max(dist - ShockHeadStartM, 0f) : dist) / OwnEchoes.SpeedOfSound;
             if (vol < MinVolume) return Skip(kind, "too quiet", dist, m, spent, reach, vol, cutoff, delay, route, clip);
 
             double now = AudioSettings.dspTime;

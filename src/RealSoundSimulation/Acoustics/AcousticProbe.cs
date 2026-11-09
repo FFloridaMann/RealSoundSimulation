@@ -828,6 +828,14 @@ namespace RealSoundSimulation.Acoustics
         public static int BlockMask => _blockMask; // 0.6.37: read by 6.2
         public static int FullMask => _mask;
 
+        // 0.6.51: where the remembered openings are, for the corner search.
+        public static int CopyOpenings(Vector3[] into)
+        {
+            int n = 0;
+            for (int k = 0; k < MaxLobes && n < into.Length; k++) if (Lobes[k].W > 0f) into[n++] = Lobes[k].P;
+            return n;
+        }
+
         // 0.6.8: where an escaping leg (from o, direction d) leaves cover: the first point along it with no roof above,
         // sampled at 0, 0.75, 1.5, 3, 6, 12, 24, 48 m and refined twice. At most 10 short casts.
         private static readonly float[] ExitSteps = { 0.75f, 1.5f, 3f, 6f, 12f, 24f, 48f };

@@ -28,6 +28,9 @@ namespace RealSoundSimulation.Fixes
     //   cutoff   16 kHz x 2^(-1.5 x steps x "6.1c"), never below "6.1d"; smoothed over 150 ms, set at once on the first shot
     // Sound bending round an edge really does lose its highs first, but real rooms are gentler than a filter and hard walls bounce some highs along, so
     // these are starting values. Steps aside on the game's muffled channel. Our own filter: back to neutral when the gun goes quiet or gives up its voices.
+    //
+    // 6.8b (0.6.51): a bot firing behind something when the room map has you both outdoors has no route, so it uses CornerSearch: re-read every 0.5 s while it fires, the first
+    // answer after a pause finished in the same frame (a few a second at most) so the first shot isn't heard from the wrong side. Position and tone only.
     [DefaultExecutionOrder(32000)]
     internal class PortalPositioning : MonoBehaviour
     {
@@ -52,6 +55,10 @@ namespace RealSoundSimulation.Fixes
             public Vector3 Near, CurDir;
             public float Path, CurDist, NextScan, Moved, LastFire, CurCut = DullOffHz;
             public int HeldRoute = -1;
+            public bool Corner;
+            public CornerSearch.Job Job;
+            public int JobSerial;
+            public float NextCorner, LastAnswer = -100f;
             public uint HeldPair;
         }
 
@@ -59,7 +66,7 @@ namespace RealSoundSimulation.Fixes
         private static readonly Dictionary<int, Gun> ByKey = new Dictionary<int, Gun>();
         private static readonly Dictionary<GameObject, AudioLowPassFilter> Filters = new Dictionary<GameObject, AudioLowPassFilter>(); // by object: a filter acts on every source on it
 
-        public static int Tracked, RouteChanges, HeldBack;
+        public static int Tracked, RouteChanges, HeldBack, GunCornerFound, GunCornerNone;
         public static long MovedFrames, DullFrames, StepAsideFrames;
         public static double MovedSum, DullLogSum;
         public static float MaxMoved, MinCut = DullOffHz;
@@ -77,6 +84,7 @@ namespace RealSoundSimulation.Fixes
             NeutralAll();
             Filters.Clear();
             Guns.Clear(); ByKey.Clear();
+            GunCornerFound = GunCornerNone = 0;
             Tracked = RouteChanges = HeldBack = 0; MovedFrames = DullFrames = StepAsideFrames = 0; MovedSum = DullLogSum = 0; MaxMoved = 0f; MinCut = DullOffHz;
         }
 
@@ -162,7 +170,7 @@ namespace RealSoundSimulation.Fixes
             {
                 Vector3 toNear = g.Near - listener;
                 float nearM = toNear.magnitude;
-                float blend = Mathf.Clamp01(c.PropagationEffect / FullAtEffect) * Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.PortalStrength.Value);
+                float blend = (g.Corner ? 1f : Mathf.Clamp01(c.PropagationEffect / FullAtEffect)) * Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.PortalStrength.Value);
                 if (blend > 0f && nearM > 0.01f)
                 {
                     dirTarget = Vector3.Slerp(dirGun, toNear / nearM, blend);
@@ -191,6 +199,8 @@ namespace RealSoundSimulation.Fixes
             if (!ProcessorsRef(sas).TryGetValue(g.Player, out SoundOcclusionProcessor p) || !(p?._occluder is CombinedSpatialAudioOccluder occ)) { g.HasRoute = false; return; }
             PortalRoutes.Result r = PortalRoutes.Read(sas, c, occ, listener, g.HeldRoute, g.HeldPair, Hysteresis);
             if (r.Reason == PortalRoutes.Why.Busy || r.Reason == PortalRoutes.Why.NotComputed) { g.NextScan = now + RetryS; return; } // keep what it has
+            if (r.Reason == PortalRoutes.Why.Outdoor && Plugin.GunCornerOn.Value) { g.HeldRoute = -1; ScanCorner(sas, listener, g, now); return; }
+            g.Corner = false; g.Job = null;
             if (r.Reason != PortalRoutes.Why.Route || !r.Found) { g.HasRoute = false; g.HeldRoute = -1; return; }
             if (r.KeptHeld) HeldBack++;
             if (g.HeldRoute >= 0 && (r.Best != g.HeldRoute || r.Pair != g.HeldPair)) RouteChanges++;
@@ -204,6 +214,38 @@ namespace RealSoundSimulation.Fixes
                 int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
                 g.Blocked = len > 0.01f && CountedRay.Raycast(listener, toGun / len, out RaycastHit _, len, mask, QueryTriggerInteraction.Ignore);
             }
+        }
+
+        private const float GunCornerEveryS = 0.5f, GunCornerFreshS = 1f;
+
+        private static void ScanCorner(SpatialAudioSystem sas, Vector3 listener, Gun g, float now)
+        {
+            if (now - g.LastFire >= DullHoldS) { g.HasRoute = g.Corner = false; g.Job = null; return; }
+            Vector3 gun = g.W.WeaponPosition, toGun = gun - listener;
+            float len = toGun.magnitude;
+            if (g.Job != null)
+            {
+                if (g.Job.Serial != g.JobSerial) g.Job = null;
+                else if (g.Job.Done) { TakeCorner(g, g.Job, gun, len, now); g.Job = null; }
+                else return;
+            }
+            if (now < g.NextCorner) return;
+            g.NextCorner = now + GunCornerEveryS;
+            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            if (len < 0.01f || !CountedRay.Raycast(listener, toGun / len, len, mask, QueryTriggerInteraction.Ignore)) { g.HasRoute = g.Corner = false; return; }
+            bool canWait = now - g.LastAnswer < GunCornerFreshS || !CornerSearch.TakeSyncBudget();
+            CornerSearch.Job j = CornerSearch.Get(listener, gun, mask, canWait);
+            if (j == null) return;
+            if (j.Done) TakeCorner(g, j, gun, len, now);
+            else { g.Job = j; g.JobSerial = j.Serial; }
+        }
+
+        private static void TakeCorner(Gun g, CornerSearch.Job j, Vector3 gun, float len, float now)
+        {
+            g.LastAnswer = now;
+            g.HasRoute = g.Corner = g.Blocked = true;
+            if (j.Found) { g.Near = j.Near; g.Path = j.Path; g.Portals = j.Corners; GunCornerFound++; }
+            else { g.Near = gun; g.Path = len; g.Portals = 2; GunCornerNone++; }
         }
 
         private static void Dull(Vector3 listener, Gun g, SuperBetterAudioQueue q, float now, float dt)

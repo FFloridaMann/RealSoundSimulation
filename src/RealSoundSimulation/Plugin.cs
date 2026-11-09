@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.50")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.51")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -122,6 +122,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<int> RoomEchoCount;
         internal static ConfigEntry<bool> BlastRecordingOn, GlassRouteOn; // 0.6.49 "6.6", "6.7"
         internal static ConfigEntry<bool> BlastCornerOn; // 0.6.50 "6.8"
+        internal static ConfigEntry<bool> GunCornerOn, BlastArrivalOn; // 0.6.51 "6.8b", "6.4d"
         internal static ConfigEntry<float> BlastCornerLossDb;
         internal static ConfigEntry<float> BlastOutdoorShare, BlastCloseReachM, GlassDullStrength, GlassLossDb2;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
@@ -204,6 +205,8 @@ namespace RealSoundSimulation
             GlassLossDb2 = Config.Bind(fix, "6.7b Glass loss per opening dB", 4f, new ConfigDescription("How much quieter breaking glass gets for each opening on its way to you, on top of the game's own route loss, up to 16 dB in all. Live.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastCornerOn = Config.Bind(fix, "6.8 Blasts around a corner", true, new ConfigDescription("0.6.50: where the room map has you and an explosion both outdoors but something solid is on the straight line, rays look for the way around it. The blast comes from there, dulled and quieter; with no way round it stays put, duller and quieter still. Uses 6.4a and 6.4c. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             BlastCornerLossDb = Config.Bind(fix, "6.8a Corner loss dB", 4f, new ConfigDescription("How much quieter a blast is when it comes around a corner. Twice this with no way round, 18 dB at most. Live.", new AcceptableValueRange<float>(0f, 18f), new ConfigurationManagerAttributes { Order = 93 }));
+            GunCornerOn = Config.Bind(fix, "6.8b Bot gunshots around a corner", true, new ConfigDescription("0.6.51: the same search for a bot firing behind something when the room map has you both outdoors. Its shots come from around the corner, dulled by 6.1c. Direction and tone only, not level. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            BlastArrivalOn = Config.Bind(fix, "6.4d Blast arrives by its route", true, new ConfigDescription("0.6.51: an explosion moved to an opening or a corner arrives after the extra distance it travels, so the through-wall thump lands first. Off = the straight-line delay. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoOn = Config.Bind(fix, "6.3 Explosion echoes", true, new ConfigDescription("0.6.39: an explosion echoes off walls that it and you can both reach, from you or a bot. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoDb = Config.Bind(fix, "6.3a Explosion echo level dB", 0f, new ConfigDescription("How loud the echoes are. Try +12 to hear exactly what they do, then bring it down. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             ExplosionEchoCount = Config.Bind(fix, "6.3b Echoes per explosion", 6, new ConfigDescription("The loudest this many play. Live.", new AcceptableValueRange<int>(1, 12), new ConfigurationManagerAttributes { Order = 93 }));
@@ -324,7 +327,7 @@ namespace RealSoundSimulation
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m)" : "off")} | " +
-            $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")} | " +
+            $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +
             $"6.5 closed doors {(DoorMufflingOn.Value ? $"ON ({DoorMufflingStrength.Value:0.00})" : "off")} | " +
             $"6.4 blast from the opening {(BlastOpeningOn.Value ? $"ON ({BlastOpeningStrength.Value:0.00})" : "off")}, dulled {(BlastDullOn.Value ? $"ON (x{BlastDullStrength.Value:0.00})" : "off")}, explosion thump level {ThumpExplosionDb.Value:+0;-0;0} dB, open-air {ThumpOpenDb.Value:+0;-0;0} dB, length {ThumpExplosionLengthS.Value:0.0} s | " +

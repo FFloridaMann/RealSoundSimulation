@@ -242,6 +242,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.6`, `6.6a`, `6.6b` | explosion recording by how open the blast is: on, open share for all outdoor, close recording reach (0.6.49) | on, 0.4, 25 m |
 | `6.7`, `6.7a`, `6.7b` | glass from other rooms by route: on, dulling strength, loss per opening (0.6.49) | on, 1, 4 dB |
 | `6.8`, `6.8a` | blasts around a corner where both of you are outdoors: on, corner loss (0.6.50) | on, 4 dB |
+| `6.8b` | bot gunshots around a corner where both of you are outdoors (0.6.51) | on |
+| `6.4d` | an explosion moved to an opening or corner arrives after its longer way (0.6.51) | on |
 | `6.3e`, `6.3f`, `6.3g` | room echoes from the opening for an explosion in another room: on, level, count (0.6.48) | on, 0 dB, 4 |
 | `9v` | the roof rain floor count includes large low-detail floors (0.6.36) | on |
 | `9w` | roof rain fades out where the game says indoors with no rain (0.6.36) | on |

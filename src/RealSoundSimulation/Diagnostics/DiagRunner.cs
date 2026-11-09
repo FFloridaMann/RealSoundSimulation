@@ -536,6 +536,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(ExplosionEchoes.Summary());
             sb.Append(BlastFromOpening.Summary()); // 0.6.41
             sb.Append(BlastRecording.Summary()); // 0.6.49
+            sb.Append(Acoustics.CornerSearch.Summary().TrimEnd('\n') + $"; bot shots: answers with a corner {PortalPositioning.GunCornerFound}, without {PortalPositioning.GunCornerNone}\n"); // 0.6.51
             sb.Append(BlastFromOpening.GlassSummary()); // 0.6.49
             sb.Append(ClosedDoors.Summary()); // 0.6.47
             sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}; same-clip crossfades done as a volume ramp {RainDropoutFix.VolumeOnly}");

@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.51 — 9 Nov 2026 (6.8: search from both ends, bot gunshots, arrival times)
+**Run in game:** not yet. Starting values.
+- **The corner search now works from both ends** (`Acoustics/CornerSearch.cs`), on the worker threads: fans from you and from the source, plus the openings probe v2 remembers, and it finds one or two corners. About 290 rays when the blast is close, finished in the same frame; about 960 over the next 2 frames when the sound has at least 50 ms still to travel.
+- **The 4-per-second limit is gone.** A request within 3 m at the source and 1.5 m at you reuses an answer up to 3 s old. Up to 8 searches at once.
+- **New `6.8b Bot gunshots around a corner`** (on, live): the same search for bots when the room map has you both outdoors. Position and tone only.
+- **New `6.4d Blast arrives by its route`** (on, live): a blast moved to an opening or corner now arrives after the extra distance it travels; before, it used the straight-line delay. The through-wall thump keeps the straight line, so it lands first.
+- **The thump gets a 1.5 m head start** (about 4 ms). User: "blasts waves move faster than sound". Worked out with the Kinney-Graham blast formula for 60 g to 180 g charges: the front is 40 to 135% faster than sound at 1 m, 3 to 7% at 5 m and under 1% at 28 m, which adds up to 1.1 to 2 m (3 to 6 ms) by 28 m. Not audible by itself.
+- blast.csv: `openings` is the number of corners; `reason` can be `search busy`. New CORNER SEARCH summary line.
+- Version 0.6.51. F12 now has 125 settings.
+
 ## 0.6.50 — 9 Nov 2026 (6.8: blasts around a corner)
 **Run in game:** not yet. Starting values.
 - **New `6.8 Blasts around a corner`** (on, live) and `6.8a Corner loss dB` (4, 0 to 18). The routes behind `6.4` only exist between rooms, so where the room map has you and a blast both outdoors, a blast behind a building played clear from its true direction: 4 of 12 blasts in raid_20261109_105838. User, 9 Nov 2026: it should sound different "and from the correct position based on if you are standing at the front or behind the entrance". When the straight line is blocked, rays find the shortest way around one corner and the blast comes from there, dulled and quieter. With no way round it stays put, a step duller and twice as much quieter.

@@ -29,6 +29,7 @@ namespace RealSoundSimulation.Diagnostics
             new Target("6.7", "BetterSource", "PreOcclusionVolume", "F"),
             new Target("6.7", "SuperSource", "_secondPreEffectsVolume", "F"),
             new Target("6.8", "SuperSourceDistant", "_secondPreEffectsVolume", "F"),
+            new Target("6.4d", "SuperSourceDistant", "Delay", "F"),
             new Target("6.2", "BetterAudio", "PlayAtPoint", "M"),
             new Target("6.2", "BetterAudio", "PlayAtPointDistant", "M"),
             new Target("6.3", "BetterAudio", "PlayAtPoint", "M"),

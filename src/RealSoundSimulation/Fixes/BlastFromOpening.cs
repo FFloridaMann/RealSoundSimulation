@@ -37,8 +37,7 @@ namespace RealSoundSimulation.Fixes
     // 0.6.50 "6.8": around a corner. The routes above only exist between rooms, so where the room map has you and the blast both outdoors a blast behind a building
     // played from its true direction, clear. Raid 20261109_105838: 4 of 12 blasts, one 28 m away with stone and concrete on the line. User, same day: should sound
     // different "and from the correct position based on if you are standing at the front or behind the entrance". Only when the straight line is blocked:
-    //   search   36 level rays from you, 40 m at most; on each, 3 points along its free length; from each point a ray to the blast. 144 rays, once per blast, 4 per second at most.
-    //   pick     the shortest way through a point that sees the blast, up to 40 m longer than the straight line. One corner only.
+    //   search   Acoustics/CornerSearch: from both ends, one or two corners (0.6.51). A blast at least 50 ms of travel away waits 2 frames for the bigger search; a nearer one is finished at once.
     //   play     from that point's direction at the length of the way, dulled by the 6.1b rule at 6.4c's strength, "6.8a" dB quieter.
     //            No way round: stays at the true spot, a step duller and twice 6.8a quieter (18 dB at most). The second recording (6.6) reuses the answer.
     [DefaultExecutionOrder(32000)]
@@ -104,7 +103,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Filters) if (kv.Value.Lp != null && kv.Value.Lp.enabled) kv.Value.Lp.enabled = false;
             Filters.Clear(); Skips.Clear(); Bouncers.Clear();
             _pending = _anyOn = false;
-            CornerFound = CornerNone = CornerClear = CornerLimited = 0; _nextCorner = 0f; _cornerMovedSum = 0;
+            CornerFound = CornerClear = CornerLimited = 0; _cornerMovedSum = 0; _cJob = null; CornerVoices.Clear(); CornerSearch.Reset();
             _glass = false; GlassMoved = GlassLeft = GlassNoPass = 0; GlassSkips.Clear(); _glassCutLogSum = _glassLossSum = 0;
             Moved = Dulled = BounceGrenades = RoomPlayed = RoomDropped = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = _roomLevelSum = 0;
         }
@@ -198,6 +197,7 @@ namespace RealSoundSimulation.Fixes
                     Vector3 placed = listener + dir * Mathf.Lerp(straight, Mathf.Max(path, straight), blend);
                     source.Position = placed;
                     c.SetPositionOffset(blast - placed); // the game's occlusion stays at the true spot
+                    DelayVoice(source, Mathf.Lerp(straight, Mathf.Max(path, straight), blend) - straight, AudioSettings.dspTime); // 0.6.51: "6.4d"
                     movedDeg = Vector3.Angle(toBlast, dir);
                     moved = true;
                     if (!BlastRecording.InLayer) { Moved++; _movedSum += movedDeg; }
@@ -249,81 +249,102 @@ namespace RealSoundSimulation.Fixes
         }
 
         // ---- 6.8: around a corner (0.6.50)
-        private const int CornerFan = 36;
-        private const float CornerFanM = 40f, CornerBackOffM = 0.5f, CornerMinFreeM = 1.5f, CornerMaxDetourM = 40f, CornerLiftM = 0.5f, CornerEveryS = 0.25f, CornerMaxLossDb = 18f;
-        private static readonly float[] CornerAlong = { 0.4f, 0.7f, 1f };
+        private const float CornerLiftM = 0.5f, CornerWaitMinS = 0.05f, CornerMaxLossDb = 18f;
         private static readonly AccessTools.FieldRef<SuperSourceDistant, float> DistantSecondPreRef = AccessTools.FieldRefAccess<SuperSourceDistant, float>("_secondPreEffectsVolume");
-        public static int CornerFound, CornerNone, CornerClear, CornerLimited;
+        public static int CornerFound, CornerClear, CornerLimited;
         private static double _cornerMovedSum;
-        private static float _nextCorner;
-        private static bool _cBlocked, _cFound;
-        private static Vector3 _cPoint;
-        private static float _cPath;
+        private static bool _cBlocked;
+        private static CornerSearch.Job _cJob;
+        private class CornerVoice { public CornerSearch.Job J; public int Serial; public BetterSource S; public AudioSourceContainer C; public Vector3 Listener, Blast; public float Straight; public bool Layer; public double Dsp; }
+        private static readonly List<CornerVoice> CornerVoices = new List<CornerVoice>();
 
-        // True when this blast was dealt with here. The second recording (6.6) comes straight after the first and reuses its answer.
+        // True when this blast was dealt with here. The second recording (6.6) comes straight after the first and uses the same search.
         private static bool Corner(SpatialAudioSystem sas, AudioSourceContainer c, BetterSource source, Vector3 listener, Vector3 blast, float straight)
         {
             if (!Plugin.BlastCornerOn.Value || straight < 0.01f) return false;
-            if (!BlastRecording.InLayer) SearchCorner(sas, listener, blast);
+            bool layer = BlastRecording.InLayer;
+            float delay = source is SuperSourceDistant dv ? dv.Delay : 0f;
+            if (!layer)
+            {
+                int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+                Vector3 target = blast + Vector3.up * CornerLiftM, toTarget = target - listener;
+                float len = toTarget.magnitude;
+                _cBlocked = len >= 0.01f && CountedRay.Raycast(listener, toTarget / len, len, mask, QueryTriggerInteraction.Ignore);
+                _cJob = null;
+                if (!_cBlocked) { CornerClear++; return false; }
+                bool canWait = delay >= Mathf.Max(CornerWaitMinS, Time.unscaledDeltaTime * 3f); // the sound is still travelling: its 2 frames of work are free
+                _cJob = CornerSearch.Get(listener, target, mask, canWait);
+                if (_cJob == null) CornerLimited++;
+            }
             if (!_cBlocked) return false;
 
+            double dsp = AudioSettings.dspTime;
+            if (_cJob == null || _cJob.Done) ApplyCorner(source, c, listener, blast, straight, _cJob, layer, dsp);
+            else CornerVoices.Add(new CornerVoice { J = _cJob, Serial = _cJob.Serial, S = source, C = c, Listener = listener, Blast = blast, Straight = straight, Layer = layer, Dsp = dsp });
+            return true;
+        }
+
+        private static void TickCornerVoices()
+        {
+            for (int i = CornerVoices.Count - 1; i >= 0; i--)
+            {
+                CornerVoice v = CornerVoices[i];
+                if (v.J.Serial == v.Serial && !v.J.Done) continue;
+                CornerVoices.RemoveAt(i);
+                if (v.S != null) ApplyCorner(v.S, v.C, v.Listener, v.Blast, v.Straight, v.J.Serial == v.Serial ? v.J : null, v.Layer, v.Dsp);
+            }
+        }
+
+        private static void ApplyCorner(BetterSource source, AudioSourceContainer c, Vector3 listener, Vector3 blast, float straight, CornerSearch.Job job, bool layer, double playedDsp)
+        {
+            bool found = job != null && job.Found;
             Vector3 toBlast = blast - listener;
-            Vector3 toNear = _cFound ? _cPoint - listener : toBlast;
-            float nearM = toNear.magnitude, movedDeg = 0f;
-            if (_cFound && nearM > 0.01f)
+            Vector3 toNear = found ? job.Near - listener : toBlast;
+            float nearM = toNear.magnitude, movedDeg = 0f, path = found ? job.Path : 0f;
+            if (found && nearM > 0.01f)
             {
                 float blend = Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.BlastOpeningStrength.Value);
                 if (blend > 0f)
                 {
                     Vector3 dir = Vector3.Slerp(toBlast / straight, toNear / nearM, blend).normalized;
-                    Vector3 placed = listener + dir * Mathf.Lerp(straight, Mathf.Max(_cPath, straight), blend);
+                    float placedM = Mathf.Lerp(straight, Mathf.Max(path, straight), blend);
+                    Vector3 placed = listener + dir * placedM;
                     source.Position = placed;
                     c.SetPositionOffset(blast - placed);
                     movedDeg = Vector3.Angle(toBlast, dir);
+                    DelayVoice(source, placedM - straight, playedDsp);
                 }
             }
 
-            float cut = PortalPositioning.DullHzFor(toBlast, toNear, true, _cFound ? 1 : 2, Plugin.BlastDullStrength.Value);
+            int corners = found ? job.Corners : 2;
+            float cut = PortalPositioning.DullHzFor(toBlast, toNear, true, corners, Plugin.BlastDullStrength.Value);
             FilterVoice(source, cut);
-            float lossDb = Mathf.Min(Plugin.BlastCornerLossDb.Value * (_cFound ? 1f : 2f), CornerMaxLossDb);
+            float lossDb = Mathf.Min(Plugin.BlastCornerLossDb.Value * (found ? corners : 2f), CornerMaxLossDb);
             ScaleVoice(source, Mathf.Pow(10f, -lossDb / 20f));
 
-            if (!BlastRecording.InLayer && _cFound) { CornerFound++; _cornerMovedSum += movedDeg; }
-            Row(_cFound ? "1" : "0", _cFound ? "around a corner" : "no way round", straight, _cFound ? _cPath : 0f, _cFound ? 1 : 0, Vector3.Angle(toBlast, toNear), movedDeg, "1", cut, 0f, lossDb);
-            return true;
+            if (!layer && found) { CornerFound++; _cornerMovedSum += movedDeg; }
+            if (!layer) CornerRow(found ? "1" : "0", found ? "around a corner" : job == null ? "search busy" : "no way round", straight, path, found ? corners : 0, Vector3.Angle(toBlast, toNear), movedDeg, cut, lossDb);
         }
 
-        private static void SearchCorner(SpatialAudioSystem sas, Vector3 listener, Vector3 blast)
+        // Row() leaves out the second recording by what's happening now, and this can run a frame or two later.
+        private static void CornerRow(string moved, string why, float dist, float path, int corners, float turn, float movedDeg, float cut, float lossDb)
         {
-            _cBlocked = _cFound = false;
-            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
-            Vector3 target = blast + Vector3.up * CornerLiftM, toTarget = target - listener;
-            float straight = toTarget.magnitude;
-            if (straight < 0.01f || !CountedRay.Raycast(listener, toTarget / straight, straight, mask, QueryTriggerInteraction.Ignore)) { CornerClear++; return; }
-            _cBlocked = true;
+            if (!DiagLog.IsOpen) return;
+            DiagLog.Row("blast.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), moved, why, DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), corners.ToString(),
+                DiagLog.F(turn, "0"), DiagLog.F(movedDeg, "0"), "1", DiagLog.F(cut, "0"), DiagLog.F(0f, "0.00"), DiagLog.F(lossDb, "0.0")));
+        }
 
-            float now = Time.unscaledTime;
-            if (now < _nextCorner) { CornerLimited++; return; }
-            _nextCorner = now + CornerEveryS;
-
-            float best = straight + CornerMaxDetourM;
-            for (int i = 0; i < CornerFan; i++)
-            {
-                float a = i * Mathf.PI * 2f / CornerFan;
-                Vector3 d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-                float free = (CountedRay.Raycast(listener, d, out RaycastHit hit, CornerFanM, mask, QueryTriggerInteraction.Ignore) ? hit.distance : CornerFanM) - CornerBackOffM;
-                if (free < CornerMinFreeM) continue;
-                for (int k = 0; k < CornerAlong.Length; k++)
-                {
-                    float along = free * CornerAlong[k];
-                    Vector3 point = listener + d * along, toBlastFromPoint = target - point;
-                    float rest = toBlastFromPoint.magnitude, path = along + rest;
-                    if (path >= best || rest < 0.01f) continue; // can't beat the best found, so no ray for it
-                    if (CountedRay.Raycast(point, toBlastFromPoint / rest, rest, mask, QueryTriggerInteraction.Ignore)) continue;
-                    best = path; _cPoint = point; _cPath = path; _cFound = true;
-                }
-            }
-            if (!_cFound) CornerNone++;
+        // A voice moved to a longer way round arrives that much later. Only while it's still silent on its way to you.
+        private static void DelayVoice(BetterSource source, float extraM, double playedDsp)
+        {
+            if (!Plugin.BlastArrivalOn.Value || extraM < 0.3f || !(source is SuperSourceDistant d)) return;
+            double elapsed = AudioSettings.dspTime - playedDsp;
+            if (elapsed >= d.Delay) return;
+            d.Delay += extraM / OwnEchoes.SpeedOfSound;
+            float left = (float)(d.Delay - elapsed);
+            if (d.source1 != null && d.source1.clip != null) d.source1.PlayDelayed(left);
+            AudioSource two = Source2Ref(d);
+            if (two != null && two.clip != null) two.PlayDelayed(left);
         }
 
         private static void ScaleVoice(BetterSource source, float gain)
@@ -588,6 +609,10 @@ namespace RealSoundSimulation.Fixes
         // Back to neutral when the sound has ended: these voices return to the game's pool.
         private void LateUpdate()
         {
+            Perf.Begin();
+            try { CornerSearch.Tick(); TickCornerVoices(); }
+            catch (Exception e) { DiagRunner.ReportOnce("6.8 corner search", e); }
+            finally { Perf.End(Perf.Part.BlastFromOpening); }
             if (Bouncers.Count > 0)
             {
                 Perf.Begin();
@@ -631,7 +656,7 @@ namespace RealSoundSimulation.Fixes
                    (Moved > 0 ? $", on average {_movedSum / Moved:0} deg from the true direction" : "") + $"; dulled {Dulled}" + (Dulled > 0 ? $", typical cutoff {Mathf.Exp((float)(_cutLogSum / Dulled)):0} Hz" : "") +
                    $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; grenade bounces moved for {BounceGrenades} grenades, {BounceFrames} frames" +
                    (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") +
-                   $"; room echoes (6.3e {(Plugin.RoomEchoOn.Value ? "ON" : "off")}) played {RoomPlayed}" + (RoomPlayed > 0 ? $", mean level {_roomLevelSum / RoomPlayed:0.0} dB" : "") + $", dropped by the headroom cap {RoomDropped}; around a corner (6.8 {(Plugin.BlastCornerOn.Value ? "ON" : "off")}): found {CornerFound}" + (CornerFound > 0 ? $", on average {_cornerMovedSum / CornerFound:0} deg from the true direction" : "") + $", no way round {CornerNone}, search limit {CornerLimited}, line clear {CornerClear}  (blast.csv, echoes.csv kind Room)\n";
+                   $"; room echoes (6.3e {(Plugin.RoomEchoOn.Value ? "ON" : "off")}) played {RoomPlayed}" + (RoomPlayed > 0 ? $", mean level {_roomLevelSum / RoomPlayed:0.0} dB" : "") + $", dropped by the headroom cap {RoomDropped}; around a corner (6.8 {(Plugin.BlastCornerOn.Value ? "ON" : "off")}): found {CornerFound}" + (CornerFound > 0 ? $", on average {_cornerMovedSum / CornerFound:0} deg from the true direction" : "") + $", all search slots busy {CornerLimited}, line clear {CornerClear}  (blast.csv, echoes.csv kind Room)\n";
         }
     }
 }

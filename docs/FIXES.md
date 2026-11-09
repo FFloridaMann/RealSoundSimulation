@@ -629,9 +629,11 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Problem.** `6.4` needs a baked route, and routes only exist between rooms. Where the room map has you and the blast both outdoors there's none, so a blast behind a building played clear from its true direction. raid_20261109_105838: 4 of 12 blasts, one 28 m away with stone and concrete on the straight line.
 
-**Fix.** `BlastFromOpening`. Only when the straight line is blocked: 36 level rays from you (40 m at most), 3 points along each one's free length, and a ray from each point to the blast. The shortest way through a point that sees the blast wins, up to 40 m longer than the straight line. The blast plays from that direction at that length, dulled by the `6.1b` rule at `6.4c`'s strength and `6.8a` dB quieter. With no way round it stays at the true spot, a step duller and twice `6.8a` quieter, 18 dB at most. At most 144 rays and 4 searches a second.
+**Fix.** `BlastFromOpening` and `Acoustics/CornerSearch.cs` (rebuilt in 0.6.51). Only when the straight line is blocked: level fans from you and from the blast, plus the openings probe v2 remembers, then points tested shortest way first for one or two corners. Close blasts use the small search (about 290 rays) in the same frame; with at least 50 ms of travel left the bigger one (about 960) runs over 2 frames. An answer is reused for 3 s within 3 m of the source and 1.5 m of you. The blast plays from that direction at that length, arriving later by `6.4d`, dulled by the `6.1b` rule at `6.4c`'s strength and `6.8a` dB quieter per corner. With no way round it stays at the true spot, a step duller and twice `6.8a` quieter, 18 dB at most. `6.8b` does the same for bot gunshots, position and tone only.
 
-**Limits.** Starting values. One corner only. Grenade bounces and glass aren't included. A small object on the line, like a car, counts as blocked, so the blast is dulled a step.
+**Timing.** The thump keeps the straight line with a 1.5 m head start: by the Kinney-Graham formula a 60 g to 180 g charge's front is under 1% faster than sound at 28 m, and its lead by then totals 1.1 to 2 m (3 to 6 ms). Ground and building vibration, which travels faster, isn't modelled. A longer way round therefore puts the bang after the thump.
+
+**Limits.** Starting values. Level fans only, so nothing over a wall or up a stairwell. Grenade bounces and glass aren't included. A small object on the line, like a car, counts as blocked.
 
 **Check.** A grenade behind a building, from the front and from behind an entrance, `6.8` off and on; blast.csv `reason`, `turnDeg`, `pathM`, `cutoffHz`.
 
