@@ -455,6 +455,10 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 
 **Limits.** It only sees what has a collider. **Check.** The Capital and its escalators in rain: roof rain gradual, none under two concrete floors unless near a stair. Summary: floors above ceilings.
 
+## 9r: Roof rain by roof material (0.6.31)
+
+The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor on the roof rain from `Materials.RoofRainGain`: thin metal 2.8, thick metal 1.6, thin wood and plastic 1.4, fabric 0.7, others 1. Not measured; set by ear. The mod can now raise the rain above the game's own level on a loud roof. Same recording, so no true patter yet (own sounds are logged for step E).
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

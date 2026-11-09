@@ -78,6 +78,20 @@ namespace RealSoundSimulation.Acoustics
             }
         }
 
+        // 0.6.31 "9r": how much louder rain is on this roof than on concrete (a volume factor). Raid 41: rain in a metal trailer sounded
+        // quiet. Not measured: thin metal drums loudly, soft roofs damp it. Set by ear.
+        public static float RoofRainGain(MaterialType m)
+        {
+            switch (m)
+            {
+                case MaterialType.MetalThin: case MaterialType.GarbageMetal: return 2.8f;
+                case MaterialType.MetalThick: case MaterialType.MetalNoDecal: return 1.6f;
+                case MaterialType.WoodThin: case MaterialType.Plastic: return 1.4f;
+                case MaterialType.Fabric: case MaterialType.GenericSoft: return 0.7f;
+                default: return 1f;
+            }
+        }
+
         // What one bounce does to an own-gun echo: level (dB) and low-pass (Hz).
         public static void Echo(MaterialType m, out float db, out float cutoff)
         {

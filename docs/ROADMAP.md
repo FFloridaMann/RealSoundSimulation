@@ -176,6 +176,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   - how long the tails ring;
   - optimising voices: an echo holds its voice for the whole 2.5–5 s recording though it is too quiet to hear long before that, so end quiet ones early with a short fade (raid 35: 84 echoes from about 3.5 s of your own firing filled all 96 voices).
 - **Full-auto: spend the voices on the end of the burst** (user, 8 Nov 2026). During sustained fire each round masks the echoes of the last one; what the shooter really hears is the echo after the final round. So keep the full set of echoes on the first round and the tail, and run only the loudest one or two through the burst. Fix 6 already skips loop echoes on one-round loops and gives the tail its own echoes; this trims the middle of longer bursts. Judge by ear: the mid-burst echoes also carry some of the sense of the room.
+- **Own roof-rain sounds** (user, 8 Nov 2026): generate patter loops per roof material offline (tin, wood, concrete, tarp; three intensities), as a layer over the game's rain. Each drop a tiny impact ringing at that material's frequencies. One voice, listened to as WAVs before going in the game. Could go with step 7 instead. Until then `9r` only changes the level.
 - **Test on Factory and Labs.** Small, hard, enclosed maps will have the most echoes going at any one time (user, 8 Nov 2026).
 - **Why last:** echo amounts and tail lengths depend on everything before it, so they only need tuning once.
 
@@ -183,7 +184,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 
 ## Settings clean-up (S, planned)
 
-Requested by the user, 8 Nov 2026. F12 now has 79 settings (62 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
+Requested by the user, 8 Nov 2026. F12 now has 80 settings (63 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
 
 1. **Inventory.** List every setting with its current value, what it does, and whether anything still reads it.
 2. **Retire A/B switches that have been decided.** Candidates once they have held up in raids: `6g`, `9o`, `9p`, `1d`, `1e`, `3n`, and the old probes behind them. Remove the old code path with the switch.

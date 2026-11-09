@@ -36,7 +36,7 @@ namespace RealSoundSimulation.Fixes
         private static float _nextFind, _roofCandidate = 1f, _roofCandidateSince;
         private static bool _under2, _under2Candidate; private static float _under2Since; // 0.6.9: two floors above
         private const float Under2HoldS = 2f, Under2FadeS = 1.5f; // 0.6.28
-        private static float _under2Gate = 1f;
+        private static float _under2Gate = 1f, _roofMatGain = 1f; // 0.6.31: 9r
 
         public static bool On => Plugin.ExposureMixOn.Value && Plugin.DoorwayOn.Value;
 
@@ -60,7 +60,7 @@ namespace RealSoundSimulation.Fixes
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
-            _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; DoorwayBlend.ResetIndoorParams();
+            _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; _roofMatGain = 1f; DoorwayBlend.ResetIndoorParams();
             RoomTone.Reset();
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
         }
@@ -278,7 +278,9 @@ namespace RealSoundSimulation.Fixes
                     // the raid, even standing still. Now it must hold 2 s (was 0.5) and the change fades over 1.5 s.
                     if (Time.time - _under2Since >= Under2HoldS) _under2 = _under2Candidate;
                     _under2Gate = Mathf.MoveTowards(_under2Gate, _under2 ? 0f : 1f, dt / Under2FadeS);
-                    RoofRainFactor = _under2Gate * Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
+                    float matGain = Mathf.LerpUnclamped(1f, Acoustics.Materials.RoofRainGain(AcousticProbe.RoofMat), Plugin.RoofRainByMaterial.Value);
+                    _roofMatGain += (matGain - _roofMatGain) * (1f - Mathf.Exp(-dt / 0.5f)); // 0.6.31 "9r"
+                    RoofRainFactor = _under2Gate * Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel)) * _roofMatGain;
                     _roofCandidate = RoofRainFactor; _roofCandidateSince = Time.time;
                 }
                 else

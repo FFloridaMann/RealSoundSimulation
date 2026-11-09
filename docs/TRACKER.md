@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.29 (roof rain counts floors) and 0.6.30 (`3o`) waiting for a raid · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.31 (`9r` roof rain by material) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -74,7 +74,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Raid 39: compare `6g` on and off: "def sounds better", stays on
 - [x] Probe v2 uses the table too (`9o`, 0.6.27)
 - [x] Raid 40: `9o` on: rain deep in buildings "mostly sounds better"
-- [ ] Raid: check roof rain is gradual and gone under floors (0.6.29), and whether outdoor sound is still too loud there
+- [x] Raid 41: the old top-roof test was wrong at 4,740 of 28,043 spots with floors above: `9p` confirmed
+- [ ] Raid: `9r` in a metal trailer or under tin
+- [ ] Probe memory (raid 41 tag 4: slow, or wrong for the space): design under review
 - [x] Roof material (4b phase 3): floors above take off their material's loss (`9p`, 0.6.29)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 
@@ -128,6 +130,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 ## E · Final echo tuning and optimising (last)
 - [ ] Tune how many echoes each sound gets (own shots, bots, grenades)
 - [ ] Tune tail length
+- [ ] Own roof-rain sounds: patter loops per roof material, generated offline (or with step 7)
 - [ ] Short bursts: give a ringing tail its own voice or fade it, instead of the next tail stopping it (two voices per gun, raid 38)
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
 - [ ] Full-auto: full echoes on the first round and the tail, only the loudest 1–2 through the burst
@@ -141,7 +144,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 79 settings, what each does, and what still reads it
+- [ ] List all 80 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

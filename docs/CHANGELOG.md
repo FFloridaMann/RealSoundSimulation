@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.31 — 8 Nov 2026 (roof rain level by roof material)
+**Run in game:** not yet. From raid 41 (raid_20261108_210319): rain in a metal trailer was quiet and didn't sound like metal; `9p` and `9q` couldn't help because there are no floors above.
+- **New `9r Roof rain by roof material`** (1, live): roof rain's volume follows the most common surface above you: thin metal ×2.8 (about +9 dB), thick metal ×1.6, thin wood and plastic ×1.4, fabric ×0.7, others ×1. Values set by ear, not measured. It's the same game recording, so it sounds louder on metal, not like patter. Own roof-rain sounds are logged for step E.
+- Version 0.6.31.
+
 ## 0.6.30 — 8 Nov 2026 (your shot's ring follows your turning)
 **Run in game:** not yet. From raid 40 tag 1: at a half-open spot, fire, then turn around, and the indoor side seems to be where you now face and the outdoor side behind you. Your gun is a stereo recording locked to your head.
 - **New `3o Shot ring follows your turning`** (1, live; `Fixes/OwnShotTurn.cs`). When a shot has both recordings in it, the open side is remembered, and until the sound ends the change in your facing shifts them: sideways they pan across your ears (up to 60%), and whichever has swung behind you is low-passed down to 3.5 kHz. Firing without turning changes nothing. Scaled by how clear the open side is. No rays, no voices. Your own gun only.
