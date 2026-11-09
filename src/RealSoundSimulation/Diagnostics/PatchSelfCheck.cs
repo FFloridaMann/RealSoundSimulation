@@ -20,6 +20,8 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly Target[] Targets =
         {
             // setting 0 gun sounds (SPT or SEB)
+            new Target("6.2", "BetterAudio", "PlayAtPoint", "M"),
+            new Target("6.2", "BetterAudio", "PlayAtPointDistant", "M"),
             new Target("10a", "BetterAudio", "LoadGroupPreset", "M"),
             new Target("10a", "BetterSource", "CheckBinauralAllowed", "M"),
             new Target("10a", "BetterSource", "_forceStereo", "F"),

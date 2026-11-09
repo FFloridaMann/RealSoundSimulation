@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.37 — 8 Nov 2026 (step 6.2: gunshots and explosions through walls)
+**Run in game:** not yet, and the levels are starting values with no raid behind them. Needs bots and a fight on the other side of a wall.
+- **New `6.2 Through-wall thump`** (on, live; `Fixes/ThroughWall.cs`). A bot gunshot within 60 m in another room, or an explosion within 100 m behind a wall, also plays as a low thump from its true direction. The clear sound still comes from the opening (`6.1`). Walls are measured with rays from you to the source and back: material, and thickness where a collider is hit from both sides. Loss per wall = the material's 125 Hz loss + 6 dB per doubling above 0.2 m, up to +12. At most 4 at once, ahead of echoes in the voice pool; full-auto is a 0.3 s slice at most every 0.25 s per shooter.
+- Settings: `6.2a` level (0 dB), `6.2b` cutoff (50 Hz), `6.2c` explosion cutoff (80 Hz), `6.2d` wall loss strength (0.5). All live.
+- Where there's no route the game's own muffled voice still plays under the thump, so a shot can't go silent. Removing it would be a small follow-up.
+- **Voice budget:** echo reserve 32 (was 16), and the mod's opening sounds count toward the cap.
+- Explosions are caught by sound-bank type (`Grenades`) on `BetterAudio.PlayAtPoint` and `PlayAtPointDistant`; not checked in a raid.
+- New thump.csv (each decision: walls, materials, thickness, loss, level); a THROUGH-WALL THUMP line in the summary.
+- Version 0.6.37.
+
 ## 0.6.36 — 8 Nov 2026 (roof rain counts low-detail floors and respects no-rain rooms)
 **Run in game:** not yet. From the raid at raid_20261108_231751, tag 1 (Capital meeting room, floors above): roof rain held at 0.18, which one counted floor can't give, so about one upward path in five read a ceiling with nothing above it.
 - **New `9v Roof rain counts low-detail floors`** (on, live): much of the Capital's floors are low-detail colliders on layers the main mask leaves out, so `9p` looking up from a ceiling couldn't see them. They now count when both sides are at least 4 m, so props above you don't. Unconfirmed until a raid; storeys with no collider at all still can't be seen.

@@ -473,6 +473,14 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **0.6.36, `9v` (on, live).** `CountFloors` casts on the probe's full mask and counts a surface on a non-blocking layer when both horizontal sides of its collider are at least 4 m. Both counts are cached, so the switch is live. Check: a roofed office with floors above in rain, `9v` on and off; `floorsNow` and `floorsOldNow` in probe2.csv. **`9w` (on, live):** game says indoors and its rain volume is 0, so `AmbienceMix` fades roof rain out over 1.5 s; rain2.csv `noRainGate`.
 
+## 6.2: Through-wall thump (0.6.37)
+
+**Problem.** Sound between rooms only travels the door and window routes, so nothing of a shot comes through the wall itself, and a shot with no route is just "fully blocked".
+
+**Fix.** `Fixes/ThroughWall.cs` plays one extra low-passed voice from the true direction for blocked bot shots (within 60 m, another room) and explosions (within 100 m, a wall between). Level = `6.2a` − distance (0 dB at 5 m or closer) − wall loss × `6.2d`. It uses fix 6's voice pool, past the headroom cap, at most 4 at once.
+
+**Check (bots on).** A fight on another floor or behind a wall, with `6.2` on and off; thump.csv for walls, materials and thickness. Tune `6.2a`, `6.2b` and `6.2d` by ear.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.36 (`9v` low-detail floors, `9w` no-rain rooms) waiting for a rainy raid; 0.6.35 (`10a`, `10b`) and 0.6.34 (`9t`, `9u`, `9s`) still to be compared · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 6.2 (through walls, 0.6.37) built; the next raid needs bots and tests it plus 0.6.34 to 0.6.36 · **Next:** retune from that raid, then 6.3. Further rain tuning is in step E
 
 ---
 
@@ -100,11 +100,15 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 
 ## 6.2 · Through walls, by material
-- [ ] Voice reserve 16 → 32
-- [ ] Count the mod's own non-echo voices in the cap
-- [ ] Through-wall loss by material
-- [ ] Through-wall thump layer + cutoff slider (default 50 Hz)
-- [ ] Separate cutoffs: explosions vs gunshots
+- [x] Voice reserve 16 → 32 (0.6.37)
+- [x] Count the mod's own non-echo voices in the cap (0.6.37)
+- [x] Through-wall loss by material and thickness (0.6.37; starting values)
+- [x] Through-wall thump layer + cutoff slider, default 50 Hz (`6.2`, 0.6.37)
+- [x] Separate cutoffs: explosions vs gunshots (`6.2c`, 0.6.37)
+- [ ] Raid with bots: a fight behind a wall or on another floor, `6.2` on and off; read thump.csv
+- [ ] Raid: explosions behind a wall (their hook isn't proven yet)
+- [ ] Tune `6.2a`, `6.2b`, `6.2d` by ear
+- [ ] Decide: where there's no route, drop the game's muffled voice so the thump plays alone
 
 ## 6.3 · Echoes for bot gunshots and grenades
 - [ ] One headroom cap counting every echo type; bots get their own share
@@ -149,6 +153,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 ## E · Final echo tuning and optimising (last)
 - [ ] Tune how many echoes each sound gets (own shots, bots, grenades)
 - [ ] Tune tail length
+- [ ] Rain (moved here 8 Nov, user): roof rain level (`9t`, `9r`, `9u`, `9v`, `9w`), the in-and-out deep inside, a distance fade for outside sound on bounced paths
 - [ ] Own roof-rain sounds: patter loops per roof material, generated offline (or with step 7)
 - [ ] Short bursts: give a ringing tail its own voice or fade it, instead of the next tail stopping it (two voices per gun, raid 38)
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
@@ -163,7 +168,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 87 settings, what each does, and what still reads it
+- [ ] List all 92 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

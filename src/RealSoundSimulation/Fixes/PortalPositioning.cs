@@ -63,6 +63,9 @@ namespace RealSoundSimulation.Fixes
             Tracked = RouteChanges = HeldBack = 0; MovedFrames = 0; MovedSum = 0; MaxMoved = 0f;
         }
 
+        // 0.6.37: for 6.2's log: does this gun currently reach you along a route?
+        public static bool HasRoute(WeaponSoundPlayer w) => ByKey.TryGetValue(w.GetInstanceID(), out Gun g) && g.HasRoute;
+
         // For routes.csv: how far this gun's voices are from its true direction right now.
         public static float MovedDeg(WeaponSoundPlayer w) => ByKey.TryGetValue(w.GetInstanceID(), out Gun g) ? g.Moved : 0f;
 

@@ -637,14 +637,15 @@ namespace RealSoundSimulation.Acoustics
         // Returns true if a busy voice had to be stopped to make room.
         public static bool LastDropped; public static int CapDropped;
         private static int _realVoices = -1;
+        private const int ReserveVoices = 32; // 0.6.37 (voice budget for step 6, was 16); the mod's own opening sounds are counted too
         public static int Allowed()
         {
             if (_realVoices < 0) _realVoices = AudioSettings.GetConfiguration().numRealVoices;
-            return Mathf.Clamp(_realVoices - Diagnostics.DiagRunner.LastPlayingInContainers - 16, 16, PoolSize);
+            return Mathf.Clamp(_realVoices - Diagnostics.DiagRunner.LastPlayingInContainers - Fixes.OpeningSounds.Voices - ReserveVoices, 16, PoolSize);
         }
 
         public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,
-                                float clipOffset = 0f, double loopStart = 0.0)
+                                float clipOffset = 0f, double loopStart = 0.0, float minCutoff = 400f, bool ignoreCap = false)
         {
             Build();
             double now = AudioSettings.dspTime;
@@ -654,7 +655,7 @@ namespace RealSoundSimulation.Acoustics
             LastDropped = false;
             int busy = 0;
             foreach (Voice v in Pool) if (v.BusyUntil > now) busy++;
-            if (busy >= Allowed()) { LastDropped = true; CapDropped++; return false; }
+            if (!ignoreCap && busy >= Allowed()) { LastDropped = true; CapDropped++; return false; } // 0.6.37: the through-wall layer (at most 4) goes first
             Voice pick = null; bool stole = false;
             foreach (Voice v in Pool) if (v.BusyUntil <= now) { pick = v; break; }
             if (pick == null)
@@ -672,7 +673,7 @@ namespace RealSoundSimulation.Acoustics
             pick.Src.loop = loop;
             pick.Src.volume = Mathf.Clamp01(volume);
             pick.Src.pitch = pitch > 0f ? pitch : 1f;
-            pick.Lp.cutoffFrequency = Mathf.Clamp(cutoff, 400f, 22000f);
+            pick.Lp.cutoffFrequency = Mathf.Clamp(cutoff, minCutoff, 22000f);
             pick.Src.time = clipOffset > 0f && clip != null && clip.length > 0f ? Mathf.Repeat(clipOffset, clip.length) : 0f; // 0.6.14: late loop echoes
             pick.Src.PlayScheduled(start);
             pick.Start = start; pick.Owner = owner; pick.Delay = delay; pick.OpenLoop = loop; pick.LoopStart = loopStart > 0.0 ? loopStart : start - delay;

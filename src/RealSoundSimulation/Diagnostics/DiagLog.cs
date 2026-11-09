@@ -31,6 +31,7 @@ namespace RealSoundSimulation.Diagnostics
             ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["botshots.csv"] = BotShots.Header,
             ["routes.csv"] = RouteLog.Header,
+            ["thump.csv"] = Fixes.ThroughWall.Header,
             ["slowframes.csv"] = "t,clock,frameMs,batchWaitMs,muzzleWaitMs,rays,aliveBots", // 0.6.20: rows describe the previous frame
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
             ["transitions.csv"] = "t,system,now,x,y,z,fadeS,room",

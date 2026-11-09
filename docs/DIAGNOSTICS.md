@@ -175,6 +175,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.11: ownshots.csv rows are now written when the shot or tail call finishes (same rows as before) and end with `muzzleRoomSphere, v2MuzzleRoomSphere` (the muzzle measures without `3k`'s forward lobe; `muzzleRoom` / `v2MuzzleRoom` are with it) and `tailPlayed, tailLevelDb` (relative to the shot), `tailDelayMs, tailAz` (relative to where you face), `tailThrough` (open / glass / bars / open (fallback); when no tail played, the reason: mostly outdoor already, aim cone closed, no tail bank, fix 6 off…). The summary has OUTDOOR TAIL FROM THE OPENING and MUZZLE LOBE (mean sphere minus lobe muzzle room).
 
+0.6.37: thump.csv, one row for each 6.2 decision: `kind` (gun, explosion), `played`, `reason` (why not), `distM`, `walls`, `materials` (material@thickness, joined with +), `thickM`, `lossDb` (before `6.2d`), `volume`, `cutoffHz`, `delayMs`, `hasRoute`, `clip`.
+
 0.6.36: probe2.csv ends with `floorsOldNow`, the floors counted on the main solid layers alone (`floorsNow` follows `9v`).
 
 0.6.34: probe2.csv ends with `floorsNow` (floors above the ceiling straight overhead, -1 = none measured) and `roofLossDb` (how much `9u` took off the roof rain reaching you, negative dB).

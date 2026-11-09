@@ -825,6 +825,8 @@ namespace RealSoundSimulation.Acoustics
         }
 
         private static int _blockMask;
+        public static int BlockMask => _blockMask; // 0.6.37: read by 6.2
+        public static int FullMask => _mask;
 
         // 0.6.8: where an escaping leg (from o, direction d) leaves cover: the first point along it with no roof above,
         // sampled at 0, 0.75, 1.5, 3, 6, 12, 24, 48 m and refined twice. At most 10 short casts.

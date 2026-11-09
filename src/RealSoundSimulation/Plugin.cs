@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.36")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.37")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -107,6 +107,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> RoofRainShaftLoss; // 0.6.34 "9u"
         internal static ConfigEntry<bool> RoofCountsLowDetail; // 0.6.36 "9v"
         internal static ConfigEntry<bool> RoofRainNoRainRooms; // 0.6.36 "9w"
+        internal static ConfigEntry<bool> ThumpOn; // 0.6.37 "6.2"
+        internal static ConfigEntry<float> ThumpDb, ThumpCutoffHz, ThumpExplosionCutoffHz, ThumpWallLoss;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
         internal static ConfigEntry<bool> ExtraRoutesOn; // 0.6.35 "10b"
 
@@ -154,6 +156,11 @@ namespace RealSoundSimulation
             ShotOverlapOn = Config.Bind(fix, "1e Shots ring under the next", true, new ConfigDescription("0.6.23: every gun, yours and bots. The game stops a shot dead when the same gun's next sound starts. With this on it rings out underneath; only a firing loop is ended. A gun has two voices, so a third sound takes back the oldest. If the game runs out of gun voices, the gun closest to finishing gives up its own so a shot never goes silent. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 95 }));
             PortalPositioningOn = Config.Bind(fix, "6.1 Bot gunshots from the opening", true, new ConfigDescription("0.6.24: a bot's gunshot from another room comes from the doorway, window or stairwell it reaches you through, at the length of that route, instead of through the wall. Uses the route the game already picks. Same room, both outdoors, or no baked route = the true position. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 94 }));
             PortalStrength = Config.Bind(fix, "6.1a Opening strength", 1f, new ConfigDescription("How far towards the opening the shot is moved: 1 = all the way, 0.5 = halfway between the true direction and the opening.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpOn = Config.Bind(fix, "6.2 Through-wall thump", true, new ConfigDescription("0.6.37: a bot gunshot in another room, or an explosion behind a wall, also comes through the wall as a low thump from its true direction. The clear sound still comes from the opening. At most 4 at once. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpDb = Config.Bind(fix, "6.2a Thump level dB", 0f, new ConfigDescription("How loud the thump is before distance and wall loss. Live.", new AcceptableValueRange<float>(-30f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpCutoffHz = Config.Bind(fix, "6.2b Thump cutoff Hz", 50f, new ConfigDescription("Low-pass for gunshots through walls. Lower = deeper. Depends on your headset. Live.", new AcceptableValueRange<float>(20f, 400f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpExplosionCutoffHz = Config.Bind(fix, "6.2c Explosion thump cutoff Hz", 80f, new ConfigDescription("Low-pass for explosions through walls. Higher than gunshots because low frequencies pass walls better. Live.", new AcceptableValueRange<float>(20f, 400f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpWallLoss = Config.Bind(fix, "6.2d Wall loss strength", 0.5f, new ConfigDescription("How much of each wall's material and thickness loss is applied. 1 = the full table, 0 = walls make no difference. Live.", new AcceptableValueRange<float>(0f, 1.5f), new ConfigurationManagerAttributes { Order = 93 }));
             ObstructionModeCfg = Config.Bind(fix, "2 Obstruction score", ObstructionMode.ParallelPaths, new ConfigDescription("How the through-wall, around-corner and echo checks are combined. Game = average (a failed check counts as fully blocked). IgnoreFailedPaths = average of the checks that found a path. ParallelPaths = blocked only if every path is.", null, new ConfigurationManagerAttributes { Order = 90 }));
             DoorwayOn = Config.Bind(fix, "3 Smooth doorways", true, new ConfigDescription("Blend the indoor/outdoor mix and ambience by distance to the doorway instead of switching.", null, new ConfigurationManagerAttributes { Order = 80 }));
             DoorwayInside = Config.Bind(fix, "3a Blend inside m", 1.5f, new ConfigDescription("Distance inside the doorway over which the blend happens.", new AcceptableValueRange<float>(0.25f, 6f), new ConfigurationManagerAttributes { Order = 79 }));
@@ -241,6 +248,7 @@ namespace RealSoundSimulation
             Safe("fix 6 own gun echoes", () => OwnEchoes.Apply(Harmony));
             Safe("fix 7 rain dropout", () => RainDropoutFix.Apply(Harmony));
             Safe("fix 8 ambience mix", () => AmbienceMix.Apply(Harmony));
+            Safe("6.2 through-wall thump", () => ThroughWall.Apply(Harmony)); // 0.6.37
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
             gameObject.AddComponent<DiagRunner>();
@@ -259,6 +267,7 @@ namespace RealSoundSimulation
         internal static string FixState() =>
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")} | " +
+            $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00})" : "off")} | " +
             $"10a footsteps and handling {FoleyPresets.State} | 10b routes {ExtraRoutes.State} | " +
             $"fix2 obstruction {ObstructionModeCfg.Value} | " +
             $"fix3 doorways {(DoorwayOn.Value ? $"ON (in {DoorwayInside.Value:0.0} m / out {DoorwayOutside.Value:0.0} m)" : "off")} | " +
