@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.26 — 8 Nov 2026 (open sky lowers the indoor gunshot mix)
+**Run in game:** not yet. From raid 39 (raid_20261108_195106, Ground Zero, 0.6.25; `6g` measured surfaces: "def sounds better"). Mark 7, outside the extract with wide open space behind, firing past a pillar into the glass room: "too much indoor mix on the shot, not enough of the open space behind me". About 42% of the sky was open, but the room measure (0.45–0.59) took no account of it, and the shot played 82–89% indoor.
+- **New `3n Open sky lowers the indoor mix`** (1, live): in fix 3c's Enclosure mode with probe v2, the room part of the weight is multiplied by (1 − open sky × 3n). Simulated on raid 39's 97 shots: those three go to about 64%, 49% and 40%; the 52 shots with almost no open sky don't change; only shots with 20% or more open sky do.
+- Version 0.6.26.
+
 ## 0.6.25 — 8 Nov 2026 (echoes use measured surfaces)
 **Run in game:** not yet. Roadmap step M, from [MATERIALS.md](MATERIALS.md).
 - **New `Acoustics/Materials.cs`:** one table of what each game surface does to sound, from Meta XR's own presets: absorption in four bands, scattering, transmission. Probe v2's values and the old echo values moved into it unchanged.

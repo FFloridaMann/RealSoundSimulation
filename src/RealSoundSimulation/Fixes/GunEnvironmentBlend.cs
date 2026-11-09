@@ -149,6 +149,9 @@ namespace RealSoundSimulation.Fixes
             float room = v2 ? Mix(AcousticProbe.Room, AcousticProbe.MuzzleRoom, mw) : Mix(EnclosureProbe.Room, EnclosureProbe.MuzzleRoom, mw);
             if (float.IsNaN(room)) return float.NaN;
             float a = Mathf.InverseLerp(RoomOpen, RoomClosed, room);
+            // 0.6.26 "3n": the room measure doesn't subtract open space. Raid 39 mark 7: outdoors, 42% of the sky open behind you,
+            // firing into a building past a pillar: room 0.45-0.59, so the shot played 82-89% indoor.
+            if (v2 && !float.IsNaN(AcousticProbe.SkyOpen)) a *= 1f - Mathf.Clamp01(AcousticProbe.SkyOpen) * Mathf.Clamp01(Plugin.OpenSkyLowersIndoor.Value);
             float w = a;
             if (!float.IsNaN(aimClosure))
             {

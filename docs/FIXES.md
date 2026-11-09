@@ -187,6 +187,8 @@ It applies to the shot (`FireBullet`) and to the burst tail (`StopFiringLoop`). 
 
 ---
 
+**0.6.26: open sky (`3n`, 1).** With probe v2, the room part of the weight is multiplied by (1 − open sky × 3n), so a spot with open space behind you doesn't count as a full room just because the muzzle faces one. Raid 39 mark 7: 42% open sky, 82–89% indoor. Check: outside a building with open space behind, fire into it with `3n` at 0 and 1.
+
 ## Enclosure probe (0.2.2)
 
 Not a fix by itself: it measures, and fix 3c (Enclosure mode) uses it. The planned echoes will too. Setting: `1. Diagnostics → Enclosure probe` (on by default). It changes no sound unless something uses it.
