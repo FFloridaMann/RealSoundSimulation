@@ -533,6 +533,27 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check (no bots needed).** Grenades in a concrete room and outdoors near a building, `6.3` on and off; echoes.csv sample `explosion`; does Bring Back Concussion duck them? Tune `6.3a` to `6.3d` by ear.
 
+## 6.4: Explosions from the opening (0.6.41)
+
+**Problem.** raid_20261109_083938: a grenade 15 m away through two walls played from its true spot, with a thump at −25 dB. User: "i sort of wish grenades sounded more from the entrance and (felt (thud from teh source)".
+
+**Fix.** Airborne sound from a blast reaches you through openings, while the heavy low end comes through the structure from the true spot. `Fixes/BlastFromOpening.cs`:
+
+- Right after the game sets up the blast's one-shot occlusion, it has already found the blast's room. Of the baked routes between that room and yours, the shortest is used; a shut door counts as 15 m. Guns read the game's finished route (6.1), but for a one-shot that only arrives after the sound starts.
+- The voice goes to `listener + direction(opening nearest you) × route length`, by `6.4a`, fading out within 1 m of the opening. It stays there while it rings.
+- The game's occlusion follows the voice's transform, so the container gets an offset back to the true spot (`SetPositionOffset`). The game doesn't clear that offset when a container is reused, so a postfix on `AudioSourceContainer.Clear` does.
+- `6.4b` dulls it with the rule from 6.1b. Our own filter goes back to neutral when the sound ends.
+- `6.2h` raises only the explosion's thump, which stays at the true spot and still needs a wall on the straight line.
+
+| Grenade in raid_20261109_083938 | Thump now | With `6.2h` +12 |
+|---|---|---|
+| 75 s, 27.9 m, one wall | −21 dB | −9 dB |
+| 949 s, 15 m, two walls | −25 dB | −13 dB |
+
+**Limits.** The game's grenade group only, so not rockets. Same room, both outdoors or no baked route stay at the true spot. Flight time still uses the straight distance. It may feel disorienting the way 6.1 did on Factory: `6.4` off and `6.4a` at 0.5 are for that.
+
+**Check.** Grenades in another room, `6.4` off and on, then `6.2h` by ear; blast.csv `moved`, `reason`, `pathM`, `openings`, `turnDeg`, `movedDeg`, `cutoffHz`; summary BLAST FROM THE OPENING.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

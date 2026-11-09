@@ -2,8 +2,17 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.41 — 9 Nov 2026 (6.4: explosions from the opening, with a felt thud)
+**Run in game:** not yet. The 15 m shut-door cost and the levels are starting values. Test with grenades in another room, `6.4` on and off.
+- **New `6.4 Blast from the opening`** (on, live; `Fixes/BlastFromOpening.cs`) and `6.4a Blast opening strength` (1). User, 9 Nov 2026, Ground Zero: "i sort of wish grenades sounded more from the entrance and (felt (thud from teh source)". An explosion in another room plays from the direction of the opening nearest you, at the length of the route. Picks the shortest of the game's baked routes between the two rooms; a shut door counts as 15 m. The game's occlusion stays at the true spot through its own position offset.
+- **New `6.4b Dull the blast by its route`** (on, live). The same rule as `6.1b`, using `6.1c` and `6.1d`.
+- **New `6.2h Explosion thump level dB`** (+12, −12 to +24, live). Guns stay as they were. On raid_20261109_083938's two grenades the thump goes from −21 and −25 dB to −9 and −13 dB.
+- blast.csv has a row per blast, and there's a new BLAST FROM THE OPENING line in the summary.
+- Limits: the game's grenade group only, so not rockets. Same room, both outdoors or no baked route stay at the true spot. The sound stays where it was placed while it rings. The time of flight still uses the straight distance.
+- Version 0.6.41. F12 now has 107 settings.
+
 ## 0.6.40 — 9 Nov 2026 (6.1b: bot gunshots dulled by their route)
-**Run in game:** not yet. Numbers are starting values, checked only as maths on three saved Factory raids. Test with bots in other rooms, `6.1b` on and off. First check: does the filter work on these voices at all, since they go through the Meta spatializer.
+**Run in game:** two raids, 9 Nov (raid_20261109_083033 Factory, raid_20261109_083938 Ground Zero). The code ran without errors: typical cutoff 1.6 kHz and 2.7 kHz. Not yet confirmed by ear that the filter works through the Meta spatializer. Numbers are starting values. Factory FPS was 40 with 13 bots, but the mod's measured cost was 1.9% of a core and audio timing was unchanged.
 - **New `6.1b Dull the shot by its route`** (on, live; `Fixes/PortalPositioning.cs`). User, 9 Nov 2026: "the sound should be muffled (less distinct) regardless". raid_20261109_001706: a bot 39 m away with 3–5 walls on the straight line read occlusion 0.17 because one opening joins the rooms, and the game only muffles above 0.60, so 2 of 96 bot shots under 60 m were muffled.
 - Rule: 1 step for a wall on the straight line + the turn at the nearest opening / 90° (at most 135°, less within 1 m of the opening) + 0.5 per extra opening. Cutoff = 16 kHz × 2^(−1.5 × steps × `6.1c`), floor `6.1d`. Smoothed over 150 ms, set at once on the first shot. Tone only.
 - Sound bending round an edge does lose its highs first, so the direction is real. Real rooms are gentler than a filter and hard walls bounce some highs along, so the amounts are estimates.

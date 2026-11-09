@@ -9,12 +9,12 @@ namespace RealSoundSimulation.Diagnostics
     // maximum ms per call, ms per second (its share of each second of game time), raycasts and room lookups per second.
     internal static class Perf
     {
-        public enum Part { EnclosureSweep, MuzzleRoom, AimCone, EchoSearch, Exposure, AmbienceMix, DiagTick, SourceScan, EnvLog, LogFlush, AcousticProbe, PortalPositioning, ThroughWall, Count }
+        public enum Part { EnclosureSweep, MuzzleRoom, AimCone, EchoSearch, Exposure, AmbienceMix, DiagTick, SourceScan, EnvLog, LogFlush, AcousticProbe, PortalPositioning, ThroughWall, BlastFromOpening, Count }
 
         private static readonly string[] Names = { "enclosure sweep (32+5 rays, 10/s)", "muzzle room (37 rays, per shot)", "aim cone (9 rays, per shot)",
             "echo search (per shot, own rays)", "outdoor exposure (continuous, ~290 rays/s)", "ambience mix + opening sounds (per frame)",
             "diagnostics: containers, overlay, timing (per frame)", "diagnostics: source scan (every 15 s)", "diagnostics: ambience/probe rows (per frame)",
-            "diagnostics: saving log files (every 2 s)", "acoustic probe v2 (batched, guided, rays by 9g)", "6.1 bot gunshots from the opening (per frame)", "6.2 through-wall thump (per qualifying shot)" };
+            "diagnostics: saving log files (every 2 s)", "acoustic probe v2 (batched, guided, rays by 9g)", "6.1 bot gunshots from the opening (per frame)", "6.2 through-wall thump (per qualifying shot)", "6.4 blast from the opening (per blast)" };
 
         private static readonly long[] Calls = new long[(int)Part.Count];
         private static readonly double[] TotalMs = new double[(int)Part.Count], MaxMs = new double[(int)Part.Count];

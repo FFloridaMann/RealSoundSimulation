@@ -24,7 +24,7 @@ namespace RealSoundSimulation.Fixes
     //   reach    0.6.38 ("6.2e"): gunshot "6.2f", explosion "6.2g", suppressed gun 20 less. Distance + full wall loss use it up; none left, no thump.
     //            Fades over the last 6 dB. User, 9 Nov 2026: "not every gunshot and explosion should get through", then chose numbers set from physics
     //            (one concrete wall rarely stops a shot; several heavy walls or earth do).
-    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss x "6.2d"; explosions +6 dB, suppressed guns -10 dB
+    //   level    "6.2a" - distance (0 dB at 5 m or closer) - loss x "6.2d"; explosions +6 dB + "6.2h" (0.6.41), suppressed guns -10 dB
     //   voice    at most 4 at once, from fix 6's pool, past its headroom cap; full-auto: a 0.3 s slice at most every 0.25 s per shooter
     // Adds a voice; the game's own sound for the shot is left alone. No raid numbers behind the levels or reach yet: thump.csv records each decision.
     internal static class ThroughWall
@@ -119,7 +119,7 @@ namespace RealSoundSimulation.Fixes
                 if (dist > ExplosionRangeM) return;
                 var m = new Measure();
                 MeasureWalls(lt.position, position, m);
-                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb, Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
+                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value, Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (explosion)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }
