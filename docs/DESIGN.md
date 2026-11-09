@@ -227,7 +227,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9p`, `9q` | roof rain counts floors above, and how much each takes off (0.6.29) | on, 1 |
 | `9r` | roof rain louder on metal, quieter on soft roofs (0.6.31) | 1 |
 | `9s` | the probe forgets when the space really changes (0.6.32; retuned 0.6.33) | on |
-| `9t` | roof rain minimum level (0.6.33) | 0.3 |
+| `9t` | roof rain level, replacing the game's per-room value (0.6.33; one level from 0.6.34) | 0.3 |
+| `9u` | roof rain fades with distance on bounced paths, dB per metre after 6 m (0.6.34) | 1 |
 | `3n` | open sky around you lowers the indoor gunshot mix (0.6.26) | 1 |
 | `3o` | your shot's ring shifts as you turn (0.6.30) | 1 |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |

@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.33 (`9s` retuned, `9t`) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.34 (`9t` one level, `9u`, `9s` without direction) waiting for a rainy raid; SEB compared, Real Sound Simulation continues · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -79,7 +79,12 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Probe memory reacts to real changes instead of speed (`9s`, 0.6.32; raid 41 tag 4)
 - [ ] Raid: walk into a roofed room and stop, repeat slowly, stand by a window (`9s` on and off)
 - [ ] Decide: rays traced from ahead of you for the walking lag
-- [x] Roof rain has its own minimum level (`9t`, 0.6.33)
+- [x] Roof rain has its own level (`9t`, 0.6.33; one level from 0.6.34)
+- [x] Roof rain fades down shafts (`9u`, 0.6.34; raid 43 tag 6)
+- [ ] Raid: rainy stairwell with `9u` at 0 and 1
+- [x] Raid: one raid on SEB + True Acoustics (Real Sound Simulation out), 8 Nov: no blending between inside and outside; some general audio better; Real Sound Simulation continues
+- [ ] Decide which pieces to take from SEB or True Acoustics (route files, `live_mastermixer`, non-gun sounds, through-wall by material for 6.2)
+- [ ] Credit red_the_fox (SEB, MIT) and Kaan (True Acoustics, MIT) in the README, and keep their licence notice with anything copied
 - [ ] Decide: bake maps (big), or load SEB's route files (small, only adds routes between rooms)
 - [x] Roof material (4b phase 3): floors above take off their material's loss (`9p`, 0.6.29)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
@@ -148,7 +153,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 82 settings, what each does, and what still reads it
+- [ ] List all 83 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

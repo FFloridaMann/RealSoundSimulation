@@ -469,6 +469,8 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **0.6.33.** `9s` keeps a speed cap on the memory, grown back over about 1.5 s after you stop; a change must also be 1.6× as a ratio; direction needs 20 paths and 90 degrees. **`9t` (0.3):** roof rain has a minimum level before roof, floors and material, because the game's baked level is 0 or about 0.05 in some places.
 
+**0.6.34.** `9t` is one level instead of a minimum, so the game's per-room value can't move the rain (0 = the game's value). **`9u` (1 dB/m):** a bounced path to the roof fades with distance after 6 m. `9s` no longer checks direction. Under 8 escaping paths a rise keeps the long average. Check: walk up and down a concrete stairwell in rain with `9u` at 0 and 1, and read `roofLossDb` in probe2.csv.
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

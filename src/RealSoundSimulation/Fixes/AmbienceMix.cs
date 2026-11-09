@@ -164,6 +164,9 @@ namespace RealSoundSimulation.Fixes
             return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - ExposureApplied) / 0.25f));
         }
 
+        private static readonly AccessTools.FieldRef<PrecipitationAmbientBlender, float> RainMultRef =
+            AccessTools.FieldRefAccess<PrecipitationAmbientBlender, float>("_globalsVolumeMult"); // 0.6.34: the game's factor for how hard it rains
+
         private static void RoofRain(float dt)
         {
             if (RainSrc.Count == 0) return;
@@ -173,28 +176,29 @@ namespace RealSoundSimulation.Fixes
             // 0.6.9: if the indoor-layer fade (openings around you) also turns the rain player's mixer down, undo it here:
             // roof rain follows the roof only (raid 28 tags 2-3: 0.65 from the probe x 0.53-0.68 from the fade)
             RoofRainComp = DoorwayBlend.IndoorParamsIncludeRain ? 1f / Mathf.Max(DoorwayBlend.IndoorApplied, 0.1f) : 1f;
-            // 0.6.33 "9t": the game's indoor rain volume is baked per room (0.05 in much of the Capital, 0 in a trailer it thinks is outdoors), and
-            // only multiplying it meant no rain at all there. While it rains and the probe traces the roof, the player gets at least this level.
-            float missing = 0f; int playing = 0;
-            if (Plugin.AmbienceV2On.Value && Plugin.RoofRainFromProbe.Value && AcousticProbe.Valid && RainController.IntensityType != RainController.ERainIntensity.None)
+            // 0.6.33 "9t": the game's indoor rain volume is baked per room (0.05 in much of the Capital, 0 in a trailer it thinks is outdoors).
+            // 0.6.34: and 1 in others, so "at least 0.3" still jumped between rooms (raid 43 tag 4: 0.74 and 0.225 with the roof unchanged).
+            // While it rains and the probe traces the roof, the room's value no longer counts: one level, times the game's own factor for how
+            // hard it rains. The game's volumes only say how the level is shared between the two sources while they crossfade.
+            bool ownLevel = Plugin.RoofRainLevel.Value > 0f && Plugin.AmbienceV2On.Value && Plugin.RoofRainFromProbe.Value && AcousticProbe.Valid && RainController.IntensityType != RainController.ERainIntensity.None;
+            float sum = 0f, level = 0f; int playing = 0;
+            if (ownLevel)
             {
-                float sum = 0f;
                 for (int i = 0; i < RainSrc.Count; i++)
                 {
                     AudioSource s = RainSrc[i];
                     if (s == null) continue;
                     if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume;
-                    sum += _rainGame[i];
-                    if (s.isPlaying && s.clip != null) playing++;
+                    if (s.isPlaying && s.clip != null) { sum += _rainGame[i]; playing++; }
                 }
-                missing = Mathf.Max(0f, Plugin.RoofRainLevel.Value - sum);
+                level = Plugin.RoofRainLevel.Value * (IndoorRain.Count > 0 && IndoorRain[0] != null ? Mathf.Clamp01(RainMultRef(IndoorRain[0])) : 1f);
             }
             for (int i = 0; i < RainSrc.Count; i++)
             {
                 AudioSource s = RainSrc[i];
                 if (s == null) continue;
                 if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume; // the game changed it (crossfade)
-                float baseVol = _rainGame[i] + (playing > 0 && s.isPlaying && s.clip != null ? missing / playing : 0f);
+                float baseVol = ownLevel && playing > 0 && s.isPlaying && s.clip != null ? level * (sum > 1e-3f ? _rainGame[i] / sum : 1f / playing) : _rainGame[i];
                 _rainWritten[i] = Mathf.Min(1f, baseVol * RoofRainApplied * RoofRainComp);
                 s.volume = _rainWritten[i];
             }

@@ -529,7 +529,9 @@ namespace RealSoundSimulation.Acoustics
         public static string OverlayLine()
         {
             if (!Valid) return "exposure: -\n";
-            string above = FloorsAbove < 0 ? "open sky" : $"ceiling {CeilingM:0.0} m {CeilingMat}, floors above {FloorsAbove}, roof {RoofMat}";
+            // 0.6.34: with 9p on, show the floors the sound really uses. The old 5-ray count and "roof" (whatever the last ray hit) read wrong in raid 43.
+            string above = FloorsAbove < 0 ? "open sky" : AcousticProbe.FloorsNow >= 0 ? $"ceiling {CeilingM:0.0} m {CeilingMat}, {AcousticProbe.AboveText()}"
+                : $"ceiling {CeilingM:0.0} m {CeilingMat}, floors above {FloorsAbove}, roof {RoofMat}";
             if (!ListenerIndoor) return $"exposure: outdoors   above: {above}\n";
             return $"exposure open {ExposureOpen:0.00} ({OpenN}+{BrokenN} broken+{BarsN} bars)  glass {ExposureGlass:0.00} ({GlassN})  other {ExposureOther:0.00} ({OtherN})  blocked {BlockedN}  " +
                    $"room floor {RoomFloor:0.00} -> value {Value:0.00}  open side {SideAz():0} deg ({OneSided:0.00} one-sided)  open sectors {OpenSectors}\n   above: {above}\n";

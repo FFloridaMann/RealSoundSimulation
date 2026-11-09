@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.34 — 8 Nov 2026 (roof rain holds its level and fades down shafts; 9s without direction)
+**Run in game:** not yet. From raid 43 (raid_20261108_221708, Ground Zero).
+- **`9t` is now one level** (renamed "9t Roof rain level", 0.3, live): while it rains, the game's value for the room no longer counts. "At least 0.3" still jumped, because the game's value is 1 in some rooms and 0 in others (tag 4: 0.74 and 0.225 with the roof unchanged). The level is multiplied by the game's factor for how hard it rains. 0 = the game's value.
+- **New `9u Roof rain fades down shafts`** (1 dB per metre, live): a path that bounces its way to the real roof loses level with distance after the first 6 m. Before, it lost only absorption (2% a bounce on concrete), so roof rain came down a concrete stair shaft nearly in full (tag 6, the Nakatani stairwell). A path straight up doesn't fade. Whether this is the whole stairwell problem is untested.
+- **`9s` no longer ends the memory on direction.** Raid 43: 56 of 57 resets were direction, 43 standing still.
+- **Few escaping paths can't raise the sound quickly** (tags 2 and 3: 2 paths were worth 13 dB). Under 8 paths a rise keeps the long average; falling stays quick.
+- **Overlay:** with `9p` on, "above" shows the floors the sound uses, the surface overhead, the roof rain and how much it faded. The old 5-ray count and "roof" (whatever the last ray hit) read wrong at tags 4 and 5.
+- probe2.csv ends with `floorsNow, roofLossDb`. Summary no longer counts direction resets.
+- Version 0.6.34.
+
 ## 0.6.33 — 8 Nov 2026 (the memory check, less jumpy; roof rain has its own level)
 **Run in game:** not yet. From raid 42 (raid_20261108_214847): `9s` fired 7 times a minute standing still and 25 moving (mostly direction), missed quiet changes, and removing the speed rule left the memory at 3 s on the move (the stairwell). The trailer's rain was silent because the game plays its indoor rain at volume 0 there.
 - **`9s` retuned.** Moving caps the memory again (0.5 s at speed), and after you stop it grows back over about 1.5 s instead of jumping to 3 s. A change must also be at least 1.6× as a ratio and pass a stricter test; direction needs at least 20 paths and to differ by 90 degrees or more. While moving, listeners follow over 0.35 s.
