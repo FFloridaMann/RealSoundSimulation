@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.52")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.53")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -125,6 +125,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> GunCornerOn, BlastArrivalOn; // 0.6.51 "6.8b", "6.4d"
         internal static ConfigEntry<float> BlastCornerLossDb;
         internal static ConfigEntry<float> BlastOutdoorShare, BlastCloseReachM, GlassDullStrength, GlassLossDb2;
+        internal static ConfigEntry<float> BlastOutsidePull; // 0.6.53 "6.6c"
+        internal static ConfigEntry<bool> ShockOn; // 0.6.53 "6.9"
+        internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
         internal static ConfigEntry<int> ExplosionEchoCount;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
@@ -200,6 +203,11 @@ namespace RealSoundSimulation
             BlastRecordingOn = Config.Bind(fix, "6.6 Blast recording by how open it is", true, new ConfigDescription("0.6.49: the game plays an explosion's indoor or outdoor recording, all or nothing, by its own indoor boxes. This measures how open the blast point really is and blends the two. Off = the game's pick. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             BlastOutdoorShare = Config.Bind(fix, "6.6a Open share for all outdoor", 0.4f, new ConfigDescription("How much of the sky and horizon around the blast has to be open for only the outdoor recording to play. Lower = more blasts sound outdoors. At 0.08 or less open it's all indoor. Live.", new AcceptableValueRange<float>(0.15f, 0.9f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastCloseReachM = Config.Bind(fix, "6.6b Close recording reach m", 25f, new ConfigDescription("How far away an explosion still plays its sharp close recording before fading to the distant one. 10 = the game's value. Needs 6.6 on. Live.", new AcceptableValueRange<float>(10f, 60f), new ConfigurationManagerAttributes { Order = 93 }));
+            BlastOutsidePull = Config.Bind(fix, "6.6c Outside pulls to outdoor", 0.75f, new ConfigDescription("0.6.53: when you're outside, an explosion in a garage or doorway reaches you through open air. This is the least outdoor recording it can have then; half of it if the game also has the blast indoors. 0 = only how open the blast point is counts. Needs 6.6 on. Live.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 93 }));
+            ShockOn = Config.Bind(fix, "6.9 Shock wave", true, new ConfigDescription("0.6.53: the part of an explosion you feel: a generated pressure hit, a thump that gets louder up close, and the rest of the world dipping for a moment. Off = none of the three. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            ShockLevelDb = Config.Bind(fix, "6.9a Pressure hit level dB", 0f, new ConfigDescription("How strong the pressure hit is. At 0 it's full strength from 5 m in, and weaker further out by real blast pressure. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            ShockReachM = Config.Bind(fix, "6.9b Shock wave reach m", 40f, new ConfigDescription("How far away you still feel the pressure hit and the dip. They fade out over the last 40% of this. Live.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 93 }));
+            ShockDuckDb = Config.Bind(fix, "6.9c Dip in other sounds dB", 8f, new ConfigDescription("How far footsteps, the environment and ambience dip when a close explosion arrives, for about a third of a second. Less with distance and walls. 0 = no dip. Bring Back Concussion's own sound cut wins inside its radius. Live.", new AcceptableValueRange<float>(0f, 24f), new ConfigurationManagerAttributes { Order = 93 }));
             GlassRouteOn = Config.Bind(fix, "6.7 Glass from other rooms by route", true, new ConfigDescription("0.6.49: a window breaking in another room comes from the opening it reaches you through, dulled and quieter by that route. A window of the room you're in stays where it is. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             GlassDullStrength = Config.Bind(fix, "6.7a Glass dulling strength", 1f, new ConfigDescription("How strongly the route dulls breaking glass. 1 = the gunshot rule, 0 = no dulling. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
             GlassLossDb2 = Config.Bind(fix, "6.7b Glass loss per opening dB", 4f, new ConfigDescription("How much quieter breaking glass gets for each opening on its way to you, on top of the game's own route loss, up to 16 dB in all. Live.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
@@ -317,6 +325,7 @@ namespace RealSoundSimulation
             gameObject.AddComponent<PortalPositioning>(); // 0.6.24
             gameObject.AddComponent<BlastFromOpening>(); // 0.6.41
             gameObject.AddComponent<ClosedDoors>(); // 0.6.47
+            gameObject.AddComponent<ShockWave>(); // 0.6.53
             gameObject.AddComponent<OwnShotTurn>(); // 0.6.30
             Log.LogInfo("Real Sound Simulation loaded");
         }
@@ -326,7 +335,8 @@ namespace RealSoundSimulation
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")}, 6.1b route dulling {(RouteDullOn.Value ? $"ON (x{RouteDullStrength.Value:0.00}, floor {RouteDullMinHz.Value:0} Hz)" : "off")} | " +
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
-            $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m)" : "off")} | " +
+            $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
+            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, dip {ShockDuckDb.Value:0} dB)" : "off")} | " +
             $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +
             $"6.5 closed doors {(DoorMufflingOn.Value ? $"ON ({DoorMufflingStrength.Value:0.00})" : "off")} | " +

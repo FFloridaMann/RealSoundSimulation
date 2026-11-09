@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.53 — 9 Nov 2026 (6.6c: outside pulls to outdoor; 6.9: shock wave)
+**Run in game:** not yet. Starting values, set by ear.
+- **New `6.6c Outside pulls to outdoor`** (0.75, 0 to 1, live). raid_20261109_114154: all 6 recording changes turned the game's Outdoor into Indoor while the player was outside. User, beside a garage: "it still doesnt sound like its outdoor mix is right when its comes out the front of the entrance". blastrec.csv has `listenerEnclosure` and `outdoorFloor`.
+- **New `6.9 Shock wave`** (on, live; `Fixes/ShockWave.cs`), `6.9a` level (0 dB, −24 to +12), `6.9b` reach (40 m, 10 to 100), `6.9c` dip (8 dB, 0 to 24). User: explosions "just lack the sense of a shock wave that the player can feel". A generated pressure hit with its level from Kinney-Graham blast pressure; the thump gets a second in-step voice up to +6 dB; other sounds dip for about 0.38 s. Works with `6.2` off, apart from the thump part.
+- New shock.csv; SHOCK WAVE summary line.
+- Version 0.6.53. F12 now has 130 settings.
+
 ## 0.6.52 — 9 Nov 2026 (6.5 actually reads doors)
 **Run in game:** not yet.
 - **Bug fix: `6.5` never worked on a real door.** `GameWorld.FindDoor` crashes in SPT because its `World` component is null, so from 0.6.47 every shut door kept the game's full closure. Doors are now read from the scene once the raid has them.

@@ -615,6 +615,8 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** blastrec.csv: `gameEnv` against `outdoorWeight` at a garage front, deep inside and in the open. `6.6` off and on; `6.6b` at 10 and 25.
 
+**0.6.53, `6.6c`.** The rays only look around the blast. raid_20261109_114154: all 6 changed picks turned the game's Outdoor into Indoor (open share 0.00 to 0.23) with the player outside. User, beside a garage: "it still doesnt sound like its outdoor mix is right when its comes out the front of the entrance". When you're outside (enclosure probe under 0.45, fading out by 0.8) the outdoor share can't fall below `6.6c`, or half of it if the game also has the blast indoors. No probe reading counts as inside.
+
 ## 6.7: Glass from other rooms by route (0.6.49)
 
 **Problem.** A window breaking in another room plays from the pane, with route loss only. User: "a few walls and turns" away and "it sounded a bit loud".
@@ -636,6 +638,20 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 **Limits.** Starting values. Level fans only, so nothing over a wall or up a stairwell. Grenade bounces and glass aren't included. A small object on the line, like a car, counts as blocked.
 
 **Check.** A grenade behind a building, from the front and from behind an entrance, `6.8` off and on; blast.csv `reason`, `turnDeg`, `pathM`, `cutoffHz`.
+
+## 6.9: Shock wave (0.6.53)
+
+**Problem.** User: explosions "just lack the sense of a shock wave that the player can feel". raid_20261109_114154: the thump is a recording with its highs removed, so it has no sharp front, and at +12 dB it's at full volume for anything within 20 m in the open, so a blast at 3 m has no more thump than one at 20 m.
+
+**Fix.** `Fixes/ShockWave.cs`, three parts, all at the blast's arrival time.
+
+- **Pressure hit.** A generated clip: a 2 ms rise, a short push and pull (Friedlander shape, stretched so headphones can play it), then a 42 to 80 Hz boom dying over about 0.2 s. It plays in the middle of the head with a slight lean towards the blast. Level is Kinney-Graham peak pressure for 100 g TNT, with 0 dB at 5 m, plus `6.9a`: +6 dB at 3 m (held at full volume), −7 at 10 m, −13 at 20 m, −17 at 30 m. Walls cost what they cost the thump, and a blast through a wall keeps only what's under 200 Hz. Fades out over the last 40% of `6.9b`. Flashbangs and smoke don't get it.
+- **Thump.** A voice can't go over full volume, so above it `6.2` adds a second voice exactly in step, up to +6 dB.
+- **Dip.** Footsteps, the environment and ambience (the Main, AmbientIn and AmbientOut mixer volumes) dip by up to `6.9c`, less with distance and walls, for about 0.38 s. Explosions and guns are on the Guns bus and don't dip.
+
+**Limits.** The clip's shape, the 200 Hz, and the dip's depth and timing are by ear. The Guns bus may squash the front; not measured. Headphones limit how much can be felt. Bring Back Concussion cuts sound on the same mixer controls inside its radius: any control something else moves during a dip is let go and not put back, so a dip can't fight it or leave a channel quiet. That also means the dip may not be heard inside that radius.
+
+**Check.** A grenade at 3, 10 and 25 m and behind a wall, `6.9` off and on; shock.csv; summary SHOCK WAVE.
 
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 

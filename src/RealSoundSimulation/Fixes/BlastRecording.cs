@@ -25,7 +25,13 @@ namespace RealSoundSimulation.Fixes
         private const int RayCount = 48;
         private const float OpenM = 30f, LiftM = 0.6f, AllIndoorBelow = 0.08f, NoIndoorSetM = 200f, MinLayerGain = 0.158f; // -16 dB
 
-        public const string Header = "t,x,y,z,distM,gameEnv,openShare,outdoorWeight,mainEnv,mainGain,layerGain,layerPlayed,closeReachM";
+        // 0.6.53 "6.6c": the rays above only look around the blast. User, 9 Nov 2026, standing beside a garage: "it still doesnt sound like its outdoor mix is right when its comes out the front of the entrance".
+        // raid_20261109_114154: all 6 changed picks turned the game's Outdoor into Indoor with the player outside. When you're outside the sound reaches you through open air, so the outdoor share
+        // can't fall below "6.6c", or half of it if the game also has the blast indoors. Outside = the enclosure probe under 0.45, fading out by 0.8; in that raid outside was 0.01 to 0.42 and inside 0.82 to 0.99.
+        private const float OutsideBelow = 0.45f, InsideAbove = 0.8f, GameIndoorShare = 0.5f;
+        private static float _enclosure, _floor;
+
+        public const string Header = "t,x,y,z,distM,gameEnv,openShare,outdoorWeight,mainEnv,mainGain,layerGain,layerPlayed,closeReachM,listenerEnclosure,outdoorFloor";
 
         public static bool InLayer;
         private static Vector3[] _dirs;
@@ -63,6 +69,9 @@ namespace RealSoundSimulation.Fixes
                 _open = OpenShare(position);
                 float high = Mathf.Max(Plugin.BlastOutdoorShare.Value, AllIndoorBelow + 0.01f);
                 _weight = distance >= NoIndoorSetM ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(AllIndoorBelow, high, _open));
+                _enclosure = EnclosureProbe.Valid && !float.IsNaN(EnclosureProbe.Enclosure) ? EnclosureProbe.Enclosure : 1f; // no reading: treated as inside, which leaves the blast's own measure alone
+                _floor = Plugin.BlastOutsidePull.Value * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OutsideBelow, InsideAbove, _enclosure))) * (_gameEnv == EnvironmentType.Outdoor ? 1f : GameIndoorShare);
+                _weight = Mathf.Max(_weight, _floor);
                 float outdoor = Mathf.Sin(_weight * Mathf.PI * 0.5f), indoor = Mathf.Cos(_weight * Mathf.PI * 0.5f);
                 bool mainOutdoor = _weight >= 0.5f;
                 _mainEnv = mainOutdoor ? EnvironmentType.Outdoor : EnvironmentType.Indoor;
@@ -110,7 +119,7 @@ namespace RealSoundSimulation.Fixes
             _openSum += _open; _weightSum += _weight;
             if (!DiagLog.IsOpen) return;
             DiagLog.Row("blastrec.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(position.x, "0.0"), DiagLog.F(position.y, "0.0"), DiagLog.F(position.z, "0.0"), DiagLog.F(distance, "0.0"),
-                _gameEnv.ToString(), DiagLog.F(_open, "0.00"), DiagLog.F(_weight, "0.00"), _mainEnv.ToString(), DiagLog.F(_mainGain, "0.00"), DiagLog.F(_layerGain, "0.00"), layered ? "1" : "0", DiagLog.F(Plugin.BlastCloseReachM.Value, "0")));
+                _gameEnv.ToString(), DiagLog.F(_open, "0.00"), DiagLog.F(_weight, "0.00"), _mainEnv.ToString(), DiagLog.F(_mainGain, "0.00"), DiagLog.F(_layerGain, "0.00"), layered ? "1" : "0", DiagLog.F(Plugin.BlastCloseReachM.Value, "0"), DiagLog.F(_enclosure, "0.00"), DiagLog.F(_floor, "0.00")));
         }
 
         private static Exception Finalizer(Exception __exception)
@@ -149,7 +158,7 @@ namespace RealSoundSimulation.Fixes
 
         public static string Summary()
         {
-            string state = Plugin.BlastRecordingOn.Value ? $"ON, all outdoor from {Plugin.BlastOutdoorShare.Value:0.00} open, close recording to {Plugin.BlastCloseReachM.Value:0} m" : "off";
+            string state = Plugin.BlastRecordingOn.Value ? $"ON, all outdoor from {Plugin.BlastOutdoorShare.Value:0.00} open, close recording to {Plugin.BlastCloseReachM.Value:0} m, outside pull {Plugin.BlastOutsidePull.Value:0.00}" : "off";
             return $"BLAST RECORDING (6.6 {state}): {Blasts} blasts" + (Blasts > 0 ? $", mean open share {_openSum / Blasts:0.00}, mean outdoor weight {_weightSum / Blasts:0.00}" : "") +
                    $"; game's indoor/outdoor pick changed {ChangedRecording}; second recording played {Layers}, no voice for it {LayersMissed}  (blastrec.csv)\n";
         }

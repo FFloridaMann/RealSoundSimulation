@@ -127,7 +127,7 @@ namespace RealSoundSimulation.Fixes
 
         private static void ExplosionPostfix(Vector3 position, SoundBank bank)
         {
-            if (BlastRecording.InLayer || !Plugin.ThumpOn.Value || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
+            if (BlastRecording.InLayer || (!Plugin.ThumpOn.Value && !Plugin.ShockOn.Value) || bank == null || bank.SourceType != BetterAudio.AudioSourceGroupType.Grenades) return;
             Perf.Begin();
             try
             {
@@ -137,7 +137,12 @@ namespace RealSoundSimulation.Fixes
                 if (dist > ExplosionRangeM) return;
                 var m = new Measure();
                 MeasureWalls(lt.position, position, m);
-                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), Plugin.ThumpExplosionReach.Value, Plugin.ThumpExplosionLengthS.Value, ""); // 0.6.43: "6.2j"
+                AudioClip clip = bank.PickSingleClip(0);
+                float reach = Plugin.ThumpExplosionReach.Value;
+                if (Plugin.ThumpOn.Value) Thump("explosion", bank, clip, position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), reach, Plugin.ThumpExplosionLengthS.Value, ""); // 0.6.43: "6.2j"
+                float spent = 20f * Mathf.Log10(Mathf.Max(dist, RefM) / RefM) + m.LossDb;
+                float wallFade = Plugin.ThumpWallsStop.Value ? Mathf.Clamp01((reach - spent) / ReachFadeDb) : 1f;
+                ShockWave.Explosion(lt, position, dist, m.Walls, m.LossDb, wallFade, Mathf.Max(dist - ShockHeadStartM, 0f) / OwnEchoes.SpeedOfSound, clip); // 0.6.53: "6.9"
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (explosion)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }
@@ -173,6 +178,9 @@ namespace RealSoundSimulation.Fixes
             double start = now + delay, length = Mathf.Min(clip.length, maxLen);
             // 0.6.44: an explosion's thump fades out over the second half of its length ("6.2j"), so a short setting doesn't cut off. User, 9 Nov 2026.
             EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, fadeS: kind == "explosion" ? (float)length * ExplosionFadeShare : 0f);
+            // 0.6.53: a voice can't go over full volume, so a second one exactly in step takes a close explosion up to +6 dB ("6.9").
+            float second = kind == "explosion" ? ShockWave.ThumpExtra(db, fade) : 0f;
+            if (second > 0f) EchoVoices.Play(owner, clip, pos, start, length, false, second, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, fadeS: (float)length * ExplosionFadeShare);
             Ends[free] = start + length;
             if (busy + 1 > AtOnceMax) AtOnceMax = busy + 1;
             if (kind == "gun") PlayedGun++; else PlayedExplosion++;

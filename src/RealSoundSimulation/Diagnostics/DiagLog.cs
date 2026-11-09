@@ -34,6 +34,7 @@ namespace RealSoundSimulation.Diagnostics
             ["thump.csv"] = Fixes.ThroughWall.Header,
             ["blast.csv"] = Fixes.BlastFromOpening.Header,
             ["blastrec.csv"] = Fixes.BlastRecording.Header,
+            ["shock.csv"] = Fixes.ShockWave.Header,
             ["glass.csv"] = Fixes.BlastFromOpening.GlassHeader,
             ["slowframes.csv"] = "t,clock,frameMs,batchWaitMs,muzzleWaitMs,rays,aliveBots", // 0.6.20: rows describe the previous frame
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
