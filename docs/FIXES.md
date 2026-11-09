@@ -601,9 +601,9 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 | Thick metal | 0.8 |
 | Can't tell | 0.7 |
 
-**Limits.** Hand-set values. Every sound through a door is affected, not only grenades, so bots behind doors are easier to hear. `6.5` off is the game's values. Doors only exist once the world has loaded, so it's applied again for the first 15 s of a raid.
+**Limits.** Hand-set values. Every sound through a door is affected, not only grenades, so bots behind doors are easier to hear. `6.5` off is the game's values. Doors only exist once the world has loaded, so they're read from the scene when the raid has them and it's applied again over the next 15 s. Before 0.6.52 the lookup crashed in SPT (`GameWorld.FindDoor`, null `World`), so no real door was held down and a route through a shut door also stopped `6.4`.
 
-**Check.** A closed door with a grenade or a bot behind it, `6.5` off and on; summary CLOSED DOORS for the materials read; `untagged` or `door elsewhere` there means those doors get the 0.7.
+**Check.** A closed door with a grenade or a bot behind it, `6.5` off and on, including a door shut during the fuse; summary CLOSED DOORS for the materials read; `untagged`, `door elsewhere` or `door not found` there means those doors get the 0.7. A blast through a shut door has `closure` above 0 in blast.csv.
 
 ## 6.6: Blast recording by how open it is (0.6.49)
 

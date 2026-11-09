@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.52 — 9 Nov 2026 (6.5 actually reads doors)
+**Run in game:** not yet.
+- **Bug fix: `6.5` never worked on a real door.** `GameWorld.FindDoor` crashes in SPT because its `World` component is null, so from 0.6.47 every shut door kept the game's full closure. Doors are now read from the scene once the raid has them.
+- The same crash stopped `6.4` for any blast, bounce or glass whose route ran through a shut door: no move to the opening, no dulling, no room echoes, no row in blast.csv. raid_20261109_114154, a grenade in a room with one wood door, shut during the fuse: route cost went from 0.03 to 0.77 and the blast had no row. A failure reading a door now keeps the game's value and leaves `6.4` running.
+- The CLOSED DOORS summary line also says how many doors are in the scene. Not found after the first tries shows as `door not found`.
+- Version 0.6.52. F12 still has 125 settings.
+
 ## 0.6.51 — 9 Nov 2026 (6.8: search from both ends, bot gunshots, arrival times)
 **Run in game:** not yet. Starting values.
 - **The corner search now works from both ends** (`Acoustics/CornerSearch.cs`), on the worker threads: fans from you and from the source, plus the openings probe v2 remembers, and it finds one or two corners. About 290 rays when the blast is close, finished in the same frame; about 960 over the next 2 frames when the sound has at least 50 ms still to travel.

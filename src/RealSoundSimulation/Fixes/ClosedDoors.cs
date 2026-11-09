@@ -21,15 +21,19 @@ namespace RealSoundSimulation.Fixes
     //            once the doors exist to be read, and when the settings change.
     // Touches only the route data: a portal's own closure level, which the game animates, is left alone. Every sound through a door is affected, not only grenades.
     // Values are hand-set, nothing measured.
+    //
+    // 0.6.52: the doors are found by reading them from the scene once the raid has them. GameWorld.FindDoor crashes in SPT (its World component is null), so from 0.6.47 to 0.6.51 no real door
+    // was ever held down, and a blast whose route ran through a shut door lost 6.4 as well. raid_20261109_114154, a grenade behind a wood door shut during the fuse: route cost 0.03 to 0.77.
     internal class ClosedDoors : MonoBehaviour
     {
         private const float UnknownValue = 0.7f, RetryS = 3f;
-        private const int MaxTries = 5;
+        private const int MaxTries = 5, MaxEmptyReads = 20;
 
         private static readonly Dictionary<short, float> Values = new Dictionary<short, float>();
         private static readonly Dictionary<MaterialType, float> Scores = new Dictionary<MaterialType, float>();
         private static readonly Dictionary<string, int> Found = new Dictionary<string, int>();
-        private static int _tries;
+        private static readonly Dictionary<string, WorldInteractiveObject> Doors = new Dictionary<string, WorldInteractiveObject>();
+        private static int _tries, _emptyReads;
         private static float _next;
 
         public static void Apply(Harmony h)
@@ -42,8 +46,8 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset()
         {
-            Values.Clear(); Found.Clear();
-            _tries = 0; _next = 0f;
+            Values.Clear(); Found.Clear(); Doors.Clear();
+            _tries = _emptyReads = 0; _next = 0f;
         }
 
         // The doors only exist once the world has loaded, and the game fills its route data before that.
@@ -51,8 +55,18 @@ namespace RealSoundSimulation.Fixes
         {
             if (_tries >= MaxTries || !SpatialAudioSystem.Initialized || !Singleton<GameWorld>.Instantiated || Time.time < _next) return;
             _next = Time.time + RetryS;
+            try { if (ReadDoors() == 0 && ++_emptyReads < MaxEmptyReads) return; } // none in the scene yet: this doesn't use up a try
+            catch (Exception e) { DiagRunner.ReportOnce("6.5 closed doors (read doors)", e); }
             _tries++;
             ApplyAll();
+        }
+
+        private static int ReadDoors()
+        {
+            Doors.Clear();
+            foreach (WorldInteractiveObject d in UnityEngine.Object.FindObjectsOfType<WorldInteractiveObject>())
+                if (d != null && !string.IsNullOrEmpty(d.Id)) Doors[d.Id] = d;
+            return Doors.Count;
         }
 
         private static void ApplyAll()
@@ -89,16 +103,16 @@ namespace RealSoundSimulation.Fixes
         internal static float Scaled(BaseSpatialAudioPortal p, float raw)
         {
             if (!Plugin.DoorMufflingOn.Value || p == null || raw <= 0f || p.portalType != BaseSpatialAudioPortal.PortalType.Opening) return raw;
-            return Mathf.Min(raw, DoorValue(p) * Plugin.DoorMufflingStrength.Value);
+            try { return Mathf.Min(raw, DoorValue(p) * Plugin.DoorMufflingStrength.Value); }
+            catch (Exception e) { DiagRunner.ReportOnce("6.5 closed doors (door value)", e); return raw; } // a bad door keeps the game's value and can't take 6.4 down with it
         }
 
         private static float DoorValue(BaseSpatialAudioPortal p)
         {
             if (Values.TryGetValue(p.ID, out float v)) return v;
             if (!(p is SpatialAudioPortal s) || string.IsNullOrEmpty(s.DoorID)) return Remember(p.ID, UnknownValue, "no door");
-            if (!Singleton<GameWorld>.Instantiated) return UnknownValue; // not loaded yet: read it next time
-            WorldInteractiveObject door = Singleton<GameWorld>.Instance.FindDoor(s.DoorID);
-            if (door == null) return UnknownValue;
+            if (!Doors.TryGetValue(s.DoorID, out WorldInteractiveObject door) || door == null)
+                return _tries >= MaxTries ? Remember(p.ID, UnknownValue, "door not found") : UnknownValue; // not read yet: read it next time
             if (!p.IsPositionIdentical(door.transform.position)) return Remember(p.ID, UnknownValue, "door elsewhere");
             MaterialType m = DoorMaterial(door);
             return Remember(p.ID, ValueOf(m), m == MaterialType.None ? "untagged" : m.ToString());
@@ -149,7 +163,7 @@ namespace RealSoundSimulation.Fixes
         {
             var parts = new List<string>();
             foreach (KeyValuePair<string, int> kv in Found) parts.Add($"{kv.Key} {kv.Value}");
-            return $"CLOSED DOORS (6.5 {(Plugin.DoorMufflingOn.Value ? $"ON, strength {Plugin.DoorMufflingStrength.Value:0.00}" : "off")}): doors read: {(parts.Count > 0 ? string.Join(", ", parts) : "none")}\n";
+            return $"CLOSED DOORS (6.5 {(Plugin.DoorMufflingOn.Value ? $"ON, strength {Plugin.DoorMufflingStrength.Value:0.00}" : "off")}): {Doors.Count} doors in the scene; shut doors read: {(parts.Count > 0 ? string.Join(", ", parts) : "none")}\n";
         }
     }
 }

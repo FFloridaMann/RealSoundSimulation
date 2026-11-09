@@ -119,6 +119,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Room echoes from the opening (`6.3e`-`6.3g`, 0.6.48; hand-worked levels)
 - [ ] Raid: `6.3e` off and on with a grenade in the next room; `6.3f` by ear
 - [x] Closed doors muffle by material (`6.5`, `6.5a`, 0.6.47; hand-set values)
+- [x] `6.5` door lookup crashed in SPT; doors now read from the scene (0.6.52)
 - [ ] Raid: `6.5` off and on behind closed doors; check the CLOSED DOORS line reads real materials
 - [x] Explosion recording by how open the blast is; close recording reaches further (`6.6`-`6.6b`, 0.6.49; starting values)
 - [ ] Raid: grenades at a garage front, deep inside and in the open; check blastrec.csv `gameEnv` against `outdoorWeight`
