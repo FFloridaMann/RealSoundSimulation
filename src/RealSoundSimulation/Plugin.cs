@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.39")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.40")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -59,6 +59,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ShotOverlapOn; // 0.6.23
         internal static ConfigEntry<bool> PortalPositioningOn; // 0.6.24
         internal static ConfigEntry<float> PortalStrength;
+        internal static ConfigEntry<bool> RouteDullOn; // 0.6.40 "6.1b"
+        internal static ConfigEntry<float> RouteDullStrength, RouteDullMinHz;
         internal static ConfigEntry<ObstructionMode> ObstructionModeCfg;
         internal static ConfigEntry<bool> DoorwayOn;
         internal static ConfigEntry<float> DoorwayInside;
@@ -161,6 +163,9 @@ namespace RealSoundSimulation
             ShotOverlapOn = Config.Bind(fix, "1e Shots ring under the next", true, new ConfigDescription("0.6.23: every gun, yours and bots. The game stops a shot dead when the same gun's next sound starts. With this on it rings out underneath; only a firing loop is ended. A gun has two voices, so a third sound takes back the oldest. If the game runs out of gun voices, the gun closest to finishing gives up its own so a shot never goes silent. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 95 }));
             PortalPositioningOn = Config.Bind(fix, "6.1 Bot gunshots from the opening", true, new ConfigDescription("0.6.24: a bot's gunshot from another room comes from the doorway, window or stairwell it reaches you through, at the length of that route, instead of through the wall. Uses the route the game already picks. Same room, both outdoors, or no baked route = the true position. Off = the game's behaviour. Live.", null, new ConfigurationManagerAttributes { Order = 94 }));
             PortalStrength = Config.Bind(fix, "6.1a Opening strength", 1f, new ConfigDescription("How far towards the opening the shot is moved: 1 = all the way, 0.5 = halfway between the true direction and the opening.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 93 }));
+            RouteDullOn = Config.Bind(fix, "6.1b Dull the shot by its route", true, new ConfigDescription("0.6.40: a bot's gunshot from another room loses its highs by the way it got to you: a wall on the straight line, the turn at the opening, and each extra opening. A clear line through a door stays clear. Works with 6.1 off. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            RouteDullStrength = Config.Bind(fix, "6.1c Dulling strength", 1f, new ConfigDescription("How strongly the route dulls the shot. 1 = the starting values, 0 = no dulling, 2 = twice as many octaves. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
+            RouteDullMinHz = Config.Bind(fix, "6.1d Dullest cutoff Hz", 800f, new ConfigDescription("The dullest the route can make a shot. Lower = more muffled on long routes. Live.", new AcceptableValueRange<float>(400f, 4000f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpOn = Config.Bind(fix, "6.2 Through-wall thump", true, new ConfigDescription("0.6.37: a bot gunshot in another room, or an explosion behind a wall, also comes through the wall as a low thump from its true direction. The clear sound still comes from the opening. At most 4 at once. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             ThumpDb = Config.Bind(fix, "6.2a Thump level dB", 0f, new ConfigDescription("How loud the thump is before distance and wall loss. Live.", new AcceptableValueRange<float>(-30f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpCutoffHz = Config.Bind(fix, "6.2b Thump cutoff Hz", 50f, new ConfigDescription("Low-pass for gunshots through walls. Lower = deeper. Depends on your headset. Live.", new AcceptableValueRange<float>(20f, 400f), new ConfigurationManagerAttributes { Order = 93 }));
@@ -280,7 +285,7 @@ namespace RealSoundSimulation
 
         internal static string FixState() =>
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
-            $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")} | " +
+            $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")}, 6.1b route dulling {(RouteDullOn.Value ? $"ON (x{RouteDullStrength.Value:0.00}, floor {RouteDullMinHz.Value:0} Hz)" : "off")} | " +
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
             $"6.3 explosion echoes {(ExplosionEchoOn.Value ? $"ON ({ExplosionEchoDb.Value:+0;-0;0} dB, {ExplosionEchoCount.Value} per blast, {ExplosionEchoLengthS.Value:0.0} s, {ExplosionEchoRangeM.Value:0} m)" : "off")} | " +
             $"10a footsteps and handling {FoleyPresets.State} | 10b routes {ExtraRoutes.State} | " +

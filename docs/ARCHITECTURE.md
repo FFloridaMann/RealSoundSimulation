@@ -62,7 +62,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── FoleyPresets.cs      10a (0.6.35): footstep and handling group settings from SEB
     ├── ShotOverlap.cs       1e (0.6.23): shots ring under the next one; a gun gives up voices if the pool is empty
     ├── (Acoustics/Materials.cs) 0.6.25: the one table of what each surface does to sound
-    ├── PortalPositioning.cs 6.1 (0.6.24): a bot's gun voices placed at the opening, from Acoustics/PortalRoutes.cs (the game's route result)
+    ├── PortalPositioning.cs 6.1 (0.6.24): a bot's gun voices placed at the opening, from Acoustics/PortalRoutes.cs (the game's route result); 6.1b (0.6.40) dulls them by the route
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways
     ├── GunEnvironmentBlend.cs fix 3c: your own gunshots mix indoor/outdoor recordings (Doorway or Enclosure mode);

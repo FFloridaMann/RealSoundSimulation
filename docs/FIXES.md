@@ -447,6 +447,32 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 
 **Check.** A bot firing from another room: `6.1` off (through the wall) and on (from the door or stairwell). `6.1a` at 0.5 is halfway. routes.csv `movedDeg`; summary PORTAL POSITIONING; COST line for its cost.
 
+### 6.1b: Dull the shot by its route (0.6.40)
+
+**Problem.** The game muffles a gunshot only above occlusion 0.60, and in another room that number is the route's cost. raid_20261109_001706: a bot 39 m away with 3–5 walls on the straight line read 0.17, because one opening joins the rooms. Under 60 m, 2 of 96 bot shots were muffled. User: "the sound should be muffled (less distinct) regardless".
+
+**Fix.** A low-pass of ours on the gun's voices, from the geometry rather than the cost:
+
+- Steps = 1 if a wall is on the straight line (one ray, every 0.1 s while firing) + the turn at the nearest opening / 90° (at most 135°, fading out within 1 m of it) + 0.5 per extra opening.
+- Cutoff = 16 kHz × 2^(−1.5 × steps × `6.1c`), never below `6.1d`. Smoothed over 150 ms; the first shot starts already dulled.
+
+| Situation | Cutoff |
+|---|---|
+| Straight through a doorway | 15 kHz |
+| Clear line, door slightly to the side | 12 kHz |
+| Wall in the way, one door, small turn | 4.5 kHz |
+| Wall in the way, one door, 45° | 3.4 kHz |
+| Wall in the way, one door, 90°, or two doors at 45° | 2 kHz |
+| Three or more doors, 90° or more | 800 Hz |
+
+Median on three saved Factory raids (under 60 m, not muffled by the game): 2.3 kHz, 800 Hz and 4 kHz.
+
+**Realism.** Sound bending round an edge loses highs first, so the direction is real. Real rooms give a gentler slope than a 12 dB-per-octave filter, and hard walls bounce some highs along, so the amounts are estimates; a long route at the floor may be too dull.
+
+**Limits.** Bot gunshots with a route only: same room, both outdoors or no baked route are unchanged. Steps aside on the game's muffled channel. Tone only, though losing the highs makes a shot a little quieter. The opening count depends on the route file (`10b`). Not yet confirmed that a filter on these voices works through the Meta spatializer.
+
+**Check.** Bots in other rooms, `6.1b` off and on; `6.1c` at 2 to hear it plainly. routes.csv `dullHz` (0 = not dulled; a burst's first row can read 0); summary ROUTE DULLING.
+
 ## 9p: Roof rain counts the floors above (0.6.29)
 
 **Problem (raid 40).** The top-roof test looked down from 40 m. It said "top roof" at spots with floors above (probably upper floors solid only from below), so roof rain read 0.9–1.0. An on/off rule from 5 up-rays was all that kept it out, and it flickered.

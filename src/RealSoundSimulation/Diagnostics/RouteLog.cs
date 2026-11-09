@@ -21,7 +21,7 @@ namespace RealSoundSimulation.Diagnostics
     //   notComputed the calculator hasn't run for this room pair yet    busy  its job is still running this frame
     internal static class RouteLog
     {
-        public const string Header = "t,clock,shooterId,reason,straightM,los,dy,sourceRoom,listenerRoom,reversed,routes,bestCost,secondCost,pathM,portals,nearX,nearY,nearZ,nearPortalM,closure,trueAz,portalAz,angleDeg,prop,occl,routeChanged,movedDeg";
+        public const string Header = "t,clock,shooterId,reason,straightM,los,dy,sourceRoom,listenerRoom,reversed,routes,bestCost,secondCost,pathM,portals,nearX,nearY,nearZ,nearPortalM,closure,trueAz,portalAz,angleDeg,prop,occl,routeChanged,movedDeg,dullHz";
 
         private const float PerGunS = 0.25f, ChangedM = 1.5f, ChangedWithinS = 3f, NoCost = 1e30f;
 
@@ -125,7 +125,8 @@ namespace RealSoundSimulation.Diagnostics
             DiagLog.AppendF(sb, c.PropagationEffect, 3); sb.Append(',');
             DiagLog.AppendF(sb, c.OcclusionEffect, 3); sb.Append(',');
             DiagLog.AppendB(sb, changed); sb.Append(',');
-            DiagLog.AppendF(sb, Fixes.PortalPositioning.MovedDeg(w), 0); // 0.6.24: where 6.1 actually put it
+            DiagLog.AppendF(sb, Fixes.PortalPositioning.MovedDeg(w), 0); sb.Append(','); // 0.6.24: where 6.1 actually put it
+            DiagLog.AppendF(sb, Fixes.PortalPositioning.DullHz(w), 0); // 0.6.40: 6.1b's cutoff, 0 = not dulled
             DiagLog.EndRow("routes.csv");
         }
 

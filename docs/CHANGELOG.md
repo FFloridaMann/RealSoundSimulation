@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.40 — 9 Nov 2026 (6.1b: bot gunshots dulled by their route)
+**Run in game:** not yet. Numbers are starting values, checked only as maths on three saved Factory raids. Test with bots in other rooms, `6.1b` on and off. First check: does the filter work on these voices at all, since they go through the Meta spatializer.
+- **New `6.1b Dull the shot by its route`** (on, live; `Fixes/PortalPositioning.cs`). User, 9 Nov 2026: "the sound should be muffled (less distinct) regardless". raid_20261109_001706: a bot 39 m away with 3–5 walls on the straight line read occlusion 0.17 because one opening joins the rooms, and the game only muffles above 0.60, so 2 of 96 bot shots under 60 m were muffled.
+- Rule: 1 step for a wall on the straight line + the turn at the nearest opening / 90° (at most 135°, less within 1 m of the opening) + 0.5 per extra opening. Cutoff = 16 kHz × 2^(−1.5 × steps × `6.1c`), floor `6.1d`. Smoothed over 150 ms, set at once on the first shot. Tone only.
+- Sound bending round an edge does lose its highs first, so the direction is real. Real rooms are gentler than a filter and hard walls bounce some highs along, so the amounts are estimates.
+- Sliders, all live: `6.1c` strength (1, 0 to 2), `6.1d` dullest cutoff (800 Hz, 400 to 4000). Works with `6.1` off. Steps aside when the game has put the shot on its muffled channel.
+- routes.csv has `dullHz`, and there's a new ROUTE DULLING line in the summary.
+- Limits: bot gunshots only, and only with a route. The number of openings still depends on the route file (`10b`).
+- Version 0.6.40. F12 now has 103 settings.
+
 ## 0.6.39 — 9 Nov 2026 (6.3, first half: explosion echoes)
 **Run in game:** not yet. Levels are starting values on the gun echo rule. Test in a no-AI raid: grenades in a concrete room and outdoors near a building, `6.3` on and off.
 - **New `6.3 Explosion echoes`** (on, live; `Fixes/ExplosionEchoes.cs`). An explosion from you or a bot echoes off walls that it and you can both reach. 25 rays from the blast up to 150 m; ground ignored. Mirror bounce if the true bounce point checks out, otherwise a weaker scattered echo. Paths under 3 m longer than the direct sound are dropped. Under 80 rays per blast.

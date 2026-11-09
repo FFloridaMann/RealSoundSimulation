@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** explosion echoes (`6.3`, 0.6.39) built, not raided: throw grenades in a no-AI raid. 6.2 (0.6.38) needs a louder test and a `6.1` test on Factory · **Next:** bot echoes, the second half of 6.3. Further rain tuning is in step E
+**Now:** route dulling (`6.1b`, 0.6.40) built, not raided: bots in other rooms, on and off. Explosion echoes (`6.3`, 0.6.39) also need a no-AI raid. 6.2 (0.6.38) needs a louder test and a `6.1` test on Factory · **Next:** bot echoes, the second half of 6.3. Further rain tuning is in step E
 
 ---
 
@@ -112,6 +112,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Tune `6.2a`, `6.2b`, `6.2d`, `6.2f`, `6.2g` by ear
 - [ ] Decide: where there's no route, drop the game's muffled voice so the thump plays alone
 - [ ] Test on Factory (user, 9 Nov 2026): gunshots from the opening plus the thump from the true direction may be disorienting. `6.1` on and off, then `6.1a` at 0.5
+- [x] Dull a bot's shot by its route: wall on the line, turn, openings (`6.1b`-`6.1d`, 0.6.40; starting values)
+- [ ] Raid: `6.1b` on and off with bots in other rooms; does the filter work through the Meta spatializer; is `6.1d` too dull on long routes
+- [ ] Factory with `10b` off: raids before it read 0.34-0.52 "blocked" at 15-60 m, with it 0.18 (one raid each way can't separate this from where the bots were)
 - [ ] Later (user, 9 Nov 2026): the room changes the thump. A shot in a small hard room pushes more through the wall than one in a big hall; with your head next to the wall it's bigger and less pinpointed. Today only total distance and the walls count
 
 ## 6.3 · Echoes for bot gunshots and grenades
@@ -174,7 +177,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 100 settings, what each does, and what still reads it
+- [ ] List all 103 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
