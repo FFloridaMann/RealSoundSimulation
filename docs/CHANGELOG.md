@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.27 — 8 Nov 2026 (probe v2 uses the measured material table)
+**Run in game:** not yet. Roadmap step M.
+- **New `9o Measured surfaces`** (on, live): probe v2 takes absorption, scattering and brightness per surface from `Acoustics/Materials.cs`. It feeds rain through buildings, exit credits (9k), roof rain and the gunshot room measures. Off = the earlier values.
+- **Biggest changes in absorption per bounce:** steel 0.05 to 0.12, glass 0.04 to 0.14, rubber 0.20 to 0.07, cardboard 0.30 to 0.66, carpet 0.50 to 0.26, gravel 0.35 to 0.69, snow 0.60 to 0.90. Concrete, the bulk of most interiors, barely moves (0.02). Wood and metal are no longer dulled per bounce. Untagged surfaces keep 0.15.
+- **Not retuned yet:** `9l` rain floor, `9k` exit credits, the roof rain reference (0.85) and its ×0.7 dulling, and the echo levels were tuned on the old values. They need raids. Metal rooms now read as less hard (more absorbent), which can lower the `5a` hard-room reverb boost there.
+- **Unchanged:** what passes through a surface (glass, thin wood). That belongs to 6.2.
+- Version 0.6.27.
+
 ## 0.6.26 — 8 Nov 2026 (open sky lowers the indoor gunshot mix)
 **Run in game:** not yet. From raid 39 (raid_20261108_195106, Ground Zero, 0.6.25; `6g` measured surfaces: "def sounds better"). Mark 7, outside the extract with wide open space behind, firing past a pillar into the glass room: "too much indoor mix on the shot, not enough of the open space behind me". About 42% of the sky was open, but the room measure (0.45–0.59) took no account of it, and the shot played 82–89% indoor.
 - **New `3n Open sky lowers the indoor mix`** (1, live): in fix 3c's Enclosure mode with probe v2, the room part of the weight is multiplied by (1 − open sky × 3n). Simulated on raid 39's 97 shots: those three go to about 64%, 49% and 40%; the 52 shots with almost no open sky don't change; only shots with 20% or more open sky do.

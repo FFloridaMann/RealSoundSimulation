@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.26 (open sky lowers the indoor mix, `3n`) waiting for a raid · **Next:** probe v2 retune, then 6.2 (through walls)
+**Now:** 0.6.26 (`3n`) and 0.6.27 (`9o`) waiting for a raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -72,7 +72,8 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Research each surface: [MATERIALS.md](MATERIALS.md) (absorption by frequency, transmission loss; no usable scattering data)
 - [x] One table, `Acoustics/Materials.cs`; fix 6 echoes use it (`6g`, 0.6.25)
 - [x] Raid 39: compare `6g` on and off: "def sounds better", stays on
-- [ ] Probe v2 uses the table too
+- [x] Probe v2 uses the table too (`9o`, 0.6.27)
+- [ ] Raid: compare `9o` on and off (rain inside buildings, metal rooms, doorways)
 - [ ] Roof material (4b phase 3)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 

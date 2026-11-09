@@ -223,6 +223,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9n` | deep bounce dulling: build-up brightness × this per bounce past the 3rd (0.6.14) | 0.8 |
 | `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
 | `6g` | echoes use measured surface values (0.6.25) | on |
+| `9o` | probe v2 uses measured surface values (0.6.27) | on |
 | `3n` | open sky around you lowers the indoor gunshot mix (0.6.26) | 1 |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
 | `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |

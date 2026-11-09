@@ -19,7 +19,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 6 | 6.0a | Audio-thread timing (measure) | Done (raid 34); no audio-load counter exists |
 | 7 | 6.0b | Ray batch wait on busy CPUs (measure) | Done (raid 34); no fix needed |
 | 8 | **6.1** | **Portal positioning** | **Built for bot gunshots (0.6.24)**, not raided |
-| 9 | M | Realistic materials (+ 4b roof material) | Research done ([MATERIALS.md](MATERIALS.md)); echoes use it (0.6.25, not raided); probe v2 retune next |
+| 9 | M | Realistic materials (+ 4b roof material) | Research done ([MATERIALS.md](MATERIALS.md)); echoes (0.6.25) and probe v2 (0.6.27) use it; retunes need raids |
 | 10 | 6.2 | Through-wall sound by material | Planned |
 | 11 | 6.3 | Echoes for bot gunshots and grenades | Planned |
 | 12 | W | Weather research and retune | Planned |

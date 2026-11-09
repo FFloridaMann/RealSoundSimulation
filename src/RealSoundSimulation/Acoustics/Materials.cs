@@ -7,7 +7,8 @@ namespace RealSoundSimulation.Acoustics
     // own presets, the spatializer the game runs, checked against published measurements. Absorption is the share of energy lost per
     // bounce in Meta's four bands (0-176, 176-775, 775-3408, 3408+ Hz); scattering is the 500-1000 Hz average; transmission is dB lost
     // at 125 Hz, 1 kHz and 4 kHz (for 6.2, not used yet).
-    // Echoes use it now. Probe v2 keeps its earlier values, moved here unchanged, until its retune (rain, exit credits, echo levels).
+    // Echoes use it (6g, 0.6.25) and probe v2 uses it (9o, 0.6.27), which feeds rain through buildings, exit credits, roof rain and the
+    // gunshot room measures. The transmission column is for 6.2.
     internal static class Materials
     {
         private const float NoLowPass = 20000f, NoTransmit = float.PositiveInfinity;
@@ -120,8 +121,19 @@ namespace RealSoundSimulation.Acoustics
             }
         }
 
-        // Probe v2: absorption, scattering (share reflected diffusely) and brightness (Hz) after the bounce. Unchanged by 0.6.25.
+        // Probe v2, one bounce: absorption (the two middle bands), scattering (share reflected diffusely) and brightness (Hz).
         public static void Probe(MaterialType m, out float a, out float s, out float bright)
+        {
+            if (Plugin.ProbeMeasuredSurfaces.Value && TryGet(m, out Surface t))
+            {
+                a = (t.A1 + t.A2) * 0.5f; s = t.Scatter; bright = t.EchoCutoff;
+                return;
+            }
+            LegacyProbe(m, out a, out s, out bright);
+        }
+
+        // The values used before 0.6.27 ("9o" off), and for tags with no row (see-through and untagged surfaces).
+        private static void LegacyProbe(MaterialType m, out float a, out float s, out float bright)
         {
             switch (m)
             {

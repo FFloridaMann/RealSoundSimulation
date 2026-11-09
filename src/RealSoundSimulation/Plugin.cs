@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.26")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.27")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -97,6 +97,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> OutdoorTailOn;   // 0.6.11 "3m"
         internal static ConfigEntry<float> OutdoorTailDb;  // 0.6.11 "3l"
         internal static ConfigEntry<float> DeepBounceDulling; // 0.6.14 "9n"
+        internal static ConfigEntry<bool> ProbeMeasuredSurfaces; // 0.6.27 "9o"
 
         private void Awake()
         {
@@ -183,6 +184,7 @@ namespace RealSoundSimulation
             DistantThroughOpeningsOn = Config.Bind(fix, "9k Distant gunfire through openings", true, new ConfigDescription("Probe v2: when you're inside, distant sounds off the map (the ambient gunfire mod's battles) come through the windows and doors that face them, at the level that gets in, instead of through the walls from their true direction. Needs fix 4. Off = left to the game and fix 4.", null, new ConfigurationManagerAttributes { Order = 33 }));
             RainThroughBuildingDb = Config.Bind(fix, "9l Rain through the building dB", -32f, new ConfigDescription("Fix 9: deep inside, the outdoor sound never drops below this level, muffled to a low rumble (a building in rain is never silent: the whole structure is being hit). Fades in as you go inside. -60 = off.", new AcceptableValueRange<float>(-60f, -20f), new ConfigurationManagerAttributes { Order = 32 }));
             DeepBounceDulling = Config.Bind(fix, "9n Deep bounce dulling", 0.8f, new ConfigDescription("Probe v2: past the 3rd reflection, each further bounce multiplies the build-up's brightness by this (rooms deep inside rumble rather than hiss). 1 = off (before 0.6.14).", new AcceptableValueRange<float>(0.3f, 1f), new ConfigurationManagerAttributes { Order = 30 }));
+            ProbeMeasuredSurfaces = Config.Bind(fix, "9o Measured surfaces", true, new ConfigDescription("0.6.27: probe v2 uses the measured value for each surface (Meta XR's own table; docs/MATERIALS.md) for how much a bounce absorbs, scatters and dulls. Feeds rain through buildings, exit credits, roof rain and the gunshot room measure. Off = the earlier hand-set values. Live.", null, new ConfigurationManagerAttributes { Order = 29 }));
             RoofBedMode = Config.Bind(fix, "9m Roof rain directional mode", BedDirection.Mode.UnityPanner, new ConfigDescription("Fix 9: like 9c, for the roof rain only (9c now sets the outdoor sounds: wind, rain, background). UnityPanner keeps the recording's width and steers it; MetaHrtf gives up/down placement. Up versus down only matters for the roof rain, so this is where to try HRTF. Either way the roof rain is muffled by how its paths reach you (down a stair shaft duller than overhead).", null, new ConfigurationManagerAttributes { Order = 31 }));
             MuzzleLobe = Config.Bind(fix, "3k Muzzle lobe", 1f, new ConfigDescription("Fix 3c: the room measured at the muzzle counts the directions in front of it more (a forward lobe around where you aim, ((1 + cos) / 2)^k). Out of a window the muzzle then reads mostly outdoor even though half of its sphere looks back into the room; into a room from a doorway, more indoor. 0 = the whole sphere (before 0.6.11), 1 = default, 2 = tighter.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 69 }));
             OutdoorTailOn = Config.Bind(fix, "3m Outdoor tail from the opening", true, new ConfigDescription("Fix 3c: when your shot is mixed mostly indoor but you fire out of a window or door, the gun's outdoor tail also plays from that opening, a beat later (it adds; nothing of the shot is taken away). Single shots and the tail at the end of a burst. Uses fix 6's voices (needs 6 on). Off = as before.", null, new ConfigurationManagerAttributes { Order = 68 }));
@@ -237,7 +239,7 @@ namespace RealSoundSimulation
             $"5 own reverb boost {OwnReverbBoostDb.Value:+0.0;-0.0;0} dB (+{HardRoomReverbDb.Value:0} in hard rooms) | probe {(ProbeOn.Value ? "on" : "off")} | " +
             $"fix4 off-map {(OffMapOn.Value ? "ON" : "off")} | fix7 rain dropout {(RainFixOn.Value ? "ON" : "off")} | fix8 openings {(ExposureMixOn.Value ? $"ON (cue {DirectionCueStrength.Value:0.00}, roof rain {RoofRainUnderFloors.Value:0.00}, glass {ThroughGlass.Value:0.00}, indoor fade {IndoorFadeNearOpenings.Value:0.00}, openings {OpeningShare.Value:0.00}{(OpeningHrtf.Value ? " HRTF" : "")})" : "off")} | exposure probe {(ExposureProbeOn.Value ? "on" : "off")} | " +
             $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB, surfaces {(EchoMeasuredSurfaces.Value ? "measured" : "hand-set")})" : "off")} | " +
-            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")}, rain from openings {(RainFromOpenings.Value ? "on" : "off")})" : "off")}, 9k distant gunfire through openings {(DistantThroughOpeningsOn.Value ? "ON" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
+            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")}, rain from openings {(RainFromOpenings.Value ? "on" : "off")}, surfaces {(ProbeMeasuredSurfaces.Value ? "measured" : "hand-set")})" : "off")}, 9k distant gunfire through openings {(DistantThroughOpeningsOn.Value ? "ON" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
 
         internal static void Safe(string what, Action a)
         {
