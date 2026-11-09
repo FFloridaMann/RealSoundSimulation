@@ -2,6 +2,16 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.54 — 9 Nov 2026 (6.9: the shock wave goes through the building)
+**Run in game:** not yet. Starting values, set by ear; the research behind them is mostly small-scale and was read from abstracts.
+- **The pressure hit now takes the way the wave would.** raid_20261109_121839: every blast in shock.csv had a wall on the straight line, so a hit that only took the straight line averaged volume 0.06, even at 6 m in the same room. User: not getting it "at mid distances and indoors around corners and rooms". It uses the stronger of the way through the openings (or around a corner) and the straight line through the walls; your own room or a clear line counts as open. It comes from the way it arrives and arrives by the length of that way.
+- **New `6.9d` corner loss** (6 dB per 90 degrees, half for each extra opening, 0 to 18), plus a shut door's closure x 20 dB. The front softens from 3 kHz, halving per bend; only a real path through a wall is cut to 200 Hz.
+- **New `6.9e` enclosed boost** (up to +6 dB, 0 to 12), by how shut in the blast point is. **New `6.9f` repeat hits** (3, 0 to 4), spaced by the size of the room, because indoors a shock arrives as a train of shrinking pulses. **New `6.9g` slow push** (0 dB, −24 = off): a long low swell after the hit, strongest in a small or shut room.
+- **`6.9b` reach is now 60 m** (renamed so the new default applies), and it's measured along the way.
+- **The dip now goes on top of whatever else sets those mixer controls**, every frame, instead of letting go. 8 of the 12 controls were let go last raid. Its depth follows the route too. It only restores a control nobody else has moved.
+- shock.csv has new columns: `way`, `pathM`, `bends`, `closure`, `enclosed`, `roomM`, `repeats`. The SHOCK WAVE summary line counts hits by way.
+- Version 0.6.54. F12 now has 134 settings.
+
 ## 0.6.53 — 9 Nov 2026 (6.6c: outside pulls to outdoor; 6.9: shock wave)
 **Run in game:** not yet. Starting values, set by ear.
 - **New `6.6c Outside pulls to outdoor`** (0.75, 0 to 1, live). raid_20261109_114154: all 6 recording changes turned the game's Outdoor into Indoor while the player was outside. User, beside a garage: "it still doesnt sound like its outdoor mix is right when its comes out the front of the entrance". blastrec.csv has `listenerEnclosure` and `outdoorFloor`.

@@ -653,6 +653,13 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** A grenade at 3, 10 and 25 m and behind a wall, `6.9` off and on; shock.csv; summary SHOCK WAVE.
 
+**0.6.54, through the building.** raid_20261109_121839: every blast had a wall on the straight line and the hit averaged volume 0.06, even at 6 m in the same room. Published work on blasts in buildings (mostly small-scale, read from abstracts): a confined blast is a train of shrinking reflected pulses and then a slower gas pressure that lasts until the room vents; openings carry the wave between rooms; being behind a corner cut peak pressure by 43 to 60% in one study; channelling along a passage wins some of that back.
+
+- **Way.** The stronger of the way through the openings (or around a corner, `6.8`) and the straight line through the walls. Same room or a clear line counts as open. Pressure is worked out over the length of the way, less `6.9d` per 90 degrees of turning, half that per extra opening, and the shut door's closure × 20 dB.
+- **Tone.** Open or clear, untouched. Through openings, a 3 kHz low-pass halving per bend. A real path through a wall, 200 Hz.
+- **Enclosed.** By how shut in the blast point is (the rays from `6.6`): up to `6.9e` dB, `6.9f` repeat hits spaced by twice the room's mean hit distance over the speed of sound (6 to 50 ms) at −5, −9, −13, −17 dB, and a 55 to 36 Hz swell of 0.25 to 0.7 s (`6.9g`), longer in a small or shut room. Corridors aren't treated specially.
+- **Dip.** Applied on top of whatever else sets the control each frame, and put back only on a control nobody else has moved. Its depth follows the way.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

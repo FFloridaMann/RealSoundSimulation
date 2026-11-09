@@ -23,7 +23,8 @@ namespace RealSoundSimulation.Fixes
     internal static class BlastRecording
     {
         private const int RayCount = 48;
-        private const float OpenM = 30f, LiftM = 0.6f, AllIndoorBelow = 0.08f, NoIndoorSetM = 200f, MinLayerGain = 0.158f; // -16 dB
+        internal const float AllIndoorBelow = 0.08f;
+        private const float OpenM = 30f, LiftM = 0.6f, NoIndoorSetM = 200f, MinLayerGain = 0.158f; // -16 dB
 
         // 0.6.53 "6.6c": the rays above only look around the blast. User, 9 Nov 2026, standing beside a garage: "it still doesnt sound like its outdoor mix is right when its comes out the front of the entrance".
         // raid_20261109_114154: all 6 changed picks turned the game's Outdoor into Indoor with the player outside. When you're outside the sound reaches you through open air, so the outdoor share
@@ -130,6 +131,25 @@ namespace RealSoundSimulation.Fixes
                 _opts = null; _origValues = null;
             }
             return __exception;
+        }
+
+        // 0.6.54: for 6.9. How much of the sky and horizon around a point is open, and the mean distance to what the other rays hit: the size of the room.
+        public static float MeasureAt(Vector3 position, out float roomM)
+        {
+            if (_dirs == null) _dirs = BuildDirs();
+            int full = AcousticProbe.FullMask;
+            int mask = (full != 0 ? full : LayerMask.GetMask("HighPolyCollider", "LowPolyCollider", "Terrain")) | LayerMask.GetMask("TransparentCollider");
+            Vector3 o = position + Vector3.up * LiftM;
+            int open = 0;
+            float sum = 0f;
+            for (int i = 0; i < _dirs.Length; i++)
+            {
+                if (CountedRay.Raycast(o, _dirs[i], out RaycastHit hit, OpenM, mask, QueryTriggerInteraction.Ignore)) sum += hit.distance;
+                else open++;
+            }
+            int hits = _dirs.Length - open;
+            roomM = hits > 0 ? sum / hits : OpenM;
+            return open / (float)_dirs.Length;
         }
 
         private static float OpenShare(Vector3 position)

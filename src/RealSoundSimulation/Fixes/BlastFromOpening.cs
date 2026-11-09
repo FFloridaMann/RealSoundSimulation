@@ -167,7 +167,7 @@ namespace RealSoundSimulation.Fixes
             }
             if (!_pending) return;
             _pending = false;
-            if (!Wanted && !Plugin.RoomEchoOn.Value && !Plugin.BlastCornerOn.Value) return;
+            if (!Wanted && !Plugin.RoomEchoOn.Value && !Plugin.BlastCornerOn.Value && !Plugin.ShockOn.Value) return;
             Perf.Begin();
             try { Handle(__instance, source, __result); }
             catch (Exception e) { DiagRunner.ReportOnce("6.4 blast from the opening", e); }
@@ -182,9 +182,15 @@ namespace RealSoundSimulation.Fixes
             float straight = toBlast.magnitude;
 
             if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { Skip("no container", straight); return; }
-            if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why)) { if (why != "both outdoors" || !Corner(sas, c, source, listener, blast, straight)) Skip(why, straight); return; }
+            if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why))
+            {
+                if (why == "same room" && !BlastRecording.InLayer) ShockWave.NoteClear(blast, "same room"); // 0.6.54: "6.9"
+                if (why != "both outdoors" || !Corner(sas, c, source, listener, blast, straight)) Skip(why, straight);
+                return;
+            }
 
             Vector3 toNear = near - listener;
+            if (!BlastRecording.InLayer) ShockWave.NoteRoute(blast, path, openings, closure, near, Vector3.Angle(toBlast, toNear)); // 0.6.54: "6.9"
             float nearM = toNear.magnitude, movedDeg = 0f, cutoff = 0f;
             bool moved = false, blocked = false;
 
@@ -271,7 +277,7 @@ namespace RealSoundSimulation.Fixes
                 float len = toTarget.magnitude;
                 _cBlocked = len >= 0.01f && CountedRay.Raycast(listener, toTarget / len, len, mask, QueryTriggerInteraction.Ignore);
                 _cJob = null;
-                if (!_cBlocked) { CornerClear++; return false; }
+                if (!_cBlocked) { CornerClear++; ShockWave.NoteClear(blast, "clear"); return false; }
                 bool canWait = delay >= Mathf.Max(CornerWaitMinS, Time.unscaledDeltaTime * 3f); // the sound is still travelling: its 2 frames of work are free
                 _cJob = CornerSearch.Get(listener, target, mask, canWait);
                 if (_cJob == null) CornerLimited++;
@@ -280,7 +286,11 @@ namespace RealSoundSimulation.Fixes
 
             double dsp = AudioSettings.dspTime;
             if (_cJob == null || _cJob.Done) ApplyCorner(source, c, listener, blast, straight, _cJob, layer, dsp);
-            else CornerVoices.Add(new CornerVoice { J = _cJob, Serial = _cJob.Serial, S = source, C = c, Listener = listener, Blast = blast, Straight = straight, Layer = layer, Dsp = dsp });
+            else
+            {
+                if (!layer) ShockWave.NoteWaiting(blast); // 0.6.54: "6.9" waits for the answer too
+                CornerVoices.Add(new CornerVoice { J = _cJob, Serial = _cJob.Serial, S = source, C = c, Listener = listener, Blast = blast, Straight = straight, Layer = layer, Dsp = dsp });
+            }
             return true;
         }
 
@@ -322,6 +332,7 @@ namespace RealSoundSimulation.Fixes
             float lossDb = Mathf.Min(Plugin.BlastCornerLossDb.Value * (found ? corners : 2f), CornerMaxLossDb);
             ScaleVoice(source, Mathf.Pow(10f, -lossDb / 20f));
 
+            if (!layer) ShockWave.NoteCorner(blast, found, path, corners, Vector3.Angle(toBlast, toNear), found ? job.Near : Vector3.zero); // 0.6.54: "6.9"
             if (!layer && found) { CornerFound++; _cornerMovedSum += movedDeg; }
             if (!layer) CornerRow(found ? "1" : "0", found ? "around a corner" : job == null ? "search busy" : "no way round", straight, path, found ? corners : 0, Vector3.Angle(toBlast, toNear), movedDeg, cut, lossDb);
         }
