@@ -597,7 +597,7 @@ namespace RealSoundSimulation.Acoustics
             }
 
             // reflect
-            Props(m, out float a, out float scatter, out float bright);
+            Materials.Probe(m, out float a, out float scatter, out float bright);
             bool ground = nrm.y > 0.7f; // 0.6.5: the facing normal (a floor's underside is not ground)
             p.LastPt = hit.point; p.HasLast = true;
             // 0.6.14 "9n": past the 3rd reflection each further bounce dulls the build-up's brightness (tag 2 read 10-14 kHz
@@ -877,42 +877,6 @@ namespace RealSoundSimulation.Acoustics
         }
 
         private static float GlassT() => Mathf.Pow(10f, -Mathf.Max(0f, Plugin.GlassLossDb.Value) / 10f);
-
-        // Absorption (energy lost per bounce, mid frequencies), scattering (share reflected diffusely), brightness (Hz)
-        // after the bounce. Typical published values for each surface type (concrete 0.02, carpet/fabric 0.5, grass 0.5...).
-        public static void Props(MaterialType m, out float a, out float s, out float bright)
-        {
-            switch (m)
-            {
-                case MaterialType.Concrete: case MaterialType.Tile: a = 0.02f; s = 0.15f; bright = 16000f; return;
-                case MaterialType.Stone: case MaterialType.Asphalt: a = 0.03f; s = 0.25f; bright = 15000f; return;
-                case MaterialType.GenericHard: a = 0.04f; s = 0.2f; bright = 14000f; return;
-                case MaterialType.MetalThick: case MaterialType.MetalNoDecal: a = 0.05f; s = 0.2f; bright = 16000f; return;
-                case MaterialType.MetalThin: a = 0.1f; s = 0.3f; bright = 14000f; return;
-                case MaterialType.GarbageMetal: a = 0.15f; s = 0.6f; bright = 10000f; return;
-                case MaterialType.Glass: case MaterialType.GlassVisor: a = 0.04f; s = 0.05f; bright = 18000f; return;
-                case MaterialType.WoodThick: a = 0.1f; s = 0.25f; bright = 9000f; return;
-                case MaterialType.WoodThin: a = 0.15f; s = 0.35f; bright = 7000f; return;
-                case MaterialType.Plastic: a = 0.08f; s = 0.2f; bright = 12000f; return;
-                case MaterialType.Rubber: case MaterialType.Tyre: a = 0.2f; s = 0.3f; bright = 6000f; return;
-                case MaterialType.Cardboard: a = 0.3f; s = 0.4f; bright = 5000f; return;
-                case MaterialType.Fabric: case MaterialType.GenericSoft: case MaterialType.Body: case MaterialType.BodyArmor:
-                    a = 0.5f; s = 0.7f; bright = 2500f; return;
-                case MaterialType.GarbagePaper: a = 0.4f; s = 0.7f; bright = 3000f; return;
-                case MaterialType.Soil: case MaterialType.Swamp: a = 0.3f; s = 0.5f; bright = 5000f; return;
-                case MaterialType.SoilForest: a = 0.4f; s = 0.6f; bright = 4500f; return;
-                case MaterialType.Mud: a = 0.2f; s = 0.4f; bright = 6000f; return;
-                case MaterialType.Gravel: case MaterialType.Pebbles: a = 0.35f; s = 0.7f; bright = 5000f; return;
-                case MaterialType.GrassLow: a = 0.45f; s = 0.7f; bright = 4000f; return;
-                case MaterialType.GrassHigh: a = 0.6f; s = 0.8f; bright = 3500f; return;
-                case MaterialType.Snow: a = 0.6f; s = 0.6f; bright = 3000f; return;
-                case MaterialType.Water: case MaterialType.WaterPuddle: a = 0.02f; s = 0.05f; bright = 18000f; return;
-                // 0.6.14: untagged was 0.06 / 0.3 / 10 kHz. Raid 30 tag 2 (Capital_corridor_1F_COLLIDER, no tag): 185 of 192
-                // paths trapped, one escape kept 84% after 8 bounces, level -15 dB with 90% build-up. Furnished interiors
-                // absorb 0.15-0.3. Tagged materials unchanged until the materials overhaul.
-                default: a = 0.15f; s = 0.4f; bright = 8000f; return;
-            }
-        }
 
         private static void Aggregate()
         {

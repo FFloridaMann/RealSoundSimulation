@@ -57,6 +57,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── GunMixerFix.cs       fix 1: stop muffled/clear flip-flop on gunshots
     ├── FirstBurstOcclusion.cs 1d (0.6.21): a bot's first burst starts muffled if a wall is in the way
     ├── ShotOverlap.cs       1e (0.6.23): shots ring under the next one; a gun gives up voices if the pool is empty
+    ├── (Acoustics/Materials.cs) 0.6.25: the one table of what each surface does to sound
     ├── PortalPositioning.cs 6.1 (0.6.24): a bot's gun voices placed at the opening, from Acoustics/PortalRoutes.cs (the game's route result)
     ├── ObstructionScoreFix.cs fix 2: how the three wall/corner/echo checks are combined
     ├── DoorwayBlend.cs      fix 3: component; smooth indoor/outdoor blend at doorways

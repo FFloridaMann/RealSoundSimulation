@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.24")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.25")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -87,6 +87,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> EchoFar;
         internal static ConfigEntry<float> EchoHardRoomDb;
         internal static ConfigEntry<float> BlendSteepness;     // 0.6.9 "3j"
+        internal static ConfigEntry<bool> EchoMeasuredSurfaces; // 0.6.25
         internal static ConfigEntry<float> EarlyEchoTrimDb;    // 0.6.9 "6f"
         internal static ConfigEntry<bool> IndoorWindFollowsOpenings; // 0.6.9 "8g"
         internal static ConfigEntry<float> RainThroughBuildingDb;   // 0.6.9 "9l"
@@ -187,6 +188,7 @@ namespace RealSoundSimulation
             OutdoorTailDb = Config.Bind(fix, "3l Outdoor tail through opening dB", 0f, new ConfigDescription("Fix 3m: raise or lower the outdoor tail from the opening. 0 = the shot's level x how open the aim is x how indoor the shot is mixed.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 67 }));
             BlendSteepness = Config.Bind(fix, "3j Blend steepness", 0.5f, new ConfigDescription("Fix 3c: how quickly your gunshot leaves an even indoor/outdoor mix. 0 = straight (0.6.8; many shots near 50/50, two recordings at once can sound doubled). 1 = steep (0.6.9-0.6.13 default; at a garage mouth a small change became a big jump). 0.5 (default since 0.6.14) still makes near-even mixes rare (0.6 -> 0.68).", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 70 }));
             EarlyEchoTrimDb = Config.Bind(fix, "6f Early echo trim dB", 0f, new ConfigDescription("Fix 6: added to echoes arriving under 25 ms after the shot (a wall within ~4 m). Those fuse with the shot as colour rather than a separate echo; if shots sound doubled, lower this. 0 = the physical level.", new AcceptableValueRange<float>(-24f, 0f), new ConfigurationManagerAttributes { Order = 52 }));
+            EchoMeasuredSurfaces = Config.Bind(fix, "6g Measured surfaces", true, new ConfigDescription("0.6.25: fix 6 echoes use measured values for each surface (Meta XR's own material table; docs/MATERIALS.md): wood, glass and metal are no longer dulled, soft ground and fabric lose what they really lose. Off = the earlier hand-set values. Live.", null, new ConfigurationManagerAttributes { Order = 51 }));
             IndoorWindFollowsOpenings = Config.Bind(fix, "8g Indoor wind follows openings", true, new ConfigDescription("Some rooms' room tone is a wind or draught recording (its clip name has 'wind' in it). With this on, that one follows how much of the outside reaches you (like the outdoor sound) instead of how enclosed you are, so it fades deep in a stairwell. Other room tones are unchanged. Every room tone played is logged to roomtone.csv.", null, new ConfigurationManagerAttributes { Order = 44 }));
 
             Harmony = new Harmony(Guid);
@@ -232,7 +234,7 @@ namespace RealSoundSimulation
             $"fix3c own gunshot blend {(GunEnvBlendOn.Value ? $"ON ({OwnShotSource.Value}, aim {OwnShotAimWeight.Value:0.00}, thin {ThinSurfaceCount.Value:0.00}, muzzle {MuzzleWeight.Value:0.00}, small space {SmallSpace.Value})" : "off")} | " +
             $"5 own reverb boost {OwnReverbBoostDb.Value:+0.0;-0.0;0} dB (+{HardRoomReverbDb.Value:0} in hard rooms) | probe {(ProbeOn.Value ? "on" : "off")} | " +
             $"fix4 off-map {(OffMapOn.Value ? "ON" : "off")} | fix7 rain dropout {(RainFixOn.Value ? "ON" : "off")} | fix8 openings {(ExposureMixOn.Value ? $"ON (cue {DirectionCueStrength.Value:0.00}, roof rain {RoofRainUnderFloors.Value:0.00}, glass {ThroughGlass.Value:0.00}, indoor fade {IndoorFadeNearOpenings.Value:0.00}, openings {OpeningShare.Value:0.00}{(OpeningHrtf.Value ? " HRTF" : "")})" : "off")} | exposure probe {(ExposureProbeOn.Value ? "on" : "off")} | " +
-            $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB)" : "off")} | " +
+            $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB, surfaces {(EchoMeasuredSurfaces.Value ? "measured" : "hand-set")})" : "off")} | " +
             $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")}, rain from openings {(RainFromOpenings.Value ? "on" : "off")})" : "off")}, 9k distant gunfire through openings {(DistantThroughOpeningsOn.Value ? "ON" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
 
         internal static void Safe(string what, Action a)

@@ -315,6 +315,8 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 ---
 
+**0.6.25: measured surfaces (`6g`, on).** The echo level and low-pass per surface come from `Acoustics/Materials.cs` (Meta XR's presets; [MATERIALS.md](MATERIALS.md)). Level is the average of the 176–775 Hz and 775–3400 Hz bands, where a rifle has its energy. Wood, glass and metal are no longer dulled. Off = the earlier hand-set values. Check: fire near a plywood wall, then concrete, with `6g` off and on.
+
 ## Fix 3h: Ambience through glass (0.3.3; removed in 0.5.8)
 
 **Removed in 0.5.8.** Fix 8 replaced it in 0.4.2 (with fix 8 on it did nothing). Kept here as history.

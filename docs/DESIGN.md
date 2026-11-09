@@ -222,6 +222,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `3j` | 3c blend steepness: near-even indoor/outdoor mixes rare (0.6.9; default 0.5 since 0.6.14) | 0.5 |
 | `9n` | deep bounce dulling: build-up brightness × this per bounce past the 3rd (0.6.14) | 0.8 |
 | `6f` | early echo trim: echoes under 25 ms (0.6.9) | 0 dB |
+| `6g` | echoes use measured surface values (0.6.25) | on |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
 | `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |
 | Diagnostics: `Enclosure probe`, `Outdoor exposure probe`, `Acoustic probe v2` | the measurements (§2); fixes 3c, 8, 9 and 9a need them | on |

@@ -456,7 +456,7 @@ namespace RealSoundSimulation.Acoustics
         private static void AddCand(Kind kind, Vector3 pos, Vector3 outDir, float path, MaterialType mat, float share, float extraDb, Vector3 aim, float dirMax)
         {
             if (_candN >= Cands.Length) return;
-            MaterialProps(mat, out float matDb, out float matCut);
+            Materials.Echo(mat, out float matDb, out float matCut);
             float spread = -20f * Mathf.Log10(Mathf.Max(path, RefPath) / RefPath);
             float dirDb = -dirMax * (1f - Vector3.Dot(outDir.normalized, aim)) * 0.5f;
             float shareDb = 10f * Mathf.Log10(Mathf.Max(share, 1e-4f));
@@ -514,42 +514,6 @@ namespace RealSoundSimulation.Acoustics
                 return Mathf.Exp(Mathf.Lerp(Mathf.Log(AirCutHz[i - 1]), Mathf.Log(AirCutHz[i]), t));
             }
             return AirCutHz[AirCutHz.Length - 1];
-        }
-
-        // Reflection loss (dB) and brightness (low-pass Hz) per EFT bullet material tag.
-        public static void MaterialProps(MaterialType m, out float db, out float cutoff)
-        {
-            switch (m)
-            {
-                case MaterialType.Concrete: case MaterialType.Stone: case MaterialType.Asphalt: case MaterialType.Tile:
-                case MaterialType.GenericHard: case MaterialType.MetalThick: case MaterialType.MetalNoDecal:
-                case MaterialType.Water: case MaterialType.WaterPuddle:
-                    db = -0.5f; cutoff = 20000f; break;
-                case MaterialType.Glass:
-                    db = -1f; cutoff = 20000f; break;
-                case MaterialType.MetalThin: case MaterialType.GarbageMetal:
-                    db = -1f; cutoff = 16000f; break;
-                case MaterialType.WoodThick:
-                    db = -1.5f; cutoff = 9000f; break;
-                case MaterialType.Plastic:
-                    db = -2f; cutoff = 10000f; break;
-                case MaterialType.WoodThin:
-                    db = -3f; cutoff = 6000f; break;
-                case MaterialType.Gravel: case MaterialType.Pebbles:
-                    db = -3f; cutoff = 6000f; break;
-                case MaterialType.Soil: case MaterialType.SoilForest: case MaterialType.Mud: case MaterialType.Snow:
-                case MaterialType.GrassHigh: case MaterialType.GrassLow: case MaterialType.Swamp:
-                    db = -4f; cutoff = 4000f; break;
-                case MaterialType.Cardboard: case MaterialType.GlassShattered:
-                    db = -5f; cutoff = 5000f; break;
-                case MaterialType.Fabric: case MaterialType.GenericSoft: case MaterialType.GarbagePaper:
-                case MaterialType.Rubber: case MaterialType.Tyre: case MaterialType.Body: case MaterialType.BodyArmor:
-                    db = -8f; cutoff = 2500f; break;
-                case MaterialType.Chainfence: case MaterialType.Grate:
-                    db = -10f; cutoff = 6000f; break; // mostly see-through
-                default:
-                    db = -1f; cutoff = 14000f; break; // untagged: treat as a generic hard surface
-            }
         }
 
         private static MaterialType Material(Collider c) => Surfaces.Material(c);

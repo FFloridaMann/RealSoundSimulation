@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.25 — 8 Nov 2026 (echoes use measured surfaces)
+**Run in game:** not yet. Roadmap step M, from [MATERIALS.md](MATERIALS.md).
+- **New `Acoustics/Materials.cs`:** one table of what each game surface does to sound, from Meta XR's own presets: absorption in four bands, scattering, transmission. Probe v2's values and the old echo values moved into it unchanged.
+- **New `6g Measured surfaces`** (on, live). Fix 6 echoes take their level from the table's two middle bands. Wood, glass and metal are no longer dulled; a low-pass remains only where it's real (carpet, grass, and mildly cardboard, gravel, snow). Examples per bounce: concrete −0.5 to −0.1 dB, thin wood −3 to −0.5 dB, rubber −8 to −0.3 dB, grass −4 to −5.9 dB, snow −4 to −10.5 dB. Off = the earlier hand-set values.
+- **Not changed yet:** probe v2 (rain, exit credits, roof rain) keeps its values until its retune, which needs raids. Scattering and transmission are in the table but unused.
+- Version 0.6.25.
+
 ## 0.6.24 — 8 Nov 2026 (6.1: bot gunshots come from the opening)
 **Run in game:** not yet. ROADMAP 6.1. Raid 36's routes.csv: 156 of 171 bot shots had a route, half the openings over 33 degrees from the true direction, 40% over 45, the worst 150; the best opening changed only 7 times.
 - **New `6.1 Bot gunshots from the opening`** (on, live) and **`6.1a Opening strength`** (1) (`Fixes/PortalPositioning.cs`). A bot's gun voices are placed along the direction of the opening nearest you, at the real length of the route (solutions doc 2.1). The game already picks the route; only its cost was used.

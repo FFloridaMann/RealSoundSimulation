@@ -1,6 +1,6 @@
 # Materials: real acoustic values for the game's surfaces
 
-Research for roadmap step M (8 Nov 2026). **Nothing here is in the game yet.** It compares what the mod assumes with measured or calculated values and proposes what to change.
+Research for roadmap step M (8 Nov 2026). **In the game since 0.6.25: the table and the echo values only** (setting `6g`). It compares what the mod assumes with measured or calculated values and proposes what to change.
 
 ## What the research found
 
@@ -168,8 +168,8 @@ Doors and gaps leak a lot, but I couldn't find a trustworthy figure. Rated hollo
 
 ## Proposed changes, in order
 
-1. **One table.** Today three separate tables disagree (`OwnEchoes.MaterialProps`, `AcousticProbe`'s absorption, `Surfaces`). Replace them with one `Acoustics/Materials.cs` holding Meta's absorption, scattering and transmission for each game tag.
-2. **Echoes follow it.** Levels from the table above, the low-passes on wood, glass and metal removed, a low-pass only where it's needed. No new filters, so no extra cost.
+1. **One table. Done, 0.6.25:** `Acoustics/Materials.cs` holds Meta's absorption, scattering and transmission for each game tag. `Surfaces.cs` stays: it only sorts surfaces into thin and hard.
+2. **Echoes follow it. Done, 0.6.25:** levels from the table above, the low-passes on wood, glass and metal removed, a low-pass only where it's needed. No new filters, so no extra cost.
 3. **Probe v2 and the rain paths follow it.** Then the retunes listed under step M: rain through the building (9l), exit credits (9k), roof rain and the echo levels. Those need raids.
 4. **Roof material (4b phase 3)** uses the same table.
 5. **6.2** takes Meta's transmission as its starting level, physics for the shape, and logs the game's measured thickness first.
