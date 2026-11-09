@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.47")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.48")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -117,6 +117,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> BlastOpeningOn, BlastDullOn; // 0.6.41 "6.4"
         internal static ConfigEntry<float> BlastOpeningStrength, ThumpExplosionDb, ThumpOpenDb, ThumpExplosionLengthS, BlastDullStrength, DoorMufflingStrength;
         internal static ConfigEntry<bool> DoorMufflingOn; // 0.6.47 "6.5"
+        internal static ConfigEntry<bool> RoomEchoOn; // 0.6.48 "6.3e"
+        internal static ConfigEntry<float> RoomEchoDb;
+        internal static ConfigEntry<int> RoomEchoCount;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
         internal static ConfigEntry<int> ExplosionEchoCount;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
@@ -180,6 +183,9 @@ namespace RealSoundSimulation
             ThumpExplosionDb = Config.Bind(fix, "6.2h Explosion thump level dB", 12f, new ConfigDescription("0.6.41: extra level for an explosion's thump through walls, on top of 6.2a, so guns stay as they are. Live.", new AcceptableValueRange<float>(-12f, 24f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpOpenDb = Config.Bind(fix, "6.2i Open-air thump dB", -6f, new ConfigDescription("0.6.42: an explosion with no wall in the way gets the thump too, at 6.2h's level plus this. Lower = less. Live.", new AcceptableValueRange<float>(-24f, 6f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpExplosionLengthS = Config.Bind(fix, "6.2j Explosion thump length s", 1.5f, new ConfigDescription("0.6.43: how long an explosion's thump plays. It fades out over the second half of this, so a short setting doesn't cut off. It can't run past the end of the recording. Live.", new AcceptableValueRange<float>(0.2f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
+            RoomEchoOn = Config.Bind(fix, "6.3e Room echoes from the opening", true, new ConfigDescription("0.6.48: an explosion in another room also sends a burst of room reflections out through the opening it reaches you by. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            RoomEchoDb = Config.Bind(fix, "6.3f Room echo level dB", 0f, new ConfigDescription("Level of the room echoes from the opening. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            RoomEchoCount = Config.Bind(fix, "6.3g Room echoes per explosion", 4, new ConfigDescription("How many room echoes come from the opening. Live.", new AcceptableValueRange<int>(1, 6), new ConfigurationManagerAttributes { Order = 93 }));
             DoorMufflingOn = Config.Bind(fix, "6.5 Closed door muffling by material", true, new ConfigDescription("0.6.47: a closed door muffles by what it's made of, instead of counting as fully blocked. Thin wood lets the most through, thick metal the least. Affects every sound through a door. Off = the game's values. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             DoorMufflingStrength = Config.Bind(fix, "6.5a Closed door strength", 1f, new ConfigDescription("Scales how much closed doors muffle. Lower = doors let more through. 1 = the starting values. Never muffles more than the game does. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastOpeningOn = Config.Bind(fix, "6.4 Blast from the opening", true, new ConfigDescription("0.6.41: an explosion in another room comes from the doorway, window or stairwell it reaches you through, at the length of that route. Since 0.6.42 the grenade's bounces do too. The thump (6.2) stays at the true spot. Same room, both outdoors, or no baked route = the true position. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
@@ -303,6 +309,7 @@ namespace RealSoundSimulation
             $"0 gun sounds {GunSounds.Value}{(GunSounds.Value == GunSoundSet.SEB ? (SebOnFullAuto.Value ? " (all guns)" : " (semi-only guns)") : "")} | " +
             $"fix1 gun mixer {(GunMixerOn.Value ? $"ON ({GunMuffleAbove.Value:0.00}/{GunUnmuffleBelow.Value:0.00}, hold {GunHoldSeconds.Value:0.0} s)" : "off")}, 1d first burst {(FirstBurstOn.Value ? "ON" : "off")}, 1e shot overlap {(ShotOverlapOn.Value ? "ON" : "off")}, 6.1 bot gunshots from the opening {(PortalPositioningOn.Value ? $"ON ({PortalStrength.Value:0.00})" : "off")}, 6.1b route dulling {(RouteDullOn.Value ? $"ON (x{RouteDullStrength.Value:0.00}, floor {RouteDullMinHz.Value:0} Hz)" : "off")} | " +
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
+            $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.5 closed doors {(DoorMufflingOn.Value ? $"ON ({DoorMufflingStrength.Value:0.00})" : "off")} | " +
             $"6.4 blast from the opening {(BlastOpeningOn.Value ? $"ON ({BlastOpeningStrength.Value:0.00})" : "off")}, dulled {(BlastDullOn.Value ? $"ON (x{BlastDullStrength.Value:0.00})" : "off")}, explosion thump level {ThumpExplosionDb.Value:+0;-0;0} dB, open-air {ThumpOpenDb.Value:+0;-0;0} dB, length {ThumpExplosionLengthS.Value:0.0} s | " +
             $"6.3 explosion echoes {(ExplosionEchoOn.Value ? $"ON ({ExplosionEchoDb.Value:+0;-0;0} dB, {ExplosionEchoCount.Value} per blast, {ExplosionEchoLengthS.Value:0.0} s, {ExplosionEchoRangeM.Value:0} m)" : "off")} | " +

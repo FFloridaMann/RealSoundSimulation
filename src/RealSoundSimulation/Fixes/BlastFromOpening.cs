@@ -62,6 +62,12 @@ namespace RealSoundSimulation.Fixes
         private static double _movedSum, _cutLogSum, _bounceMovedSum;
         private static bool Wanted => Plugin.BlastOpeningOn.Value || Plugin.BlastDullOn.Value;
 
+        private const float RoomBaseDb = 3f, RoomBounceDb = 2f, RoomMaxDb = -3f, RoomDullBy = 0.8f; // +6 for an explosion, -3 for what gets out of the room
+        private static readonly float[] RoomExtraM = { 6f, 12f, 20f, 32f, 46f, 62f };
+        private static SoundBank _bank;
+        public static int RoomPlayed, RoomDropped;
+        private static double _roomLevelSum;
+
         public const string Header = "t,moved,reason,distM,pathM,openings,turnDeg,movedDeg,lineBlocked,cutoffHz,closure";
 
         public static void Apply(Harmony h)
@@ -81,7 +87,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Filters) if (kv.Value.Lp != null && kv.Value.Lp.enabled) kv.Value.Lp.enabled = false;
             Filters.Clear(); Skips.Clear(); Bouncers.Clear();
             _pending = _anyOn = false;
-            Moved = Dulled = BounceGrenades = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = 0;
+            Moved = Dulled = BounceGrenades = RoomPlayed = RoomDropped = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = _roomLevelSum = 0;
         }
 
         private static void GrenadeInitPostfix(Grenade __instance)
@@ -118,6 +124,7 @@ namespace RealSoundSimulation.Fixes
         {
             _pending = bank != null && bank.SourceType == BetterAudio.AudioSourceGroupType.Grenades;
             _blast = position;
+            _bank = bank;
         }
 
         private static Exception PlayFinalizer(Exception __exception)
@@ -132,7 +139,7 @@ namespace RealSoundSimulation.Fixes
         {
             if (!_pending) return;
             _pending = false;
-            if (!Plugin.BlastOpeningOn.Value && !Plugin.BlastDullOn.Value) return;
+            if (!Wanted && !Plugin.RoomEchoOn.Value) return;
             Perf.Begin();
             try { Handle(__instance, source, __result); }
             catch (Exception e) { DiagRunner.ReportOnce("6.4 blast from the opening", e); }
@@ -168,16 +175,48 @@ namespace RealSoundSimulation.Fixes
                 }
             }
 
-            if (Plugin.BlastDullOn.Value && straight > 0.01f)
+            bool dull = Plugin.BlastDullOn.Value, room = Plugin.RoomEchoOn.Value;
+            if ((dull || room) && straight > 0.01f)
             {
                 int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
                 blocked = CountedRay.Raycast(listener, toBlast / straight, out RaycastHit _, straight, mask, QueryTriggerInteraction.Ignore);
-                cutoff = PortalPositioning.DullHzFor(toBlast, toNear, blocked, openings, Plugin.BlastDullStrength.Value);
-                FilterVoice(source, cutoff);
-                Dulled++; _cutLogSum += Mathf.Log(cutoff);
+                float cut = PortalPositioning.DullHzFor(toBlast, toNear, blocked, openings, Plugin.BlastDullStrength.Value);
+                if (dull)
+                {
+                    cutoff = cut;
+                    FilterVoice(source, cutoff);
+                    Dulled++; _cutLogSum += Mathf.Log(cutoff);
+                }
+                if (room)
+                {
+                    Vector3 dir = nearM > 0.01f ? toNear / nearM : toBlast / straight;
+                    PlayRoomEchoes(listener, lt.forward, listener + dir * Mathf.Max(nearM, 1f), path, cut);
+                }
             }
 
             Row(moved ? "1" : "0", "", straight, path, openings, Vector3.Angle(toBlast, toNear), movedDeg, blocked ? "1" : "0", cutoff, closure);
+        }
+
+        // 0.6.48 "6.3e": a blast fills its room and that pours out of the door, which 6.3's single bounce can't do. Raid 20261109_102037: 8 of 11 blasts had no echo at all.
+        private static void PlayRoomEchoes(Vector3 listener, Vector3 forward, Vector3 pos, float path, float cut)
+        {
+            AudioClip clip = _bank != null ? _bank.PickSingleClip(0) : null;
+            if (clip == null) return;
+            float trim = Plugin.RoomEchoDb.Value, length = Mathf.Min(clip.length, Plugin.ExplosionEchoLengthS.Value);
+            int count = Mathf.Clamp(Plugin.RoomEchoCount.Value, 1, RoomExtraM.Length);
+            double now = AudioSettings.dspTime;
+            float shadow = OwnEchoes.HeadShadow(listener, forward, pos);
+            for (int i = 0; i < count; i++)
+            {
+                float p = path + RoomExtraM[i], delay = p / OwnEchoes.SpeedOfSound;
+                float lvl = Mathf.Min(RoomBaseDb - 20f * Mathf.Log10(p / 2f) - RoomBounceDb * i + trim, RoomMaxDb + Mathf.Max(0f, trim));
+                float c = Mathf.Min(cut * RoomDullBy * Mathf.Pow(RoomDullBy, i), OwnEchoes.AirCutoff(p)) * shadow;
+                bool stole = EchoVoices.Play(_bank, clip, pos, now + delay, length, false, Mathf.Pow(10f, lvl / 20f), 1f, c, delay, fadeS: length * 0.5f);
+                if (EchoVoices.LastDropped) { RoomDropped++; continue; }
+                RoomPlayed++; _roomLevelSum += lvl;
+                if (DiagLog.IsOpen)
+                    DiagLog.Row("echoes.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), "explosion", count.ToString(), i.ToString(), "Room", "", DiagLog.F(p, "0.0"), DiagLog.F(delay * 1000f, "0"), DiagLog.F(lvl, "0.0"), "0", DiagLog.F(c, "0"), "", "", stole ? "1" : "0"));
+            }
         }
 
         private static bool FindRoute(SpatialAudioSystem sas, AudioSourceContainer c, Vector3 source, Vector3 listener, out Vector3 near, out float path, out int openings, out float closure, out string why)
@@ -379,7 +418,8 @@ namespace RealSoundSimulation.Fixes
             return $"BLAST FROM THE OPENING (6.4 {state}, 6.4b dulling {(Plugin.BlastDullOn.Value ? $"ON x{Plugin.BlastDullStrength.Value:0.00}" : "off")}, 6.2h thump level {Plugin.ThumpExplosionDb.Value:+0;-0;0} dB): moved {Moved}" +
                    (Moved > 0 ? $", on average {_movedSum / Moved:0} deg from the true direction" : "") + $"; dulled {Dulled}" + (Dulled > 0 ? $", typical cutoff {Mathf.Exp((float)(_cutLogSum / Dulled)):0} Hz" : "") +
                    $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; grenade bounces moved for {BounceGrenades} grenades, {BounceFrames} frames" +
-                   (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") + "  (blast.csv)\n";
+                   (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") +
+                   $"; room echoes (6.3e {(Plugin.RoomEchoOn.Value ? "ON" : "off")}) played {RoomPlayed}" + (RoomPlayed > 0 ? $", mean level {_roomLevelSum / RoomPlayed:0.0} dB" : "") + $", dropped by the headroom cap {RoomDropped}  (blast.csv, echoes.csv kind Room)\n";
         }
     }
 }

@@ -17,7 +17,8 @@ namespace RealSoundSimulation.Fixes
     //   level    the gun echo rule (-20 log10(path / 2 m), the surface's loss, scattered -3 dB and x share) + 6 dB for an explosion + "6.3a"
     //   skip     paths under 3 m longer than the direct sound; they blur into the bang. Arrivals within 4 ms and 30 degrees merge.
     //   play     the loudest "6.3b", each cut to "6.3c" s, on fix 6's voices under its headroom cap (so on the gunshot mixer), at path / 343 m/s
-    // One bounce only: a blast in another room with no wall you share gets no echoes. Starting values, nothing measured: echoes.csv, sample "explosion".
+    // One bounce only: a blast in another room with no wall you share gets no echoes; since 0.6.48 those get "6.3e", room echoes from the opening (BlastFromOpening).
+    // Starting values, nothing measured: echoes.csv, sample "explosion".
     internal static class ExplosionEchoes
     {
         private const float RayM = 150f, BlastLiftM = 0.5f, MinExtraM = 3f, RefPath = 2f, ExplosionDb = 6f, ScatterDb = -3f, MinLevelDb = -48f, MaxLevelDb = -3f,

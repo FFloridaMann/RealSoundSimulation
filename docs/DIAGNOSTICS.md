@@ -181,6 +181,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.39: echoes.csv rows with `sample` = `explosion` are explosion echoes; `kind` is `Spec` or `Diff`, `directivityDb` is 0, and `kind` = `none` means a blast with no usable wall. The EXPLOSION ECHOES summary line counts blasts, echoes played by kind, no usable walls, out of range and those dropped by the headroom cap.
 
+0.6.48: echoes.csv rows with `kind` = `Room` are room echoes from the opening (`6.3e`); their `material`, `azimuthDeg` and `elevationDeg` are empty. The BLAST FROM THE OPENING line counts them and gives their mean level.
+
 0.6.47: the summary's CLOSED DOORS line lists the doors read by material, plus `untagged`, `no door` and `door elsewhere` (those get the 0.7 value).
 
 ### blast.csv (0.6.41, one row per explosion)

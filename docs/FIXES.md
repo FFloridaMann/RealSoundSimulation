@@ -533,6 +533,22 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check (no bots needed).** Grenades in a concrete room and outdoors near a building, `6.3` on and off; echoes.csv sample `explosion`; does Bring Back Concussion duck them? Tune `6.3a` to `6.3d` by ear.
 
+### 6.3e: Room echoes from the opening (0.6.48)
+
+**Problem.** raid_20261109_102037: 8 of 11 explosions had no echo, because one bounce needs a wall both the blast and you can reach. Through a door or round a corner there usually isn't one.
+
+**Fix.** A blast fills its room and that pours out of the door, so an explosion with a route (`Fixes/BlastFromOpening.cs`) also plays `6.3g` (4) echoes from the opening nearest you. Path = route + 6, 12, 20, 32 m (then 46, 62). Level = +3 − 20 log10(path / 2 m) − 2 dB per echo + `6.3f`. Each is 0.8 × duller than the last, starting 0.8 × the blast's own route cutoff. They fade out over the second half of `6.3c`.
+
+| Blast | Echo 1 | Echo 2 | Echo 3 | Echo 4 |
+|---|---|---|---|---|
+| 5.6 m away, 7 m route | −13 dB, 22 ms | −19 dB, 39 ms | −24 dB, 62 ms | −29 dB, 97 ms |
+| 10.4 m away, 12.6 m route | −16 dB, 24 ms | −21 dB, 41 ms | −25 dB, 65 ms | −30 dB, 100 ms |
+| 37.3 m away, 39 m route | −24 dB, 22 ms | −27 dB, 40 ms | −30 dB, 63 ms | −34 dB, 98 ms |
+
+**Limits.** Only where a route is found, so not the hideout or both outdoors. Nothing comes from your own room's walls. Levels are worked out by hand.
+
+**Check.** A grenade in the next room, `6.3e` off and on, then `6.3f` by ear; echoes.csv `kind` `Room`.
+
 ## 6.4: Explosions from the opening (0.6.41)
 
 **Problem.** raid_20261109_083938: a grenade 15 m away through two walls played from its true spot, with a thump at −25 dB. User: "i sort of wish grenades sounded more from the entrance and (felt (thud from teh source)".

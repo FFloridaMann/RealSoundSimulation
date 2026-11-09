@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.48 — 9 Nov 2026 (6.3e: room echoes from the opening)
+**Run in game:** not yet. Levels are worked out by hand, not measured.
+- **New `6.3e Room echoes from the opening`** (on, live), `6.3f` level (0 dB, −24 to +12) and `6.3g` count (4, 1 to 6). raid_20261109_102037: 8 of 11 explosions had no echo, because one bounce needs a wall both the blast and you can reach. An explosion in another room now also sends reflections out through the opening it reaches you by: path = route + 6, 12, 20, 32 m; level +3 − 20 log10(path / 2) − 2 dB per echo; each duller than the last. They fade out over the second half of `6.3c`.
+- echoes.csv has rows with `kind` = `Room`. The BLAST FROM THE OPENING summary line counts them.
+- Limits: only where a route is found, so not the hideout or both outdoors. Nothing comes from your own room's walls.
+- Version 0.6.48. F12 now has 115 settings.
+
 ## 0.6.47 — 9 Nov 2026 (6.5: closed doors muffle by material)
 **Run in game:** not yet. Values are hand-set.
 - **New `6.5 Closed door muffling by material`** (on, live; `Fixes/ClosedDoors.cs`) and `6.5a Closed door strength` (1, 0 to 2). User, 9 Nov 2026, Capital: "doors I dont think closed should muffle so much especially not wood doors". The game's route cost adds a shut door's closure level straight on and caps the total at 1, so one door at 1.0 could use up the whole score. Closure is now held to: cardboard and fabric 0.2, thin wood 0.3, plastic and glass 0.4, thick wood 0.5, thin metal 0.6, thick metal 0.8, unknown 0.7.
