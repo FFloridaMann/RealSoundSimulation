@@ -278,7 +278,7 @@ namespace RealSoundSimulation.Fixes
                     last = centre;
                     path += Vector3.Distance(at, centre);
                     at = centre;
-                    shut += Mathf.Clamp01(p.PortalClosureLevel);
+                    shut += Mathf.Clamp01(ClosedDoors.Scaled(p, p.PortalClosureLevel));
                 }
                 if (!ok) continue;
                 path += Vector3.Distance(at, end);

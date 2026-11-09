@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.47 — 9 Nov 2026 (6.5: closed doors muffle by material)
+**Run in game:** not yet. Values are hand-set.
+- **New `6.5 Closed door muffling by material`** (on, live; `Fixes/ClosedDoors.cs`) and `6.5a Closed door strength` (1, 0 to 2). User, 9 Nov 2026, Capital: "doors I dont think closed should muffle so much especially not wood doors". The game's route cost adds a shut door's closure level straight on and caps the total at 1, so one door at 1.0 could use up the whole score. Closure is now held to: cardboard and fabric 0.2, thin wood 0.3, plastic and glass 0.4, thick wood 0.5, thin metal 0.6, thick metal 0.8, unknown 0.7.
+- Only the route data changes, and only ever downward. Every sound through a door is affected, not only grenades. `6.4` picks its route with these values too.
+- The summary has a CLOSED DOORS line with the doors read by material.
+- Version 0.6.47. F12 now has 112 settings.
+
 ## 0.6.46 — 9 Nov 2026 (6.4c: blasts dulled less than gunshots)
 **Run in game:** not yet.
 - **New `6.4c Blast dulling strength`** (0.5, 0 to 2, live). raid_20261109_100114 (Ground Zero): the gunshot rule took four blasts 10 m away, behind two walls, to about 1.5 kHz; user: not "loud enough or concussive enough especially indoors". At 0.5 those go to about 5 kHz. Grenade bounces still use `6.1c`.

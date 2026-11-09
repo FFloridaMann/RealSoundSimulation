@@ -569,6 +569,26 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** Grenades in another room, `6.4` off and on, then `6.2h` and `6.2i` by ear, in the open as well; blast.csv `moved`, `reason`, `pathM`, `openings`, `turnDeg`, `movedDeg`, `cutoffHz`; thump.csv explosions with `walls` 0; summary BLAST FROM THE OPENING.
 
+## 6.5: Closed doors muffle by material (0.6.47)
+
+**Problem.** The game's route cost (`PropagationJob`) adds a shut door's closure level straight on and caps the total at 1, so a door at 1.0 could use up the whole score, plywood or steel. raid_20261109_102037: a grenade behind a closed door in Capital, closure 1.00. User: "doors I dont think closed should muffle so much especially not wood doors".
+
+**Fix.** `Fixes/ClosedDoors.cs` holds down the closure the route data uses, by the door's material × `6.5a`. The material is the door's biggest by collider size, so a metal handle doesn't decide a wooden door. Never raised, and an open door stays open.
+
+| Door | Closure used |
+|---|---|
+| Cardboard, fabric | 0.2 |
+| Thin wood | 0.3 |
+| Plastic, glass | 0.4 |
+| Thick wood | 0.5 |
+| Thin metal | 0.6 |
+| Thick metal | 0.8 |
+| Can't tell | 0.7 |
+
+**Limits.** Hand-set values. Every sound through a door is affected, not only grenades, so bots behind doors are easier to hear. `6.5` off is the game's values. Doors only exist once the world has loaded, so it's applied again for the first 15 s of a raid.
+
+**Check.** A closed door with a grenade or a bot behind it, `6.5` off and on; summary CLOSED DOORS for the materials read; `untagged` or `door elsewhere` there means those doors get the 0.7.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

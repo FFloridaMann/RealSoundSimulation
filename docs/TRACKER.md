@@ -116,6 +116,8 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Raid: `6.1b` on and off with bots in other rooms; does the filter work through the Meta spatializer; is `6.1d` too dull on long routes
 - [x] Explosions from the opening, dulled by route; louder thump from the true spot (`6.4`-`6.4b`, `6.2h`, 0.6.41; starting values)
 - [x] Grenade bounces from the opening; thump with no wall in the way (`6.2i`, 0.6.42; starting values)
+- [x] Closed doors muffle by material (`6.5`, `6.5a`, 0.6.47; hand-set values)
+- [ ] Raid: `6.5` off and on behind closed doors; check the CLOSED DOORS line reads real materials
 - [x] Blasts dulled less than gunshots (`6.4c`, 0.6.46; starting value)
 - [ ] Try Bring Back Concussion's `Explosion Effect Radius` above 7 m (raid_20261109_100114: every blast 10 m or more away got no concussion)
 - [ ] Raid: `6.4` on and off with grenades in another room; `6.4a` at 0.5 if disorienting; `6.2h`, `6.2i` and `6.2j` (length and fade, 0.6.43-0.6.44) by ear, close blasts first
@@ -183,7 +185,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 110 settings, what each does, and what still reads it
+- [ ] List all 112 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
