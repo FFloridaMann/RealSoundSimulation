@@ -148,7 +148,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Defaults = the tested setup; plain-language descriptions
 
 ## Possible bug fixes later
-- [ ] At 50/50 spots your own gunshot's indoor/outdoor mix doesn't turn with you (the recording plays straight in the headset; echoes do turn). Raid 40 tag 1
+- [ ] Fire, then turn around: your own shot's ring stays locked to your head, so the indoor side seems to end up where you now face and the outdoor side behind you (the recording is stereo in the headset; echoes do stay put). Raid 40 tag 1. User clarified 8 Nov
 - [ ] Bring Back Concussion restores mixer volumes from before the blast when its fade ends. If you cross a doorway during those seconds, the indoor ambience can stay at the old level until it next changes (fix 3 only writes it when it changes)
 
 ## Not in Real Sound Simulation (separate mods)
