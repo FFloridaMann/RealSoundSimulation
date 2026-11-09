@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.28 — 8 Nov 2026 (roof rain no longer snaps on and off)
+**Run in game:** not yet. From raid 40 (raid_20261108_202707, Ground Zero, 0.6.27): "speratic roof rain sounds" in the Capital and on the escalators, with louder outdoor audio. Rain deep in the building otherwise "mostly sounds better".
+- **The "two or more floors above = no roof rain" rule** (0.6.9) uses 5 upward rays. The count flickered and flipped roof rain between nothing and full 85 times in the raid, even standing still (roof level steady at 0.9–1.0 the whole time). It must now hold 2 s (was 0.5 s), and the change fades over 1.5 s. Roof rain with one floor or less above you is unchanged.
+- Version 0.6.28.
+
 ## 0.6.27 — 8 Nov 2026 (probe v2 uses the measured material table)
 **Run in game:** not yet. Roadmap step M.
 - **New `9o Measured surfaces`** (on, live): probe v2 takes absorption, scattering and brightness per surface from `Acoustics/Materials.cs`. It feeds rain through buildings, exit credits (9k), roof rain and the gunshot room measures. Off = the earlier values.

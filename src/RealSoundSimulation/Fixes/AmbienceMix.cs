@@ -34,7 +34,9 @@ namespace RealSoundSimulation.Fixes
         private static readonly List<PrecipitationAmbientBlender> IndoorRain = new List<PrecipitationAmbientBlender>();
         private static bool _found;
         private static float _nextFind, _roofCandidate = 1f, _roofCandidateSince;
-        private static bool _under2, _under2Candidate; private static float _under2Since; // 0.6.9: two floors above (held 0.5 s)
+        private static bool _under2, _under2Candidate; private static float _under2Since; // 0.6.9: two floors above
+        private const float Under2HoldS = 2f, Under2FadeS = 1.5f; // 0.6.28
+        private static float _under2Gate = 1f;
 
         public static bool On => Plugin.ExposureMixOn.Value && Plugin.DoorwayOn.Value;
 
@@ -58,7 +60,7 @@ namespace RealSoundSimulation.Fixes
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
-            _under2 = _under2Candidate = false; _under2Since = 0f; DoorwayBlend.ResetIndoorParams();
+            _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; DoorwayBlend.ResetIndoorParams();
             RoomTone.Reset();
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
         }
@@ -272,8 +274,11 @@ namespace RealSoundSimulation.Fixes
                     // probe's call (the mezzanine edge flipped 0-1-0 in raid 26).
                     bool u2 = OutdoorExposure.AboveValid && OutdoorExposure.FloorsAbove >= 2; // 0.6.16: the up-rays only
                     if (u2 != _under2Candidate) { _under2Candidate = u2; _under2Since = Time.time; }
-                    if (Time.time - _under2Since >= 0.5f) _under2 = _under2Candidate;
-                    RoofRainFactor = _under2 ? 0f : Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
+                    // 0.6.28: raid 40 (Capital, escalators): the 5-ray count flickered and snapped roof rain off and on 85 times in
+                    // the raid, even standing still. Now it must hold 2 s (was 0.5) and the change fades over 1.5 s.
+                    if (Time.time - _under2Since >= Under2HoldS) _under2 = _under2Candidate;
+                    _under2Gate = Mathf.MoveTowards(_under2Gate, _under2 ? 0f : 1f, dt / Under2FadeS);
+                    RoofRainFactor = _under2Gate * Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
                     _roofCandidate = RoofRainFactor; _roofCandidateSince = Time.time;
                 }
                 else
