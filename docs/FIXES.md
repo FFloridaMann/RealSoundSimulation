@@ -492,6 +492,21 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check (bots on).** A fight on another floor or behind a wall, with `6.2` on and off; thump.csv for walls, materials, thickness and `stopped by walls`. Look for `earth` on shots from a basement directly below you: that would be terrain running under the building. Tune `6.2a`, `6.2b`, `6.2d`, `6.2f` and `6.2g` by ear.
 
+## 6.3: Explosion echoes (0.6.39)
+
+**Problem.** Raid 35: three grenades in a stairwell got only the game's own sound, while your gunshots there got echoes.
+
+**Fix.** `Fixes/ExplosionEchoes.cs` catches explosions on the same hook as 6.2 and fires 25 rays from the blast. A wall echoes if the blast and you can both reach it: a mirror bounce if the true bounce point checks out, else a weaker scattered echo. Level = the gun echo rule + 6 dB. The loudest `6.3b` (6) play, each cut to `6.3c` (1.5 s), on fix 6's voices.
+
+| Scene | Paths | Level before `6.3a` |
+|---|---|---|
+| Grenade 6 m away in your concrete room | 10, 14, 18 m | about −8, −11, −13 dB |
+| Round a corner, far wall reaches you both | 16 m | about −12 dB |
+| Outdoors 40 m away, building 30 m past it | about 100 m | about −28 dB, about 175 ms after the bang |
+| Another room, no wall you share | none | no echoes |
+
+**Check (no bots needed).** Grenades in a concrete room and outdoors near a building, `6.3` on and off; echoes.csv sample `explosion`; does Bring Back Concussion duck them? Tune `6.3a` to `6.3d` by ear.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

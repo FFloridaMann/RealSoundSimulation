@@ -179,6 +179,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.38: thump.csv adds `spentDb` (distance + `lossDb`) and `reachDb` after `lossDb`. `reason` can be `stopped by walls` (spentDb at or past reachDb, `6.2e` on). `materials` says `earth` for soil-type tags and terrain. The THROUGH-WALL THUMP summary line counts `stopped by walls` by gun and explosion.
 
+0.6.39: echoes.csv rows with `sample` = `explosion` are explosion echoes; `kind` is `Spec` or `Diff`, `directivityDb` is 0, and `kind` = `none` means a blast with no usable wall. The EXPLOSION ECHOES summary line counts blasts, echoes played by kind, no usable walls, out of range and those dropped by the headroom cap.
+
 0.6.36: probe2.csv ends with `floorsOldNow`, the floors counted on the main solid layers alone (`floorsNow` follows `9v`).
 
 0.6.34: probe2.csv ends with `floorsNow` (floors above the ceiling straight overhead, -1 = none measured) and `roofLossDb` (how much `9u` took off the roof rain reaching you, negative dB).

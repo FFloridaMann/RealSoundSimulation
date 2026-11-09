@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 6.2 (through walls, 0.6.37, walls can stop a sound 0.6.38) built; the next raid needs bots and tests it plus 0.6.34 to 0.6.36 · **Next:** retune from that raid, then 6.3. Further rain tuning is in step E
+**Now:** explosion echoes (`6.3`, 0.6.39) built, not raided: throw grenades in a no-AI raid. 6.2 (0.6.38) needs a louder test and a `6.1` test on Factory · **Next:** bot echoes, the second half of 6.3. Further rain tuning is in step E
 
 ---
 
@@ -107,10 +107,12 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Separate cutoffs: explosions vs gunshots (`6.2c`, 0.6.37)
 - [x] Walls can stop a sound: reach by distance and wall, earth 75 dB (`6.2e`-`6.2g`, 0.6.38; starting values)
 - [ ] Raid with bots: a fight behind a wall or on another floor, `6.2` on and off; read thump.csv
-- [ ] Raid: explosions behind a wall (their hook isn't proven yet)
+- [x] Raid: explosions behind a wall reach the thump (raid_20261109_002546: 7 grenades, 5 played, 1 stopped by walls, 1 no wall). Still to judge by ear
 - [ ] Raid: does terrain under a building count as `earth` for shots in the basement?
 - [ ] Tune `6.2a`, `6.2b`, `6.2d`, `6.2f`, `6.2g` by ear
 - [ ] Decide: where there's no route, drop the game's muffled voice so the thump plays alone
+- [ ] Test on Factory (user, 9 Nov 2026): gunshots from the opening plus the thump from the true direction may be disorienting. `6.1` on and off, then `6.1a` at 0.5
+- [ ] Later (user, 9 Nov 2026): the room changes the thump. A shot in a small hard room pushes more through the wall than one in a big hall; with your head next to the wall it's bigger and less pinpointed. Today only total distance and the walls count
 
 ## 6.3 · Echoes for bot gunshots and grenades
 - [ ] One headroom cap counting every echo type; bots get their own share
@@ -121,7 +123,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Loudest-first queue with a ceiling (start 24)
 - [ ] Zero-voice tier for the rest
 - [ ] F12 settings: ceiling, threshold, tier switch
-- [ ] Grenade and explosion echoes (find the explosion's play path; must duck with Bring Back Concussion)
+- [x] Grenade and explosion echoes (`6.3`, `6.3a`-`6.3d`, 0.6.39; starting values)
+- [ ] Raid: explosion echoes in a concrete room and outdoors, `6.3` on and off; do they duck with Bring Back Concussion?
+- [ ] Tune `6.3a` to `6.3d` by ear
 
 ---
 
@@ -170,7 +174,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 95 settings, what each does, and what still reads it
+- [ ] List all 100 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

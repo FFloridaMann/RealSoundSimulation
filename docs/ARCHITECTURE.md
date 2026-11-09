@@ -58,6 +58,7 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
     ├── FirstBurstOcclusion.cs 1d (0.6.21): a bot's first burst starts muffled if a wall is in the way
     ├── OwnShotTurn.cs       3o (0.6.30): your shot's indoor and outdoor recordings shift as you turn
     ├── ThroughWall.cs       6.2 (0.6.37): low thump through walls for blocked bot shots and explosions
+    ├── ExplosionEchoes.cs   6.3 (0.6.39): echoes for explosions off walls the blast and you can both reach
     ├── FoleyPresets.cs      10a (0.6.35): footstep and handling group settings from SEB
     ├── ShotOverlap.cs       1e (0.6.23): shots ring under the next one; a gun gives up voices if the pool is empty
     ├── (Acoustics/Materials.cs) 0.6.25: the one table of what each surface does to sound

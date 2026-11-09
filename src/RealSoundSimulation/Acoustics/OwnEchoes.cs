@@ -519,7 +519,7 @@ namespace RealSoundSimulation.Acoustics
         private static MaterialType Material(Collider c) => Surfaces.Material(c);
 
         // No HRTF on the echoes, so front/back is cued the way the ear's shadow does it: from behind is duller.
-        private static float HeadShadow(Vector3 o, Vector3 fwd, Vector3 pos)
+        internal static float HeadShadow(Vector3 o, Vector3 fwd, Vector3 pos)
         {
             Vector3 a = pos - o;
             a.y = 0f; fwd.y = 0f;

@@ -162,7 +162,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            BotShots.Reset(); ThroughWall.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
+            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -533,6 +533,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(GunSoundSource.Summary());
             sb.Append(OutdoorTail.Summary());
             sb.Append(ThroughWall.Summary());
+            sb.Append(ExplosionEchoes.Summary());
             sb.AppendLine($"RAIN (fix 7): clip picks {RainDropoutFix.Calls}, of which the game would have silenced the rain {RainDropoutFix.WouldDrop}, prevented {RainDropoutFix.Prevented}; crossfades held until the previous one finished {RainDropoutFix.Deferred}; same-clip crossfades done as a volume ramp {RainDropoutFix.VolumeOnly}");
             sb.AppendLine(MetaAcousticsCheck.Describe());
             sb.AppendLine();

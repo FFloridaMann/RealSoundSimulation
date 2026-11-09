@@ -2,8 +2,18 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.39 — 9 Nov 2026 (6.3, first half: explosion echoes)
+**Run in game:** not yet. Levels are starting values on the gun echo rule. Test in a no-AI raid: grenades in a concrete room and outdoors near a building, `6.3` on and off.
+- **New `6.3 Explosion echoes`** (on, live; `Fixes/ExplosionEchoes.cs`). An explosion from you or a bot echoes off walls that it and you can both reach. 25 rays from the blast up to 150 m; ground ignored. Mirror bounce if the true bounce point checks out, otherwise a weaker scattered echo. Paths under 3 m longer than the direct sound are dropped. Under 80 rays per blast.
+- Level: the gun echo rule (−20 log10(path / 2 m), surface loss, scattered −3 dB and × share) + 6 dB for an explosion. Air and surface dull it the same way.
+- Played through fix 6's voices, under its headroom cap, on the gunshot mixer, so they should duck with Bring Back Concussion. Not checked in a raid.
+- Sliders, all live: `6.3a` level (0 dB, −24 to +12), `6.3b` echoes per blast (6, 1 to 12), `6.3c` length (1.5 s, 0.3 to 3), `6.3d` range (120 m, 20 to 250).
+- echoes.csv has rows with sample `explosion`, and a new EXPLOSION ECHOES line in the summary.
+- Limit: one bounce, so a blast in another room with no wall you share gets no echoes.
+- Version 0.6.39. F12 now has 100 settings.
+
 ## 0.6.38 — 9 Nov 2026 (6.2: walls can stop a sound)
-**Run in game:** not yet, and neither has 0.6.37. Reach and earth are starting values set from physics, with no raid behind them.
+**Run in game:** two raids, 9 Nov. raid_20261109_001706 (bots): 45 gun thumps played, 71 stopped by walls, but the game's own nearly clear gunshot (median volume 0.78) covered them; "hard to tell what was what". raid_20261109_002546 (no bots): the explosion hook works, 5 of 7 grenades played a thump, 1 stopped by walls, 1 no wall. Reach, earth and levels are still starting values.
 - **New `6.2e Walls can stop a sound`** (on, live). A sound has a reach: gunshot 60 dB (`6.2f`), explosion 80 (`6.2g`), suppressed gun 20 less. Distance past 5 m (6 dB per doubling) and the full wall loss use it up. With none left there's no thump; the last 6 dB fade out. User, 9 Nov 2026: "not every gunshot and explosion should get through". They chose these numbers over a stricter set (40 / 65).
 - At these numbers one concrete wall carries to full range, however thick. Two 0.3 m concrete floors stop a gunshot past 9 m and a grenade past 88 m. Three stop both. Earth stops every gunshot and a grenade past 9 m.
 - `6.2d` (still 0.5) now only sets how much quieter a wall makes a thump that gets through.
