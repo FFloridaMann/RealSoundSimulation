@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.33 — 8 Nov 2026 (the memory check, less jumpy; roof rain has its own level)
+**Run in game:** not yet. From raid 42 (raid_20261108_214847): `9s` fired 7 times a minute standing still and 25 moving (mostly direction), missed quiet changes, and removing the speed rule left the memory at 3 s on the move (the stairwell). The trailer's rain was silent because the game plays its indoor rain at volume 0 there.
+- **`9s` retuned.** Moving caps the memory again (0.5 s at speed), and after you stop it grows back over about 1.5 s instead of jumping to 3 s. A change must also be at least 1.6× as a ratio and pass a stricter test; direction needs at least 20 paths and to differ by 90 degrees or more. While moving, listeners follow over 0.35 s.
+- **New `9t Roof rain minimum level`** (0.3, live): while it rains, roof rain plays at least this loud before roof, floors and material are applied. Fixes the trailer, and lifts rooms where the game's baked level is about 0.05. 0 = only the game's value.
+- Version 0.6.33.
+
 ## 0.6.32 — 8 Nov 2026 (the probe forgets when the space really changes)
 **Run in game:** not yet. From raid 41 tag 4 ("slow to play"; "at times you hear audio that doesn't make sense for the space") and a Fable design review.
 - **New `9s Sound reacts to real changes`** (on, live). Probe v2's memory depended on speed: 3 s below 0.5 m/s, 0.5 s above 1.5 m/s. So stopping stretched out where you had just been, and creeping through a door was the worst case. Now a 0.4 s estimate runs beside the 3 s memory. When they differ by more than chance explains (roof rain, how much sound gets out, or the direction it arrives from), the memory is replaced by the fast estimate. At most every 0.25 s. Off = memory by speed.

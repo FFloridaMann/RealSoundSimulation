@@ -173,12 +173,29 @@ namespace RealSoundSimulation.Fixes
             // 0.6.9: if the indoor-layer fade (openings around you) also turns the rain player's mixer down, undo it here:
             // roof rain follows the roof only (raid 28 tags 2-3: 0.65 from the probe x 0.53-0.68 from the fade)
             RoofRainComp = DoorwayBlend.IndoorParamsIncludeRain ? 1f / Mathf.Max(DoorwayBlend.IndoorApplied, 0.1f) : 1f;
+            // 0.6.33 "9t": the game's indoor rain volume is baked per room (0.05 in much of the Capital, 0 in a trailer it thinks is outdoors), and
+            // only multiplying it meant no rain at all there. While it rains and the probe traces the roof, the player gets at least this level.
+            float missing = 0f; int playing = 0;
+            if (Plugin.AmbienceV2On.Value && Plugin.RoofRainFromProbe.Value && AcousticProbe.Valid && RainController.IntensityType != RainController.ERainIntensity.None)
+            {
+                float sum = 0f;
+                for (int i = 0; i < RainSrc.Count; i++)
+                {
+                    AudioSource s = RainSrc[i];
+                    if (s == null) continue;
+                    if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume;
+                    sum += _rainGame[i];
+                    if (s.isPlaying && s.clip != null) playing++;
+                }
+                missing = Mathf.Max(0f, Plugin.RoofRainLevel.Value - sum);
+            }
             for (int i = 0; i < RainSrc.Count; i++)
             {
                 AudioSource s = RainSrc[i];
                 if (s == null) continue;
                 if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume; // the game changed it (crossfade)
-                _rainWritten[i] = Mathf.Min(1f, _rainGame[i] * RoofRainApplied * RoofRainComp);
+                float baseVol = _rainGame[i] + (playing > 0 && s.isPlaying && s.clip != null ? missing / playing : 0f);
+                _rainWritten[i] = Mathf.Min(1f, baseVol * RoofRainApplied * RoofRainComp);
                 s.volume = _rainWritten[i];
             }
         }

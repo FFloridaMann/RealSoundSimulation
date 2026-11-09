@@ -102,7 +102,9 @@ namespace RealSoundSimulation.Acoustics
         private static Vector3 _prevListener; private static bool _hasPrevListener; private static float _speed;
         // 0.6.32 "9s": what has come in over the last 0.4 s, compared with the 3 s memory
         private const float FastTau = 0.4f, ChangeCooldownS = 0.25f, ChangeFollowS = 1f;
-        private const double ChangeZ = 3.0, MinRoofDiff = 0.06, MinLeakDiff = 0.05, DirDotBelow = 0.5, MinFastStarts = 8, MinFastDeep = 4, MinFastDir = 8;
+        private const double ChangeZ = 3.5, MinRatio = 1.6, MinRoofDiff = 0.02, MinLeakDiff = 0.02, DirDotBelow = 0.0, MinFastStarts = 8, MinFastDeep = 4, MinFastDir = 20;
+        private const float TauRisePerS = 1.67f; // 0.6.33: memory grows back from 0.5 s to 3 s over about 1.5 s
+        private static float _heldTau = StatTau;
         private static float _lastChange = -100f;
         private static Stats _fast;
         public static int ChangesRoof, ChangesLeak, ChangesDir, ChangesStill;
@@ -264,7 +266,7 @@ namespace RealSoundSimulation.Acoustics
             RoofTests = 0; RoofCache.Clear(); FloorCache.Clear(); Array.Clear(FloorHist, 0, FloorHist.Length); OldRoofTestWrong = 0; ExitsFound = ExitsMissed = 0; _exitBudget = 0f;
             KindCache.Clear(); _layer = 0; _cursor = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
-            _acc = default; _fast = default; _lastChange = -100f; ChangesRoof = ChangesLeak = ChangesDir = ChangesStill = 0;
+            _acc = default; _fast = default; _lastChange = -100f; _heldTau = StatTau; ChangesRoof = ChangesLeak = ChangesDir = ChangesStill = 0;
             RaysCast = PathsDone = 0; _budget = 0f; _nextRow = 0f; _maskBlock = -1; _quality = -1;
         }
 
@@ -361,8 +363,13 @@ namespace RealSoundSimulation.Acoustics
             // 0.6.32 "9s": a fast estimate beside the slow one, and the memory ends when they really disagree (DetectChange), not by speed.
             bool detect = Plugin.ProbeChangeDetect.Value;
             float nowT = Time.time;
-            StatTauNow = detect ? Mathf.Min(StatTau, nowT - _lastChange) : Mathf.Lerp(StatTau, MovingTau, Mathf.InverseLerp(0.5f, 1.5f, _speed));
-            _acc.Scale(Math.Exp(-dt / (detect ? StatTau : StatTauNow)));
+            // 0.6.33: raid 42's stairwell. Without the speed rule the memory stayed at 3 s on the move, and values too small to test never ended it.
+            // So moving caps the memory again; it now grows back over about 1.5 s after you stop instead of jumping to 3 s.
+            float speedTau = Mathf.Lerp(StatTau, MovingTau, Mathf.InverseLerp(0.5f, 1.5f, _speed));
+            _heldTau = speedTau < _heldTau ? speedTau : Mathf.Min(speedTau, _heldTau + dt * TauRisePerS);
+            float tauUsed = detect ? _heldTau : speedTau;
+            StatTauNow = detect ? Mathf.Min(tauUsed, nowT - _lastChange) : speedTau;
+            _acc.Scale(Math.Exp(-dt / tauUsed));
             _fast.Scale(Math.Exp(-dt / FastTau));
             _acc.Starts += _started; _fast.Starts += _started; _started = 0;
             _acc.UpStarts += _startedUpW; _fast.UpStarts += _startedUpW; _startedUpW = 0f;
@@ -769,6 +776,8 @@ namespace RealSoundSimulation.Acoustics
         {
             double d = Math.Abs(fast - slow);
             if (d < minDiff) return false;
+            // 0.6.33: compare as ratios too, so a change matters by how it sounds (raid 42: fired 7 times a minute standing still)
+            if (Math.Abs(Math.Log((fast + 1e-4) / (slow + 1e-4))) < Math.Log(MinRatio)) return false;
             double p = Math.Min(0.99, Math.Max(0.01, slow));
             return d > ChangeZ * Math.Sqrt(p * (1.0 - p) / n);
         }
@@ -1042,7 +1051,7 @@ namespace RealSoundSimulation.Acoustics
             SmoothS = 0.35f + 2.15f * Mathf.Clamp01((RelErr - 0.08f) / 0.32f);
             // 0.6.32: the sound just changed, so the listeners of these values follow quickly for a second. Otherwise few escapes still means a
             // long average, which is what stops deep rooms from fluttering.
-            if (Plugin.ProbeChangeDetect.Value && Time.time - _lastChange < ChangeFollowS) SmoothS = 0.35f;
+            if (Plugin.ProbeChangeDetect.Value && (Time.time - _lastChange < ChangeFollowS || _heldTau < 1f)) SmoothS = 0.35f; // or you are on the move
             // brightness: the direct/bounced paths' own, and for the build-up the room's surfaces (many bounces: duller)
             float roomCut = _acc.Hits > 1 ? (float)Math.Exp(_acc.CutLog / _acc.Hits) * 0.8f : 12000f;
             double wSum = eW + Tail;
