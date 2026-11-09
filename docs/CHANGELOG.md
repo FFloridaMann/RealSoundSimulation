@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.58 — 9 Nov 2026 (6.9h: soft concussion cut)
+**Run in game:** not yet. Starting values, set by ear.
+- **`6.9h Soft concussion cut`** (on, live), **`6.9i Blast tail fade s`** (0.8, 0.1 to 3) and new **`6.9j Felt blast through concussion dB`** (0, −24 to +12), replacing 0.6.57's delay. User: "better if the hearing cuts out with concussion when the effect is applied. but we find a way to keep the feeling of the blast wave alive and no sharp cut offs for tails". Bring Back Concussion's cut is taken over and copied (same depth, cut time, hold, fade-back and tinnitus check). World sounds still go at its speed, but the Guns channel fades over `6.9i`, so the bang, echoes and tails melt away. Inside the part of its radius where it cuts, the thump, pressure hit, repeat hits and slow push go to the Master group and survive.
+- Bots' gunfire is on Guns too, so it fades over the same time. If that mod's code isn't found, its own cut runs.
+- Adapted from Bring Back Concussion by harmony (MIT): `THIRD_PARTY_NOTICES.md`.
+- New concussion.csv; the CONCUSSION SOUND CUT summary line counts soft cuts.
+- Version 0.6.58. F12 now has 144 settings.
+
 ## 0.6.57 — 9 Nov 2026 (long routes checked against the world; concussion cut delayed)
 **Run in game:** not yet.
 - **Bug fix: a long baked route no longer moves a sound on its own say-so.** raid_20261109_131528: a window at the car dealer, 32 m away, took a 75 m route and was heard towards the Capital; the blast there did the same. User: "i threw a grenade at the cardealer adn heard glass break in the capital". A window with nothing solid between you and it plays from the window. A route longer than 1.5 x the straight line + 6 m is checked against the corner search: blasts, glass and fragments use the shorter of the two; with no way found they keep the true direction, dulled and quieter as if around two corners. Bounces keep their true spot and are dulled. `reason` can be `clear to the window`.

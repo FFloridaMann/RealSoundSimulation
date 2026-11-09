@@ -127,8 +127,9 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Shock wave: pressure hit, closer thump, dip in other sounds (`6.9`-`6.9c`, 0.6.53; by ear)
 - [x] Long baked routes checked against the corner search; clear windows play from the window (0.6.57; hand-set limits)
 - [ ] Raid: a grenade in a building you're outside of; check blast.csv and glass.csv `reason` and `pathM`
-- [x] Bring Back Concussion's cut delayed instead of avoided (`6.9h`, `6.9i`, 0.6.57; by ear)
-- [ ] Raid: a grenade inside 7 m, `6.9h` off and on; check blastlevel.csv and the CONCUSSION SOUND CUT line
+- [x] Soft concussion cut: world goes at once, blast tail fades, felt layers survive (`6.9h`-`6.9j`, 0.6.58; by ear)
+- [ ] Raid: a grenade inside 6.5 m, `6.9h` off and on; set `6.9i` and `6.9j` by ear; check concussion.csv
+- [ ] Ask harmony how he wants the credit and year written (`THIRD_PARTY_NOTICES.md`)
 - [x] Fragment pass-bys along the real flight path, with cracks up close (`6.7f`-`6.7i`, 0.6.56; by ear)
 - [ ] Raid: your own grenade and a bot's through a door, `6.7f` off and on; check passby.csv and the audio thread's late blocks
 - [x] Fragment hits from other rooms by route (`6.7c`-`6.7e`, 0.6.55; starting values)

@@ -154,7 +154,16 @@ namespace RealSoundSimulation.Fixes
             _active = false;
         }
 
+        // 0.6.58: inside the concussion cut, everything played here is felt rather than heard, so it goes past that cut.
         private static void Fire(Held h, Way w)
+        {
+            bool felt = ConcussionProof.WillCut(h.Dist);
+            if (felt) { ConcussionProof.FeltOn(); ConcussionProof.Felt++; }
+            try { FireCore(h, w); }
+            finally { if (felt) ConcussionProof.FeltOff(); }
+        }
+
+        private static void FireCore(Held h, Way w)
         {
             if (h.Listener == null) return;
             float reach = Plugin.ShockReachM.Value;
@@ -226,6 +235,7 @@ namespace RealSoundSimulation.Fixes
             }
 
             float duck = Plugin.ShockDuckDb.Value * Mathf.Clamp01(1f + boosted / DuckRangeDb) * fade;
+            if (ConcussionProof.CutActive || ConcussionProof.WillCut(h.Dist)) duck = 0f; // the concussion cut is doing this job
             if (duck >= 0.1f) { _armed = true; _armAt = start; _armDepth = duck; Ducks++; }
             if (DiagLog.IsOpen) Row("1", "", way, h.Dist, path, bends, usesWay && w.Kind == WayKind.Route ? w.Closure : 0f, h.Walls, h.LossDb, enclosed, roomM, level, vol, cutoff, delay, h.Extra, duck, repeats, h.Name);
         }

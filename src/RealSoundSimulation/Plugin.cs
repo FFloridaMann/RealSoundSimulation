@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.57")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.58")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -129,8 +129,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ShockOn; // 0.6.53 "6.9"
         internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb, ShockCornerDb, ShockEnclosedDb, ShockPushDb; // 0.6.54 "6.9d", "6.9e", "6.9g"
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
-        internal static ConfigEntry<bool> ConcussionDelayOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
-        internal static ConfigEntry<float> ConcussionDelayS, FragmentDullStrength, FragmentLossDb;
+        internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
+        internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
         internal static ConfigEntry<bool> FragmentPassOn; // 0.6.56 "6.7f"
         internal static ConfigEntry<float> FragmentPassDb, FragmentPassReachM;
         internal static ConfigEntry<int> FragmentPassCount;
@@ -215,8 +215,9 @@ namespace RealSoundSimulation
             ShockReachM = Config.Bind(fix, "6.9b Shock reach m", 60f, new ConfigDescription("How far along its way you still feel the pressure hit and the dip. They fade out over the last 40% of this. Live.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 93 }));
             ShockCornerDb = Config.Bind(fix, "6.9d Shock corner loss dB", 6f, new ConfigDescription("0.6.54: how much weaker the hit is for each 90 degrees it turns on its way to you, and half this for each extra opening. A shut door also costs by its material. Live.", new AcceptableValueRange<float>(0f, 18f), new ConfigurationManagerAttributes { Order = 93 }));
             ShockEnclosedDb = Config.Bind(fix, "6.9e Shock enclosed boost dB", 6f, new ConfigDescription("0.6.54: a blast in a closed space hits harder because its reflections pile up. This much at most, by how shut in the blast point is. Live.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
-            ConcussionDelayOn = Config.Bind(fix, "6.9h Delay concussion sound cut", true, new ConfigDescription("0.6.57: Bring Back Concussion cuts every sound channel the moment a nearby grenade goes off, which chopped the blast and its echoes. This holds its cut back so you hear the bang first, then the world drops away. Off = that mod's own timing. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
-            ConcussionDelayS = Config.Bind(fix, "6.9i Concussion cut delay s", 0.8f, new ConfigDescription("How long after the grenade goes off that mod's sound cut starts. Longer keeps more of the blast's tail. Live.", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 93 }));
+            SoftCutOn = Config.Bind(fix, "6.9h Soft concussion cut", true, new ConfigDescription("0.6.58: when Bring Back Concussion cuts the sound, the world still goes at once, but the blast's tail and echoes fade instead of being chopped, and its thump and pressure hit are still felt. Off = that mod's own cut. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            BlastTailFadeS = Config.Bind(fix, "6.9i Blast tail fade s", 0.8f, new ConfigDescription("How long the blast's tail, echoes and gunfire take to fade when concussion cuts the sound. Live.", new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = 93 }));
+            FeltThroughCutDb = Config.Bind(fix, "6.9j Felt blast through concussion dB", 0f, new ConfigDescription("Level of the thump, pressure hit, repeat hits and slow push when concussion cuts the sound. They skip the gun channel's own processing, so set this by ear. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             FragmentRouteOn = Config.Bind(fix, "6.7c Fragment hits by route", true, new ConfigDescription("0.6.55: a grenade fragment hitting something in another room comes from the opening it reaches you through, dulled and quieter by that route. Hits in the room you're in stay where they are. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             FragmentDullStrength = Config.Bind(fix, "6.7d Fragment dulling strength", 1f, new ConfigDescription("How strongly the route dulls a fragment hit. 1 = the gunshot rule, 0 = no dulling. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
             FragmentLossDb = Config.Bind(fix, "6.7e Fragment loss per opening dB", 4f, new ConfigDescription("How much quieter a fragment hit gets for each opening on its way to you, on top of the game's own route loss, up to 16 dB in all. Live.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
@@ -331,7 +332,7 @@ namespace RealSoundSimulation
             Safe("6.4 blast from the opening", () => BlastFromOpening.Apply(Harmony)); // 0.6.41
             Safe("6.5 closed doors", () => ClosedDoors.Apply(Harmony)); // 0.6.47
             Safe("6.6 blast recording", () => BlastRecording.Apply(Harmony)); // 0.6.49
-            Safe("6.9h concussion delay", () => ConcussionProof.Apply(Harmony)); // 0.6.55; the patch itself waits for the first raid
+            Safe("6.9h soft concussion cut", () => ConcussionProof.Apply(Harmony)); // 0.6.55; the patch itself waits for the first raid
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
             gameObject.AddComponent<DiagRunner>();
@@ -358,7 +359,7 @@ namespace RealSoundSimulation
             $"6.2 through-wall thump {(ThumpOn.Value ? $"ON ({ThumpCutoffHz.Value:0} Hz, explosions {ThumpExplosionCutoffHz.Value:0} Hz, level {ThumpDb.Value:+0;-0;0} dB, wall loss x{ThumpWallLoss.Value:0.00}, {(ThumpWallsStop.Value ? $"walls stop ON, reach {ThumpGunReach.Value:0}/{ThumpExplosionReach.Value:0}" : "walls stop off")})" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
-            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h concussion cut delay {(ConcussionDelayOn.Value ? $"ON ({ConcussionDelayS.Value:0.0} s)" : "off")} | " +
+            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")} | " +
             $"6.7c fragment hits by route {(FragmentRouteOn.Value ? $"ON (dull x{FragmentDullStrength.Value:0.00}, {FragmentLossDb.Value:0} dB per opening)" : "off")}, 6.7f pass-bys {(FragmentPassOn.Value ? $"ON ({FragmentPassDb.Value:+0;-0;0} dB, {FragmentPassReachM.Value:0.0} m, {FragmentPassCount.Value} per grenade)" : "off")} | " +
             $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +

@@ -674,11 +674,13 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Problem.** Bring Back Concussion's `Cut Off Sound On Explosion`, for a blast inside its radius (7 m by default): Main, Guns, World and both ambience volumes go to as low as −80 dB, by closeness, in 0.05 to 0.3 s from the moment the grenade goes off, hold for 0.2 to 1.5 s, then fade back. Explosions and this mod's thumps, hits and echoes are on the Guns bus. User: "the echo and grenade background sounds bad it cuts out".
 
-**Fix (0.6.57).** `Fixes/ConcussionProof.cs` holds back that mod's `ExplosionSoundCutoff.Trigger` by `6.9i` seconds, so the bang, thump and early echoes play at their normal level and then the world drops away. A later blast during the wait keeps the first time and the stronger cut. Any `6.9c` dip ends before that mod reads the volumes it later restores. 0.6.55 instead sent the blast to the Master group, as the game's tinnitus ring does, but that loses the Guns bus's gain.
+**Fix (0.6.58).** `Fixes/ConcussionProof.cs` takes over that mod's `ExplosionSoundCutoff.Trigger` and runs a copy of its cut: same depth, cut time, hold, fade-back setting and tinnitus check. Main, World and both ambience volumes go at its speed. Only Guns differs: it goes down over `6.9i`, so the bang, echoes and tails fade instead of being chopped. Inside 95% of its radius, where it really cuts, the thump, pressure hit, repeat hits and slow push go to the Master group at `6.9j`, as the game's tinnitus ring does. `6.9c`'s dip isn't used there. Adapted from that mod by harmony, MIT: `THIRD_PARTY_NOTICES.md`.
 
-**Limits.** The delay is by ear, and the last of the tail is still cut. It patches that mod's code by name; if that changes, the summary says not found and the cut happens at its normal time. The game's own ringing (no headset) isn't delayed.
+Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's gain, and 0.6.57 delayed the cut, but the user wanted hearing to go when concussion hits.
 
-**Check.** A grenade inside 7 m, `6.9h` off and on; summary CONCUSSION SOUND CUT; blastlevel.csv.
+**Limits.** Bots' gunfire fades over `6.9i` as well. The felt layers skip the Guns bus's effects, so `6.9j` is by ear. It finds that mod's code by name; if that changes, the summary says not found and its own cut runs. While the game's own ringing plays (no headset), it drives Main and Guns, as in that mod, so `6.9i` has no effect then.
+
+**Check.** A grenade inside 6.5 m, `6.9h` off and on; summary CONCUSSION SOUND CUT; concussion.csv.
 
 ## 6.7c: Fragment hits by route (0.6.55)
 

@@ -38,6 +38,7 @@ namespace RealSoundSimulation.Diagnostics
             ["fragments.csv"] = Fixes.BlastFromOpening.FragmentHeader,
             ["passby.csv"] = Fixes.FragmentPassBy.Header,
             ["blastlevel.csv"] = Fixes.BlastRecording.LevelHeader,
+            ["concussion.csv"] = Fixes.ConcussionProof.Header,
             ["glass.csv"] = Fixes.BlastFromOpening.GlassHeader,
             ["slowframes.csv"] = "t,clock,frameMs,batchWaitMs,muzzleWaitMs,rays,aliveBots", // 0.6.20: rows describe the previous frame
             ["rays.csv"] = "t,mark,ray,azimuthDeg,elevationDeg,wallM,wallCollider,outsideAtM,path,betweenCollider,lastSampleRoom,lastSampleM,weight,roofOverOutside,yourCeiling",
