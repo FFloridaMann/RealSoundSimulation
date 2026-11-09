@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.30 — 8 Nov 2026 (your shot's ring follows your turning)
+**Run in game:** not yet. From raid 40 tag 1: at a half-open spot, fire, then turn around, and the indoor side seems to be where you now face and the outdoor side behind you. Your gun is a stereo recording locked to your head.
+- **New `3o Shot ring follows your turning`** (1, live; `Fixes/OwnShotTurn.cs`). When a shot has both recordings in it, the open side is remembered, and until the sound ends the change in your facing shifts them: sideways they pan across your ears (up to 60%), and whichever has swung behind you is low-passed down to 3.5 kHz. Firing without turning changes nothing. Scaled by how clear the open side is. No rays, no voices. Your own gun only.
+- Limit: a stereo recording can't truly be placed behind you, so front and back is a cue rather than a position.
+- Version 0.6.30.
+
 ## 0.6.29 — 8 Nov 2026 (roof rain counts the floors above)
 **Run in game:** not yet. From raid 40: all upward rays at the roof-rain tags stayed trapped, but the look-down top-roof test still said "top roof" under floors, so roof rain read 0.9–1.0 and only the on/off 5-ray rule kept it out.
 - **New `9p Roof rain counts the floors above`** (on, live) and **`9q Roof rain loss per floor`** (1). From each ceiling a path reaches, the probe looks up and counts the surfaces above it, from either side; surfaces under 1 m apart are one slab. Top roof = full; each floor above takes off its material's transmission loss (concrete about 28 dB, untagged 25 dB). A path keeps its best result, so rain coming down a stair shaft from the real roof still counts. Replaces the two-floors rule while on; 0.6.28's hold and fade only apply with it off.

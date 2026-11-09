@@ -226,6 +226,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9o` | probe v2 uses measured surface values (0.6.27) | on |
 | `9p`, `9q` | roof rain counts floors above, and how much each takes off (0.6.29) | on, 1 |
 | `3n` | open sky around you lowers the indoor gunshot mix (0.6.26) | 1 |
+| `3o` | your shot's ring shifts as you turn (0.6.30) | 1 |
 | `8g` | indoor wind follows openings: "wind" room tones follow the outside's level, not enclosure (0.6.9) | on |
 | `9a` | gunshots from probe v2 (§5.1b) | **off** (test) |
 | Diagnostics: `Enclosure probe`, `Outdoor exposure probe`, `Acoustic probe v2` | the measurements (§2); fixes 3c, 8, 9 and 9a need them | on |

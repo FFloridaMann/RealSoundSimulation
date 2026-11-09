@@ -194,6 +194,7 @@ namespace RealSoundSimulation.Fixes
         private static readonly Pending[] PendingRows = new Pending[4];
         private static int _pendingN;
         public static float LastWeightUsed = float.NaN; // 3c's weight after 3j for the latest own pick (read by 3m)
+        public static bool LastMixed; // 0.6.30: the latest own pick has both recordings in it (read by 3o)
         private static float _lastSphere = float.NaN, _lastLobe = float.NaN;
         public static float LobeDiffSum; public static int LobeDiffN; // 3k: sphere minus lobe muzzle room, for the summary
 
@@ -215,6 +216,7 @@ namespace RealSoundSimulation.Fixes
             if (!_ownShot || clip1 == null || clip2 != null) return; // only single-clip picks (own shots at distance 0)
             float w = Steep(_indoorWeight);
             LastWeightUsed = w;
+            LastMixed = false;
             bool applied = false;
             try
             {
@@ -244,6 +246,7 @@ namespace RealSoundSimulation.Fixes
                             clip1 = indoorClip;
                             clip2 = outdoorClip;
                             proportions = w; // slot 1 (indoor) volume; slot 2 (outdoor) gets 1 - w
+                            LastMixed = true;
                             applied = true;
                         }
                     }

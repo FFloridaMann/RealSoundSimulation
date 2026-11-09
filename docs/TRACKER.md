@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.29 (roof rain counts floors) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.29 (roof rain counts floors) and 0.6.30 (`3o`) waiting for a raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -141,14 +141,15 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 78 settings, what each does, and what still reads it
-- [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `1d`, `1e`, `3n`)
+- [ ] List all 79 settings, what each does, and what still reads it
+- [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
 - [ ] Defaults = the tested setup; plain-language descriptions
 
 ## Possible bug fixes later
-- [ ] Fire, then turn around: your own shot's ring stays locked to your head, so the indoor side seems to end up where you now face and the outdoor side behind you (the recording is stereo in the headset; echoes do stay put). Raid 40 tag 1. User clarified 8 Nov
+- [x] Fire, then turn around: your own shot's ring stayed locked to your head (raid 40 tag 1): `3o` (0.6.30)
+- [ ] Raid: fire and turn at half-open spots with `3o` at 0 and 1
 - [ ] Bring Back Concussion restores mixer volumes from before the blast when its fade ends. If you cross a doorway during those seconds, the indoor ambience can stay at the old level until it next changes (fix 3 only writes it when it changes)
 
 ## Not in Real Sound Simulation (separate mods)
