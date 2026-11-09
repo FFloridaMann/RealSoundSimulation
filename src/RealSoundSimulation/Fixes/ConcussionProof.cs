@@ -25,8 +25,11 @@ namespace RealSoundSimulation.Fixes
 
         public static bool Active => _active;
         public static int Blasts;
+        private static float _lastBlast = -100f;
+        public static bool RecentBlast => Time.time - _lastBlast < RecentS; // 0.6.56: fragments from that blast go past the cut too
+        private const float RecentS = 2f;
 
-        public static void Reset() => Blasts = 0;
+        public static void Reset() { Blasts = 0; _lastBlast = -100f; }
 
         public static void Apply(Harmony h)
         {
@@ -83,6 +86,7 @@ namespace RealSoundSimulation.Fixes
                 {
                     Set();
                     Blasts++;
+                    _lastBlast = Time.time;
                 }
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.9h blast through concussion", e); }

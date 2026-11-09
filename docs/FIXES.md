@@ -680,6 +680,16 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** A grenade in another room, `6.7c` off and on; fragments.csv.
 
+## 6.7f: Fragment pass-bys (0.6.56)
+
+**Problem.** The game's whoosh (`BulletSoundPlayersController.TryShot`) skips anything you fired or threw, and any shot whose owner's gun is muffled to you, so a fragment out of a door from a bot behind cover is silent. Fragments never get a crack. User: fragments "do make alot of noise though and cracks".
+
+**Fix.** `Fixes/FragmentPassBy.cs`. Each frame, while shots are flying, each fragment's `PositionHistory` is checked against you. A path whose nearest point is within `6.7h` m, with nothing solid on one ray between, plays a generated whiz from that side: three shapes, from about 2.6 kHz to a low 220 Hz, pitched 0.8 to 1.25 per fragment. Level is `6.7g` at 1 m, −6 dB per doubling. Inside 1.5 m a 30 ms crack goes with it. `6.7i` per grenade (1.5 s window), the last place kept for a close one.
+
+**Limits.** Fragments are 90 to 100 m/s in the item data, so a pass lands later than a real one. Shapes and levels are by ear. The game's whoosh also plays when it applies; it drives the screen effect. The character comes from soldiers' accounts of mostly artillery shrapnel.
+
+**Check.** Your own grenade nearby and a bot's through a doorway, `6.7f` off and on; passby.csv; summary FRAGMENT PASS-BYS and the audio thread's late blocks.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

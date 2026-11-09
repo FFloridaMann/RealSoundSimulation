@@ -27,6 +27,7 @@ namespace RealSoundSimulation.Diagnostics
             new Target("6.7", "EFT.Interactive.WindowBreaker", "PlayHitSound", "M"),
             new Target("6.7", "EFT.Interactive.WindowBreaker", "PlayPieceSound", "M"),
             new Target("6.7c", "Systems.Effects.EffectsCommutator", "PlayHitEffect", "M"),
+            new Target("6.7f", "EFT.Ballistics.Shot", "PositionHistory", "F"),
             new Target("6.9h", "EFT.ExplosionSharedMethods", "Explosion", "M"),
             new Target("6.9h", "BetterAudio", "MasterMixerGroup", "F"),
             new Target("6.7", "BetterSource", "PreOcclusionVolume", "F"),

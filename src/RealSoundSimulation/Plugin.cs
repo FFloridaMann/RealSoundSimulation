@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.55")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.56")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -131,6 +131,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionProofOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> ConcussionProofDb, FragmentDullStrength, FragmentLossDb;
+        internal static ConfigEntry<bool> FragmentPassOn; // 0.6.56 "6.7f"
+        internal static ConfigEntry<float> FragmentPassDb, FragmentPassReachM;
+        internal static ConfigEntry<int> FragmentPassCount;
         internal static ConfigEntry<float> ExplosionEchoDb, ExplosionEchoLengthS, ExplosionEchoRangeM;
         internal static ConfigEntry<int> ExplosionEchoCount;
         internal static ConfigEntry<bool> FoleyPresetsOn; // 0.6.35 "10a"
@@ -217,6 +220,10 @@ namespace RealSoundSimulation
             FragmentRouteOn = Config.Bind(fix, "6.7c Fragment hits by route", true, new ConfigDescription("0.6.55: a grenade fragment hitting something in another room comes from the opening it reaches you through, dulled and quieter by that route. Hits in the room you're in stay where they are. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             FragmentDullStrength = Config.Bind(fix, "6.7d Fragment dulling strength", 1f, new ConfigDescription("How strongly the route dulls a fragment hit. 1 = the gunshot rule, 0 = no dulling. Live.", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = 93 }));
             FragmentLossDb = Config.Bind(fix, "6.7e Fragment loss per opening dB", 4f, new ConfigDescription("How much quieter a fragment hit gets for each opening on its way to you, on top of the game's own route loss, up to 16 dB in all. Live.", new AcceptableValueRange<float>(0f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            FragmentPassOn = Config.Bind(fix, "6.7f Fragment pass-bys", true, new ConfigDescription("0.6.56: a grenade fragment passing you whizzes along its real flight path, from your own grenades too, and cracks when it's very close. A fragment that hit a wall makes none. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
+            FragmentPassDb = Config.Bind(fix, "6.7g Fragment pass-by level dB", 0f, new ConfigDescription("How loud a fragment passing 1 m away is. Closer is louder, further is quieter. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
+            FragmentPassReachM = Config.Bind(fix, "6.7h Fragment pass-by reach m", 5f, new ConfigDescription("How close a fragment's path has to come to you to be heard. Live.", new AcceptableValueRange<float>(1f, 15f), new ConfigurationManagerAttributes { Order = 93 }));
+            FragmentPassCount = Config.Bind(fix, "6.7i Fragment pass-bys per grenade", 4, new ConfigDescription("The most that play per grenade, so a burst doesn't turn to mush. The last place is kept for a very close one. Live.", new AcceptableValueRange<int>(1, 12), new ConfigurationManagerAttributes { Order = 93 }));
             ShockRepeats = Config.Bind(fix, "6.9f Shock repeat hits", 3, new ConfigDescription("0.6.54: indoors a shock arrives as a train of shrinking pulses. How many fading repeat hits follow, spaced by the size of the room. 0 = none. Live.", new AcceptableValueRange<int>(0, 4), new ConfigurationManagerAttributes { Order = 93 }));
             ShockPushDb = Config.Bind(fix, "6.9g Shock slow push dB", 0f, new ConfigDescription("0.6.54: the long low swell after the hit in a closed space, strongest and longest in a small room. -24 = off. Live.", new AcceptableValueRange<float>(-24f, 12f), new ConfigurationManagerAttributes { Order = 93 }));
             ShockDuckDb = Config.Bind(fix, "6.9c Dip in other sounds dB", 8f, new ConfigDescription("How far footsteps, the environment and ambience dip when a close explosion arrives, for about a third of a second. Less with distance and walls. 0 = no dip. Bring Back Concussion's own sound cut wins inside its radius. Live.", new AcceptableValueRange<float>(0f, 24f), new ConfigurationManagerAttributes { Order = 93 }));
@@ -339,6 +346,7 @@ namespace RealSoundSimulation
             gameObject.AddComponent<BlastFromOpening>(); // 0.6.41
             gameObject.AddComponent<ClosedDoors>(); // 0.6.47
             gameObject.AddComponent<ShockWave>(); // 0.6.53
+            gameObject.AddComponent<FragmentPassBy>(); // 0.6.56
             gameObject.AddComponent<OwnShotTurn>(); // 0.6.30
             Log.LogInfo("Real Sound Simulation loaded");
         }
@@ -350,7 +358,7 @@ namespace RealSoundSimulation
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
             $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h past concussion {(ConcussionProofOn.Value ? $"ON ({ConcussionProofDb.Value:+0;-0;0} dB)" : "off")} | " +
-            $"6.7c fragment hits by route {(FragmentRouteOn.Value ? $"ON (dull x{FragmentDullStrength.Value:0.00}, {FragmentLossDb.Value:0} dB per opening)" : "off")} | " +
+            $"6.7c fragment hits by route {(FragmentRouteOn.Value ? $"ON (dull x{FragmentDullStrength.Value:0.00}, {FragmentLossDb.Value:0} dB per opening)" : "off")}, 6.7f pass-bys {(FragmentPassOn.Value ? $"ON ({FragmentPassDb.Value:+0;-0;0} dB, {FragmentPassReachM.Value:0.0} m, {FragmentPassCount.Value} per grenade)" : "off")} | " +
             $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +
             $"6.5 closed doors {(DoorMufflingOn.Value ? $"ON ({DoorMufflingStrength.Value:0.00})" : "off")} | " +

@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.56 — 9 Nov 2026 (6.7f: fragment pass-bys)
+**Run in game:** not yet. Sound shapes and levels are by ear; the voice and CPU cost are estimates until a raid.
+- **New `6.7f Fragment pass-bys`** (on, live; `Fixes/FragmentPassBy.cs`), `6.7g` level (0 dB, −24 to +12), `6.7h` reach (5 m, 1 to 15) and `6.7i` per grenade (4, 1 to 12). User: "what if 1 fragment comes out the door at me", "grenade fragments do make alot of noise though and cracks". Each fragment's real flight is followed. A path within reach with nothing solid between plays a generated whiz, high to low bass and pitched per fragment, and inside 1.5 m a short crack. Works for your own grenades and for bots behind cover, which the game's whoosh skips. The game's own whoosh is left alone.
+- Inside the concussion radius they go past that cut (`6.9h`). They obey the echo voice cap.
+- Fragment speeds in the game's data are 90 to 100 m/s, so a pass lands later than a real one would. A search for real fragment speeds was refused by the search tool, so nothing here rests on them. Soldiers' accounts were used for the character of the sound.
+- New passby.csv; FRAGMENT PASS-BYS summary line.
+- Version 0.6.56. F12 now has 143 settings.
+
 ## 0.6.55 — 9 Nov 2026 (6.9h: the blast survives concussion; 6.7c: fragment hits by route)
 **Run in game:** not yet. Starting values, set by ear.
 - **New `6.9h Blast survives concussion`** (on, live; `Fixes/ConcussionProof.cs`) and `6.9i` level (0 dB, −24 to +6). User: "when concussions are triggered the echo and grenade background sounds bad it cuts out". Bring Back Concussion, for a blast inside its radius, takes every mixer bus including Guns down by up to 80 dB within 0.05 to 0.3 s of the grenade going off, then fades back over its `Explosion Sound Fade In Time`. Explosions and the mod's thumps, hits and echoes are on Guns, so they were chopped. Inside that mod's radius + 1 m they now go to the Master group, which the cut doesn't touch, as the game's own tinnitus ring does. The dip (`6.9c`) is left to that mod there, and is ended before it reads the volumes it later restores.

@@ -79,7 +79,7 @@ namespace RealSoundSimulation.Fixes
 
         private static float PressureDb(float m) => 20f * Mathf.Log10(PressureKPa(m) / PressureKPa(FullAtM));
 
-        private static AudioClip MakeClip(string name, float lengthS, Func<float, float> shape)
+        internal static AudioClip MakeClip(string name, float lengthS, Func<float, float> shape)
         {
             const int rate = 48000;
             int n = (int)(rate * lengthS);

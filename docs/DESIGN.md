@@ -245,6 +245,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.9d`, `6.9e`, `6.9f`, `6.9g` | shock wave in buildings: corner loss, enclosed boost, repeat hits, slow push (0.6.54) | 6 dB, 6 dB, 3, 0 dB |
 | `6.9h`, `6.9i` | blast and echoes play past Bring Back Concussion's cut: on, level (0.6.55) | on, 0 dB |
 | `6.7c`, `6.7d`, `6.7e` | fragment hits from other rooms by route: on, dulling, loss per opening (0.6.55) | on, 1, 4 dB |
+| `6.7f`, `6.7g`, `6.7h`, `6.7i` | fragment pass-bys: on, level, reach, per grenade (0.6.56) | on, 0 dB, 5 m, 4 |
 | `6.7`, `6.7a`, `6.7b` | glass from other rooms by route: on, dulling strength, loss per opening (0.6.49) | on, 1, 4 dB |
 | `6.8`, `6.8a` | blasts around a corner where both of you are outdoors: on, corner loss (0.6.50) | on, 4 dB |
 | `6.8b` | bot gunshots around a corner where both of you are outdoors (0.6.51) | on |
