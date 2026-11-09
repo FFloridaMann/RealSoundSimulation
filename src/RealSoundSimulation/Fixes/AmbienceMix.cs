@@ -36,7 +36,7 @@ namespace RealSoundSimulation.Fixes
         private static float _nextFind, _roofCandidate = 1f, _roofCandidateSince;
         private static bool _under2, _under2Candidate; private static float _under2Since; // 0.6.9: two floors above
         private const float Under2HoldS = 2f, Under2FadeS = 1.5f; // 0.6.28
-        private static float _under2Gate = 1f, _roofMatGain = 1f; // 0.6.31: 9r
+        private static float _under2Gate = 1f, _roofMatGain = 1f, _noRainGate = 1f; // 0.6.31: 9r; 0.6.36: 9w
 
         public static bool On => Plugin.ExposureMixOn.Value && Plugin.DoorwayOn.Value;
 
@@ -60,7 +60,7 @@ namespace RealSoundSimulation.Fixes
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
-            _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; _roofMatGain = 1f; DoorwayBlend.ResetIndoorParams();
+            _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; _roofMatGain = 1f; _noRainGate = 1f; DoorwayBlend.ResetIndoorParams();
             RoomTone.Reset();
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
         }
@@ -192,6 +192,11 @@ namespace RealSoundSimulation.Fixes
                     if (s.isPlaying && s.clip != null) { sum += _rainGame[i]; playing++; }
                 }
                 level = Plugin.RoofRainLevel.Value * (IndoorRain.Count > 0 && IndoorRain[0] != null ? Mathf.Clamp01(RainMultRef(IndoorRain[0])) : 1f);
+                // 0.6.36 "9w" (raid 44 tags 1-2, the Capital): rays can't see storeys that have no colliders, but the game knows these rooms get no
+                // rain: it marks you indoors with a rain value of 0. A trailer it thinks is outdoors isn't affected.
+                bool noRainRoom = Plugin.RoofRainNoRainRooms.Value && playing > 0 && sum <= 0.01f && EnvProbe.GameSaysIndoor;
+                _noRainGate = Mathf.MoveTowards(_noRainGate, noRainRoom ? 0f : 1f, dt / 1.5f);
+                level *= _noRainGate;
             }
             for (int i = 0; i < RainSrc.Count; i++)
             {
@@ -207,7 +212,7 @@ namespace RealSoundSimulation.Fixes
         // 0.6.8: the game's indoor rain player, every 0.25 s (raid 27: roof rain went silent at car dealer spots while our
         // factor held at 0.55). rain2.csv.
         private static float _nextRainRow;
-        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp,lowpassHz";
+        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp,lowpassHz,noRainGate";
         private static void LogRain()
         {
             if (!DiagLog.IsOpen || Time.time < _nextRainRow) return;
@@ -221,7 +226,7 @@ namespace RealSoundSimulation.Fixes
                     s.isPlaying ? "1" : "0", s.isVirtual ? "1" : "0", s.mute ? "1" : "0", i < _rainGame.Length ? DiagLog.F(_rainGame[i]) : "", DiagLog.F(RoofRainApplied),
                     DiagLog.F(s.volume), DiagLog.F(s.spatialBlend), DiagLog.F(s.spread, "0"), s.spatialize ? "1" : "0",
                     s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : "", DiagLog.F(RoofRainComp),
-                    LpOf(s)));
+                    LpOf(s), DiagLog.F(_noRainGate)));
             }
         }
 

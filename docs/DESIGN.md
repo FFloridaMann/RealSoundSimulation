@@ -229,6 +229,8 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9s` | the probe forgets when the space really changes (0.6.32; retuned 0.6.33) | on |
 | `9t` | roof rain level, replacing the game's per-room value (0.6.33; one level from 0.6.34) | 0.3 |
 | `9u` | roof rain fades with distance on bounced paths, dB per metre after 6 m (0.6.34) | 1 |
+| `9v` | the roof rain floor count includes large low-detail floors (0.6.36) | on |
+| `9w` | roof rain fades out where the game says indoors with no rain (0.6.36) | on |
 | `10a` | footsteps, gear and handling use EFT 1.0 settings, from SEB (0.6.35) | on |
 | `10b` | routes between rooms from EFT 1.0, from SEB, checked against the map (0.6.35) | on |
 | `3n` | open sky around you lowers the indoor gunshot mix (0.6.26) | 1 |

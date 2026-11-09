@@ -264,8 +264,11 @@ namespace RealSoundSimulation.Fixes
 
         // Own-gun room reverb boost: add the setting to the stereo reverb/early-reflection sends of your gun's hidden
         // reverb copies. Always (re)applied, so setting it back to 0 restores the game's values.
+        private static string _gunName = ""; // 0.6.36: which gun, for ownshots.csv
+
         private static void ApplyReverbBoost(WeaponSoundPlayer wsp)
         {
+            _gunName = wsp != null && wsp.Body != null ? wsp.Body.name.Replace(',', ';') : "";
             SuperBetterAudioQueue q = QueueRef(wsp);
             if (q?.AudioSources == null) return;
             // 0.3.3: plus "5a Hard room reverb boost dB" scaled by how much this is a hard closed room (stairwell).
@@ -330,7 +333,7 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(AcousticProbe.HardRoom), DiagLog.F(AcousticProbe.Rt60, "0.00"), DiagLog.F(used),
                 DiagLog.F(EnclosureProbe.MuzzleRoomSphere), DiagLog.F(AcousticProbe.MuzzleRoomSphere),
                 tail ? "1" : "0", tail ? DiagLog.F(OutdoorTail.LastLevelDb, "0.0") : "", tail ? DiagLog.F(OutdoorTail.LastDelayMs, "0") : "",
-                tail ? DiagLog.F(OutdoorTail.LastAz, "0") : "", tail ? OutdoorTail.LastThrough : (last ? OutdoorTail.LastSkip : "")));
+                tail ? DiagLog.F(OutdoorTail.LastAz, "0") : "", tail ? OutdoorTail.LastThrough : (last ? OutdoorTail.LastSkip : ""), _gunName));
         }
     }
 }

@@ -471,6 +471,8 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **0.6.34.** `9t` is one level instead of a minimum, so the game's per-room value can't move the rain (0 = the game's value). **`9u` (1 dB/m):** a bounced path to the roof fades with distance after 6 m. `9s` no longer checks direction. Under 8 escaping paths a rise keeps the long average. Check: walk up and down a concrete stairwell in rain with `9u` at 0 and 1, and read `roofLossDb` in probe2.csv.
 
+**0.6.36, `9v` (on, live).** `CountFloors` casts on the probe's full mask and counts a surface on a non-blocking layer when both horizontal sides of its collider are at least 4 m. Both counts are cached, so the switch is live. Check: a roofed office with floors above in rain, `9v` on and off; `floorsNow` and `floorsOldNow` in probe2.csv. **`9w` (on, live):** game says indoors and its rain volume is 0, so `AmbienceMix` fades roof rain out over 1.5 s; rain2.csv `noRainGate`.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.

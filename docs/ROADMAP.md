@@ -184,7 +184,7 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 
 ## Settings clean-up (S, planned)
 
-Requested by the user, 8 Nov 2026. F12 now has 85 settings (68 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
+Requested by the user, 8 Nov 2026. F12 now has 87 settings (70 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
 
 1. **Inventory.** List every setting with its current value, what it does, and whether anything still reads it.
 2. **Retire A/B switches that have been decided.** Candidates once they have held up in raids: `6g`, `9o`, `9p`, `1d`, `1e`, `3n`, and the old probes behind them. Remove the old code path with the switch.

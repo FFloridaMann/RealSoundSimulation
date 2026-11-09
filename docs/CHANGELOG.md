@@ -2,10 +2,18 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.36 — 8 Nov 2026 (roof rain counts low-detail floors and respects no-rain rooms)
+**Run in game:** not yet. From the raid at raid_20261108_231751, tag 1 (Capital meeting room, floors above): roof rain held at 0.18, which one counted floor can't give, so about one upward path in five read a ceiling with nothing above it.
+- **New `9v Roof rain counts low-detail floors`** (on, live): much of the Capital's floors are low-detail colliders on layers the main mask leaves out, so `9p` looking up from a ceiling couldn't see them. They now count when both sides are at least 4 m, so props above you don't. Unconfirmed until a raid; storeys with no collider at all still can't be seen.
+- **New `9w Roof rain respects no-rain rooms`** (on, live): when the game marks you indoors and the room's rain level is 0, roof rain fades out over 1.5 s. Tag 2 (Capital, roof rain 0.90 with no floors found above) is probably storeys with no collision, which no ray can see. A trailer the game thinks is outdoors is not affected. Soft fades are possible at some room edges.
+- ownshots.csv ends with `gun` (the gun's sound bank name); rain2.csv ends with `noRainGate`.
+- probe2.csv ends with `floorsOldNow` (the count on the main layers alone) beside `floorsNow`. Summary: how many spots gained a floor and how many of those had read as top roof. The overlay shows both counts.
+- Version 0.6.36.
+
 ## 0.6.35 — 8 Nov 2026 (footsteps and handling like EFT 1.0; routes between rooms from SEB)
 **Run in game:** not yet. From a raid on Sound Engine Backport and True Acoustics (8 Nov): no blending between inside and outside and shots not as good, but footsteps and gun inspections were better, and its path work is worth having. Taken with credit: README, THIRD_PARTY_NOTICES.md.
 - **New `10a Footsteps and handling like EFT 1.0`** (on, needs a game restart): the Character and Weaponary sound groups use SEB's EFT 1.0 distance curves, stereo spread, occlusion radius and 3D ear processing, kept on at any distance. Weapon handling also fades 3D processing by distance, angle and height. Not SEB's mixer, and levels stay SPT's, so this may not be all of what was heard. No new recordings. Whether the inspection sounds are in the Weaponary group is unconfirmed.
-- **New `10b Sound routes between rooms from EFT 1.0`** (on, next raid): loads SEB's route file for maps that have one, after checking every room and portal is where the file expects, within 5 cm; otherwise the game's routes. The files (530 MB) are in `plugins/FFloridaMann-RealSoundSimulation/seb_routes/AudioBakeData`, copied from SEB's `acoustics/AudioBakeData`, and not in git.
+- **New `10b Sound routes between rooms from EFT 1.0`** (on, next raid): loads SEB's route file for maps that have one, after checking every room and portal is where the file expects, within 5 cm; otherwise the game's routes. The files (508 MB) are in `plugins/FFloridaMann-RealSoundSimulation/seb_routes/AudioBakeData`, copied from SEB's `acoustics/AudioBakeData`, and not in git.
 - Summary "Fixes at" lines show what SPT had for those groups and which routes loaded.
 - Version 0.6.35.
 

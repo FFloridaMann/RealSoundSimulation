@@ -175,6 +175,8 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.11: ownshots.csv rows are now written when the shot or tail call finishes (same rows as before) and end with `muzzleRoomSphere, v2MuzzleRoomSphere` (the muzzle measures without `3k`'s forward lobe; `muzzleRoom` / `v2MuzzleRoom` are with it) and `tailPlayed, tailLevelDb` (relative to the shot), `tailDelayMs, tailAz` (relative to where you face), `tailThrough` (open / glass / bars / open (fallback); when no tail played, the reason: mostly outdoor already, aim cone closed, no tail bank, fix 6 off…). The summary has OUTDOOR TAIL FROM THE OPENING and MUZZLE LOBE (mean sphere minus lobe muzzle room).
 
+0.6.36: probe2.csv ends with `floorsOldNow`, the floors counted on the main solid layers alone (`floorsNow` follows `9v`).
+
 0.6.34: probe2.csv ends with `floorsNow` (floors above the ceiling straight overhead, -1 = none measured) and `roofLossDb` (how much `9u` took off the roof rain reaching you, negative dB).
 
 0.6.14: probe2.csv ends with `memoryS` (how long the running sums remember right now: 3 s standing, 0.5 s moving fast) and `speedMs` (your speed, smoothed). Summary: OUTDOOR TAIL counts tails from the 3 m fallback; OWN GUN ECHOES counts loop echoes skipped for one-round loops and started 0.2 s late on longer ones; PERFORMANCE adds "playing sources in sound containers" (counted at every container sample, 0.5 s) beside the 15 s full scan and our echo voices; AMBIENCE MIX's indoor-layer mixer volumes and room tones heard now survive to the summary.
