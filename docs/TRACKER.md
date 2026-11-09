@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.28 (steadier roof rain) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.29 (roof rain counts floors) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -74,8 +74,8 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Raid 39: compare `6g` on and off: "def sounds better", stays on
 - [x] Probe v2 uses the table too (`9o`, 0.6.27)
 - [x] Raid 40: `9o` on: rain deep in buildings "mostly sounds better"
-- [ ] Raid: check roof rain no longer snaps (0.6.28), and whether outdoor sound is still too loud there
-- [ ] Roof material (4b phase 3)
+- [ ] Raid: check roof rain is gradual and gone under floors (0.6.29), and whether outdoor sound is still too loud there
+- [x] Roof material (4b phase 3): floors above take off their material's loss (`9p`, 0.6.29)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 
 ## 6.2 · Through walls, by material
@@ -139,6 +139,13 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] G: ground between you and a distant shooter (grass vs asphalt; a filter, never an echo)
 - [ ] Distant obstruction (past ~250 m)
 - [ ] Server settings (solutions doc phase 1)
+
+## S · Settings clean-up (near the end)
+- [ ] List all 78 settings, what each does, and what still reads it
+- [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `1d`, `1e`, `3n`)
+- [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
+- [ ] Migrate renamed settings so your values survive; back up the config first
+- [ ] Defaults = the tested setup; plain-language descriptions
 
 ## Possible bug fixes later
 - [ ] At 50/50 spots your own gunshot's indoor/outdoor mix doesn't turn with you (the recording plays straight in the headset; echoes do turn). Raid 40 tag 1

@@ -272,7 +272,7 @@ namespace RealSoundSimulation.Fixes
                     // 0.6.9: with two or more floors above (the exposure probe's 5 up-rays, held 0.5 s) there is no roof rain,
                     // whatever the probe's roof test says (raid 28 tag 4: 0.68 under two floors). One floor above stays the
                     // probe's call (the mezzanine edge flipped 0-1-0 in raid 26).
-                    bool u2 = OutdoorExposure.AboveValid && OutdoorExposure.FloorsAbove >= 2; // 0.6.16: the up-rays only
+                    bool u2 = !Plugin.RoofCountsFloors.Value && OutdoorExposure.AboveValid && OutdoorExposure.FloorsAbove >= 2; // 0.6.16: the up-rays only; 0.6.29: 9p replaces this rule
                     if (u2 != _under2Candidate) { _under2Candidate = u2; _under2Since = Time.time; }
                     // 0.6.28: raid 40 (Capital, escalators): the 5-ray count flickered and snapped roof rain off and on 85 times in
                     // the raid, even standing still. Now it must hold 2 s (was 0.5) and the change fades over 1.5 s.

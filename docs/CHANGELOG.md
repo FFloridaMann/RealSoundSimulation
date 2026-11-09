@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.29 — 8 Nov 2026 (roof rain counts the floors above)
+**Run in game:** not yet. From raid 40: all upward rays at the roof-rain tags stayed trapped, but the look-down top-roof test still said "top roof" under floors, so roof rain read 0.9–1.0 and only the on/off 5-ray rule kept it out.
+- **New `9p Roof rain counts the floors above`** (on, live) and **`9q Roof rain loss per floor`** (1). From each ceiling a path reaches, the probe looks up and counts the surfaces above it, from either side; surfaces under 1 m apart are one slab. Top roof = full; each floor above takes off its material's transmission loss (concrete about 28 dB, untagged 25 dB). A path keeps its best result, so rain coming down a stair shaft from the real roof still counts. Replaces the two-floors rule while on; 0.6.28's hold and fade only apply with it off.
+- Summary: how many spots had 0, 1, 2 or 3+ floors above, and how often the old test wrongly said top roof.
+- Version 0.6.29.
+
 ## 0.6.28 — 8 Nov 2026 (roof rain no longer snaps on and off)
 **Run in game:** not yet. From raid 40 (raid_20261108_202707, Ground Zero, 0.6.27): "speratic roof rain sounds" in the Capital and on the escalators, with louder outdoor audio. Rain deep in the building otherwise "mostly sounds better".
 - **The "two or more floors above = no roof rain" rule** (0.6.9) uses 5 upward rays. The count flickered and flipped roof rain between nothing and full 85 times in the raid, even standing still (roof level steady at 0.9–1.0 the whole time). It must now hold 2 s (was 0.5 s), and the change fades over 1.5 s. Roof rain with one floor or less above you is unchanged.

@@ -148,6 +148,7 @@ namespace RealSoundSimulation.Acoustics
             public Vector3 ExitPt; public bool HasExitPt;
             public Vector3 LastPt, ExitDir;
             public bool HasLast, RoofDone;
+            public float RoofGot; // 0.6.29: the best share of roof rain this path has reached so far
             public int LastPassId, LastPassCast;
         }
 
@@ -254,7 +255,7 @@ namespace RealSoundSimulation.Acoustics
             for (int i = 0; i < MaxLobes; i++) Lobes[i] = default;
             _gN = 0; Openings = MaxOpenings = 0; GuidedPaths = 0; SmoothS = 0.35f; RelErr = 0f; Escapes = 0;
             BackfaceHits = ExitFacesSkipped = SkyRejected = 0; FocusEarly = FocusBuildUp = BuildUpCount = RoofLevel = RoofLevelAll = RoofFocus = RoofPaths = _startedUpW = 0f; RoofCutoffHz = 22000f; _hasPrevListener = false; _speed = 0f; StatTauNow = StatTau; BuildUpDir = Vector3.zero; RoofArrival = Vector3.up;
-            RoofTests = 0; RoofCache.Clear(); ExitsFound = ExitsMissed = 0; _exitBudget = 0f;
+            RoofTests = 0; RoofCache.Clear(); FloorCache.Clear(); Array.Clear(FloorHist, 0, FloorHist.Length); OldRoofTestWrong = 0; ExitsFound = ExitsMissed = 0; _exitBudget = 0f;
             KindCache.Clear(); _layer = 0; _cursor = 0;
             for (int i = 0; i < MaxActive; i++) Paths[i].Active = false;
             _acc = default;
@@ -558,11 +559,16 @@ namespace RealSoundSimulation.Acoustics
             if (p.Casts == 1) { p.FirstHit = true; p.FirstHitM = hit.distance; p.FirstMat = m; p.FirstPt = hit.point; }
             // 0.6.7: the first time a path reaches the top roof's underside, it collects the roof rain (deep part x2: only
             // half the paths go on after 3 reflections)
-            if (record && !p.RoofDone && nrm.y < -0.3f && IsRoof(hit.point, c))
+            // 0.6.29 "9p": a ceiling with floors above still lets a little through; a path keeps only its best (it may reach the real
+            // roof later, down a stair shaft), and a path that reaches the top roof is done.
+            float through = record && !p.RoofDone && nrm.y < -0.3f ? RoofThrough(hit.point, c) : 0f;
+            if (through > p.RoofGot)
             {
-                p.RoofDone = true;
-                float er = p.E * p.W * (p.Bounces > EarlyBounces ? 1f / DeepShare : 1f);
-                s.RoofE += er; s.RoofX += p.First.x * er; s.RoofY += p.First.y * er; s.RoofZ += p.First.z * er; s.RoofN++;
+                float gain = through - p.RoofGot;
+                p.RoofGot = through;
+                if (through >= 0.999f) p.RoofDone = true;
+                float er = p.E * p.W * (p.Bounces > EarlyBounces ? 1f / DeepShare : 1f) * gain;
+                s.RoofE += er; s.RoofX += p.First.x * er; s.RoofY += p.First.y * er; s.RoofZ += p.First.z * er; if (through >= 0.1f) s.RoofN++;
                 if (p.First.y > UpY) s.UpRoofE += er;
                 // 0.6.10: how bright this path is when it reaches the roof: the dullest surface it passed or reflected off,
                 // and RoofBounceDull per reflection on the way (scattering and edge diffraction; a placeholder until the
@@ -668,6 +674,58 @@ namespace RealSoundSimulation.Acoustics
             roof = !CountedRay.Raycast(top, Vector3.down, out RaycastHit h, 40f, _mask, QueryTriggerInteraction.Ignore) || h.point.y <= pt.y + 1.5f;
             RoofCache[key] = roof;
             return roof;
+        }
+
+        // 0.6.29 "9p": how much rain energy from above reaches this ceiling: 1 = nothing above it (the top roof), less for every floor
+        // above, by that floor's material. Raid 40: looking down from 40 m said "top roof" at spots with 1-2 floors above (upper floors
+        // solid only from below let the ray through), so roof rain read 0.9-1.0 and only an on/off 5-ray rule kept it out. This looks
+        // up from the ceiling, counting surfaces from either side; surfaces under 1 m apart are one slab. Cached per collider and 1 m cell.
+        private const float FloorGapM = 1f, UntaggedFloorDb = 25f, FloorSearchM = 60f;
+        private const int MaxFloorCasts = 8;
+        private struct Floors { public int N; public float Db; }
+        private static readonly Dictionary<long, Floors> FloorCache = new Dictionary<long, Floors>();
+        public static readonly long[] FloorHist = new long[4]; // 0, 1, 2, 3+ floors above
+        public static long OldRoofTestWrong;
+
+        private static float RoofThrough(Vector3 pt, Collider c)
+        {
+            if (!Plugin.RoofCountsFloors.Value) return IsRoof(pt, c) ? 1f : 0f;
+            long key = ((long)c.GetInstanceID() * 73856093L) ^ ((long)Mathf.FloorToInt(pt.x) * 19349663L) ^ ((long)Mathf.FloorToInt(pt.z) * 83492791L);
+            if (!FloorCache.TryGetValue(key, out Floors f))
+            {
+                if (FloorCache.Count > 50000) FloorCache.Clear();
+                f = CountFloors(pt);
+                FloorCache[key] = f;
+                FloorHist[Mathf.Min(f.N, 3)]++;
+                if (f.N > 0 && IsRoof(pt, c)) OldRoofTestWrong++;
+            }
+            if (f.N == 0) return 1f;
+            return Mathf.Pow(10f, -f.Db * Mathf.Max(0f, Plugin.RoofFloorLossScale.Value) / 10f);
+        }
+
+        private static Floors CountFloors(Vector3 pt)
+        {
+            var f = new Floors();
+            bool was = Physics.queriesHitBackfaces;
+            Physics.queriesHitBackfaces = true;
+            try
+            {
+                float lastY = pt.y, top = pt.y + FloorSearchM;
+                Vector3 o = pt + Vector3.up * Skin;
+                for (int i = 0; i < MaxFloorCasts && o.y < top; i++)
+                {
+                    if (!CountedRay.Raycast(o, Vector3.up, out RaycastHit h, top - o.y, _blockMask, QueryTriggerInteraction.Ignore)) break;
+                    if (h.point.y - lastY >= FloorGapM)
+                    {
+                        f.N++;
+                        f.Db += Materials.TryGet(Surfaces.Material(h.collider), out Materials.Surface t) && !float.IsInfinity(t.T1k) ? t.T1k : UntaggedFloorDb;
+                    }
+                    lastY = h.point.y;
+                    o = h.point + Vector3.up * Skin;
+                }
+            }
+            finally { Physics.queriesHitBackfaces = was; }
+            return f;
         }
 
         private static int _blockMask;
@@ -1157,7 +1215,7 @@ namespace RealSoundSimulation.Acoustics
             sb.AppendLine($"ACOUSTIC PROBE V2 (ambience {(Plugin.AmbienceV2On.Value ? "ON" : "off")}, gunshots {(Plugin.GunV2On.Value ? "ON" : "off")}, glass loss {Plugin.GlassLossDb.Value:0} dB, build-up x{Plugin.RoomBuildUp.Value:0.00}, guided rays {(Plugin.GuidedRays.Value ? "ON" : "off")}, ray quality {Plugin.RayQualityCfg.Value} at the end)");
             sb.AppendLine($"  rays cast {RaysCast}, paths completed {PathsDone}, guided paths aimed at openings {GuidedPaths}, most openings remembered at once {MaxOpenings}");
             sb.AppendLine($"  back faces hit (reflected as surfaces) {BackfaceHits}, far sides of passed objects skipped {ExitFacesSkipped}, upward escapes rejected by the roof test {SkyRejected}   <- 0.6.5 leak fix (raid 25: paths came up through floors)");
-            sb.AppendLine($"  roof tests (0.6.7 roof rain, cached per collider and 1 m cell) {RoofTests}, roof rain from the probe {(Plugin.RoofRainFromProbe.Value ? "ON" : "off")}, direction strength x{Plugin.DirectionStrength.Value:0.00}");
+            sb.AppendLine($"  floors above ceilings (9p, cached spots): 0 floors {FloorHist[0]}, 1 floor {FloorHist[1]}, 2 floors {FloorHist[2]}, 3+ {FloorHist[3]}; the old look-down test wrongly said top roof at {OldRoofTestWrong} of them\n  roof tests (0.6.7 roof rain, cached per collider and 1 m cell) {RoofTests}, roof rain from the probe {(Plugin.RoofRainFromProbe.Value ? "ON" : "off")}, direction strength x{Plugin.DirectionStrength.Value:0.00}");
             sb.AppendLine($"  exit points (0.6.8) found {ExitsFound}, not found within 48 m {ExitsMissed}; rain from openings (9j) {(Plugin.RainFromOpenings.Value ? "ON" : "off")}");
             return sb.ToString();
         }

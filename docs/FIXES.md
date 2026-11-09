@@ -445,6 +445,14 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 
 **Check.** A bot firing from another room: `6.1` off (through the wall) and on (from the door or stairwell). `6.1a` at 0.5 is halfway. routes.csv `movedDeg`; summary PORTAL POSITIONING; COST line for its cost.
 
+## 9p: Roof rain counts the floors above (0.6.29)
+
+**Problem (raid 40).** The top-roof test looked down from 40 m. It said "top roof" at spots with floors above (probably upper floors solid only from below), so roof rain read 0.9–1.0. An on/off rule from 5 up-rays was all that kept it out, and it flickered.
+
+**Fix.** From a ceiling a path reaches, cast up, counting surfaces from either side; surfaces under 1 m apart are one slab. Each floor above takes off its material's transmission at 1 kHz from `Materials.cs` (25 dB if untagged), scaled by `9q`. A path keeps its best result, so the real roof reached via a stair shaft still counts in full.
+
+**Limits.** It only sees what has a collider. **Check.** The Capital and its escalators in rain: roof rain gradual, none under two concrete floors unless near a stair. Summary: floors above ceilings.
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

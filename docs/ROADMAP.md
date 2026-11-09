@@ -29,6 +29,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 | 16 | 7 | Gun audio overhaul, every gun | Planned, long |
 | 17 | E | Final echo tuning and optimising | Planned, last |
 | any time | G | Ground between you and a distant shooter | Planned |
+| near the end | S | Settings clean-up | Planned |
 | any time | – | Distant obstruction; server settings | Planned |
 
 Not in this roadmap: **GC and spawn stutters**. That's a separate project, likely separate mods (user, 8 Nov 2026), on branch `claude/gc-and-spawn-stutters`. Its two pieces that belong to Real Sound Simulation's own logging (garbage-free container rows, backing off after spawns) moved here as 0.6.19.
@@ -179,6 +180,16 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
 - **Why last:** echo amounts and tail lengths depend on everything before it, so they only need tuning once.
 
 ---
+
+## Settings clean-up (S, planned)
+
+Requested by the user, 8 Nov 2026. F12 now has 78 settings (61 under Fixes, numbered as they were added, so related ones are scattered: 3a to 3n, 9a to 9q). Do it once the big steps are built, so it happens once.
+
+1. **Inventory.** List every setting with its current value, what it does, and whether anything still reads it.
+2. **Retire A/B switches that have been decided.** Candidates once they have held up in raids: `6g`, `9o`, `9p`, `1d`, `1e`, `3n`, and the old probes behind them. Remove the old code path with the switch.
+3. **Group by what you hear,** not by build order: own gun, bot gunfire, rain and ambience, diagnostics. Keep a small "tuning" group, and move the rarely touched ones to an advanced group.
+4. **Keep your values.** A renamed key resets to default in BepInEx, so migrate the old values on first load and back up `ffloridamann.realsoundsimulation.cfg` first.
+5. **Set defaults to the tested setup** and rewrite descriptions in plain language.
 
 ## Any time
 - **G · Ground between you and a distant shooter** (user, 8 Nov 2026): grass takes mids and treble off a far shot, asphalt doesn't. One filter per gun, no voices, needs the ground sampled along the path. Details: [MATERIALS.md](MATERIALS.md). Never a separate ground echo: at these delays the ground changes the tone, and the recordings already hold a bounce.
