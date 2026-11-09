@@ -33,6 +33,14 @@ namespace RealSoundSimulation.Fixes
     // 0.6.49 "6.7": a window breaking in another room. User, 9 Nov 2026: a grenade in the hallway broke glass "a few walls and turns" away and "it sounded a bit loud".
     // The game plays glass at the pane, and only if the window isn't part of your room does it run the one-shot occlusion, route loss only. That pass is the hook
     // here, so a window of your own room is never touched. Same route, placement and dulling rule as a blast (strength "6.7a"), plus "6.7b" dB per opening, 16 at most.
+    //
+    // 0.6.50 "6.8": around a corner. The routes above only exist between rooms, so where the room map has you and the blast both outdoors a blast behind a building
+    // played from its true direction, clear. Raid 20261109_105838: 4 of 12 blasts, one 28 m away with stone and concrete on the line. User, same day: should sound
+    // different "and from the correct position based on if you are standing at the front or behind the entrance". Only when the straight line is blocked:
+    //   search   36 level rays from you, 40 m at most; on each, 3 points along its free length; from each point a ray to the blast. 144 rays, once per blast, 4 per second at most.
+    //   pick     the shortest way through a point that sees the blast, up to 40 m longer than the straight line. One corner only.
+    //   play     from that point's direction at the length of the way, dulled by the 6.1b rule at 6.4c's strength, "6.8a" dB quieter.
+    //            No way round: stays at the true spot, a step duller and twice 6.8a quieter (18 dB at most). The second recording (6.6) reuses the answer.
     [DefaultExecutionOrder(32000)]
     internal class BlastFromOpening : MonoBehaviour
     {
@@ -73,7 +81,7 @@ namespace RealSoundSimulation.Fixes
         public static int RoomPlayed, RoomDropped;
         private static double _roomLevelSum;
 
-        public const string Header = "t,moved,reason,distM,pathM,openings,turnDeg,movedDeg,lineBlocked,cutoffHz,closure";
+        public const string Header = "t,moved,reason,distM,pathM,openings,turnDeg,movedDeg,lineBlocked,cutoffHz,closure,lossDb";
 
         public static void Apply(Harmony h)
         {
@@ -96,6 +104,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Filters) if (kv.Value.Lp != null && kv.Value.Lp.enabled) kv.Value.Lp.enabled = false;
             Filters.Clear(); Skips.Clear(); Bouncers.Clear();
             _pending = _anyOn = false;
+            CornerFound = CornerNone = CornerClear = CornerLimited = 0; _nextCorner = 0f; _cornerMovedSum = 0;
             _glass = false; GlassMoved = GlassLeft = GlassNoPass = 0; GlassSkips.Clear(); _glassCutLogSum = _glassLossSum = 0;
             Moved = Dulled = BounceGrenades = RoomPlayed = RoomDropped = 0; BounceFrames = 0; _movedSum = _cutLogSum = _bounceMovedSum = _roomLevelSum = 0;
         }
@@ -159,7 +168,7 @@ namespace RealSoundSimulation.Fixes
             }
             if (!_pending) return;
             _pending = false;
-            if (!Wanted && !Plugin.RoomEchoOn.Value) return;
+            if (!Wanted && !Plugin.RoomEchoOn.Value && !Plugin.BlastCornerOn.Value) return;
             Perf.Begin();
             try { Handle(__instance, source, __result); }
             catch (Exception e) { DiagRunner.ReportOnce("6.4 blast from the opening", e); }
@@ -174,7 +183,7 @@ namespace RealSoundSimulation.Fixes
             float straight = toBlast.magnitude;
 
             if (!ContainersRef(sas).TryGetValue(containerId, out AudioSourceContainer c) || c == null) { Skip("no container", straight); return; }
-            if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why)) { Skip(why, straight); return; }
+            if (!FindRoute(sas, c, blast, listener, out Vector3 near, out float path, out int openings, out float closure, out string why)) { if (why != "both outdoors" || !Corner(sas, c, source, listener, blast, straight)) Skip(why, straight); return; }
 
             Vector3 toNear = near - listener;
             float nearM = toNear.magnitude, movedDeg = 0f, cutoff = 0f;
@@ -239,6 +248,101 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        // ---- 6.8: around a corner (0.6.50)
+        private const int CornerFan = 36;
+        private const float CornerFanM = 40f, CornerBackOffM = 0.5f, CornerMinFreeM = 1.5f, CornerMaxDetourM = 40f, CornerLiftM = 0.5f, CornerEveryS = 0.25f, CornerMaxLossDb = 18f;
+        private static readonly float[] CornerAlong = { 0.4f, 0.7f, 1f };
+        private static readonly AccessTools.FieldRef<SuperSourceDistant, float> DistantSecondPreRef = AccessTools.FieldRefAccess<SuperSourceDistant, float>("_secondPreEffectsVolume");
+        public static int CornerFound, CornerNone, CornerClear, CornerLimited;
+        private static double _cornerMovedSum;
+        private static float _nextCorner;
+        private static bool _cBlocked, _cFound;
+        private static Vector3 _cPoint;
+        private static float _cPath;
+
+        // True when this blast was dealt with here. The second recording (6.6) comes straight after the first and reuses its answer.
+        private static bool Corner(SpatialAudioSystem sas, AudioSourceContainer c, BetterSource source, Vector3 listener, Vector3 blast, float straight)
+        {
+            if (!Plugin.BlastCornerOn.Value || straight < 0.01f) return false;
+            if (!BlastRecording.InLayer) SearchCorner(sas, listener, blast);
+            if (!_cBlocked) return false;
+
+            Vector3 toBlast = blast - listener;
+            Vector3 toNear = _cFound ? _cPoint - listener : toBlast;
+            float nearM = toNear.magnitude, movedDeg = 0f;
+            if (_cFound && nearM > 0.01f)
+            {
+                float blend = Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.BlastOpeningStrength.Value);
+                if (blend > 0f)
+                {
+                    Vector3 dir = Vector3.Slerp(toBlast / straight, toNear / nearM, blend).normalized;
+                    Vector3 placed = listener + dir * Mathf.Lerp(straight, Mathf.Max(_cPath, straight), blend);
+                    source.Position = placed;
+                    c.SetPositionOffset(blast - placed);
+                    movedDeg = Vector3.Angle(toBlast, dir);
+                }
+            }
+
+            float cut = PortalPositioning.DullHzFor(toBlast, toNear, true, _cFound ? 1 : 2, Plugin.BlastDullStrength.Value);
+            FilterVoice(source, cut);
+            float lossDb = Mathf.Min(Plugin.BlastCornerLossDb.Value * (_cFound ? 1f : 2f), CornerMaxLossDb);
+            ScaleVoice(source, Mathf.Pow(10f, -lossDb / 20f));
+
+            if (!BlastRecording.InLayer && _cFound) { CornerFound++; _cornerMovedSum += movedDeg; }
+            Row(_cFound ? "1" : "0", _cFound ? "around a corner" : "no way round", straight, _cFound ? _cPath : 0f, _cFound ? 1 : 0, Vector3.Angle(toBlast, toNear), movedDeg, "1", cut, 0f, lossDb);
+            return true;
+        }
+
+        private static void SearchCorner(SpatialAudioSystem sas, Vector3 listener, Vector3 blast)
+        {
+            _cBlocked = _cFound = false;
+            int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
+            Vector3 target = blast + Vector3.up * CornerLiftM, toTarget = target - listener;
+            float straight = toTarget.magnitude;
+            if (straight < 0.01f || !CountedRay.Raycast(listener, toTarget / straight, straight, mask, QueryTriggerInteraction.Ignore)) { CornerClear++; return; }
+            _cBlocked = true;
+
+            float now = Time.unscaledTime;
+            if (now < _nextCorner) { CornerLimited++; return; }
+            _nextCorner = now + CornerEveryS;
+
+            float best = straight + CornerMaxDetourM;
+            for (int i = 0; i < CornerFan; i++)
+            {
+                float a = i * Mathf.PI * 2f / CornerFan;
+                Vector3 d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                float free = (CountedRay.Raycast(listener, d, out RaycastHit hit, CornerFanM, mask, QueryTriggerInteraction.Ignore) ? hit.distance : CornerFanM) - CornerBackOffM;
+                if (free < CornerMinFreeM) continue;
+                for (int k = 0; k < CornerAlong.Length; k++)
+                {
+                    float along = free * CornerAlong[k];
+                    Vector3 point = listener + d * along, toBlastFromPoint = target - point;
+                    float rest = toBlastFromPoint.magnitude, path = along + rest;
+                    if (path >= best || rest < 0.01f) continue; // can't beat the best found, so no ray for it
+                    if (CountedRay.Raycast(point, toBlastFromPoint / rest, rest, mask, QueryTriggerInteraction.Ignore)) continue;
+                    best = path; _cPoint = point; _cPath = path; _cFound = true;
+                }
+            }
+            if (!_cFound) CornerNone++;
+        }
+
+        private static void ScaleVoice(BetterSource source, float gain)
+        {
+            PreVolumeRef(source) *= gain;
+            if (source.source1 != null) source.source1.volume *= gain;
+            if (source is SuperSourceDistant d)
+            {
+                DistantSecondPreRef(d) *= gain;
+                AudioSource two = Source2Ref(d);
+                if (two != null) two.volume *= gain;
+            }
+            else if (source is SuperSource s)
+            {
+                SecondPreRef(s) *= gain;
+                if (s.source2 != null) s.source2.volume *= gain;
+            }
+        }
+
         // ---- 6.7: glass (0.6.49)
         private const float GlassMaxLossDb = 16f;
         public const string GlassHeader = "t,x,y,z,moved,reason,distM,pathM,openings,lineBlocked,cutoffHz,lossDb,clip";
@@ -297,13 +401,7 @@ namespace RealSoundSimulation.Fixes
 
             float lossDb = Mathf.Min(Plugin.GlassLossDb2.Value * openings, GlassMaxLossDb);
             float gain = Mathf.Pow(10f, -lossDb / 20f);
-            PreVolumeRef(source) *= gain;
-            if (source.source1 != null) source.source1.volume *= gain;
-            if (source is SuperSource s)
-            {
-                SecondPreRef(s) *= gain;
-                if (s.source2 != null) s.source2.volume *= gain;
-            }
+            ScaleVoice(source, gain);
 
             GlassMoved++; _glassCutLogSum += Mathf.Log(cut); _glassLossSum += lossDb;
             GlassRow("1", "", at, straight, path, openings, blocked ? "1" : "0", cut, lossDb, clip);
@@ -517,11 +615,11 @@ namespace RealSoundSimulation.Fixes
             Row("0", why, dist, 0f, 0, 0f, 0f, "", 0f, 0f);
         }
 
-        private static void Row(string moved, string why, float dist, float path, int openings, float turn, float movedDeg, string blocked, float cutoff, float closure)
+        private static void Row(string moved, string why, float dist, float path, int openings, float turn, float movedDeg, string blocked, float cutoff, float closure, float lossDb = 0f)
         {
             if (!DiagLog.IsOpen || BlastRecording.InLayer) return;
             DiagLog.Row("blast.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), moved, why, DiagLog.F(dist, "0.0"), DiagLog.F(path, "0.0"), openings.ToString(),
-                DiagLog.F(turn, "0"), DiagLog.F(movedDeg, "0"), blocked, DiagLog.F(cutoff, "0"), DiagLog.F(closure, "0.00")));
+                DiagLog.F(turn, "0"), DiagLog.F(movedDeg, "0"), blocked, DiagLog.F(cutoff, "0"), DiagLog.F(closure, "0.00"), DiagLog.F(lossDb, "0.0")));
         }
 
         public static string Summary()
@@ -533,7 +631,7 @@ namespace RealSoundSimulation.Fixes
                    (Moved > 0 ? $", on average {_movedSum / Moved:0} deg from the true direction" : "") + $"; dulled {Dulled}" + (Dulled > 0 ? $", typical cutoff {Mathf.Exp((float)(_cutLogSum / Dulled)):0} Hz" : "") +
                    $"; left at the true spot: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}; grenade bounces moved for {BounceGrenades} grenades, {BounceFrames} frames" +
                    (BounceFrames > 0 ? $", on average {_bounceMovedSum / BounceFrames:0} deg from the true direction" : "") +
-                   $"; room echoes (6.3e {(Plugin.RoomEchoOn.Value ? "ON" : "off")}) played {RoomPlayed}" + (RoomPlayed > 0 ? $", mean level {_roomLevelSum / RoomPlayed:0.0} dB" : "") + $", dropped by the headroom cap {RoomDropped}  (blast.csv, echoes.csv kind Room)\n";
+                   $"; room echoes (6.3e {(Plugin.RoomEchoOn.Value ? "ON" : "off")}) played {RoomPlayed}" + (RoomPlayed > 0 ? $", mean level {_roomLevelSum / RoomPlayed:0.0} dB" : "") + $", dropped by the headroom cap {RoomDropped}; around a corner (6.8 {(Plugin.BlastCornerOn.Value ? "ON" : "off")}): found {CornerFound}" + (CornerFound > 0 ? $", on average {_cornerMovedSum / CornerFound:0} deg from the true direction" : "") + $", no way round {CornerNone}, search limit {CornerLimited}, line clear {CornerClear}  (blast.csv, echoes.csv kind Room)\n";
         }
     }
 }

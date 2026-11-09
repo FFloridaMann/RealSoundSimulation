@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.50 — 9 Nov 2026 (6.8: blasts around a corner)
+**Run in game:** not yet. Starting values.
+- **New `6.8 Blasts around a corner`** (on, live) and `6.8a Corner loss dB` (4, 0 to 18). The routes behind `6.4` only exist between rooms, so where the room map has you and a blast both outdoors, a blast behind a building played clear from its true direction: 4 of 12 blasts in raid_20261109_105838. User, 9 Nov 2026: it should sound different "and from the correct position based on if you are standing at the front or behind the entrance". When the straight line is blocked, rays find the shortest way around one corner and the blast comes from there, dulled and quieter. With no way round it stays put, a step duller and twice as much quieter.
+- Cost: at most 144 rays per blocked blast, at most 4 searches a second, nothing otherwise.
+- blast.csv: `reason` can be `around a corner` or `no way round`; new last column `lossDb`. The BLAST FROM THE OPENING summary line counts them.
+- Limits: one corner only. Grenade bounces and glass aren't included.
+- Version 0.6.50. F12 now has 123 settings.
+
 ## 0.6.49 — 9 Nov 2026 (6.6, 6.7: blast recording by how open it is; glass by route)
 **Run in game:** not yet. All values are starting values.
 - **New `6.6 Blast recording by how open it is`** (on, live; `Fixes/BlastRecording.cs`) and `6.6a Open share for all outdoor` (0.4, 0.15 to 0.9). User, 9 Nov 2026: a grenade at the mouth of a garage "sounded fully indoors but the garage opens to the front to full open air". The game plays its indoor or outdoor recording, all or nothing, by its own indoor boxes. Now 48 rays from the blast measure how open it is and the two recordings blend, the weaker on a second voice that follows the same distance, delay, occlusion, opening and dulling. That second voice adds no second thump or echoes.

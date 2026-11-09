@@ -625,6 +625,16 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 **Check.** Break a window from another room, `6.7` off and on; glass.csv shows the route, cutoff and loss.
 
+## 6.8: Blasts around a corner (0.6.50)
+
+**Problem.** `6.4` needs a baked route, and routes only exist between rooms. Where the room map has you and the blast both outdoors there's none, so a blast behind a building played clear from its true direction. raid_20261109_105838: 4 of 12 blasts, one 28 m away with stone and concrete on the straight line.
+
+**Fix.** `BlastFromOpening`. Only when the straight line is blocked: 36 level rays from you (40 m at most), 3 points along each one's free length, and a ray from each point to the blast. The shortest way through a point that sees the blast wins, up to 40 m longer than the straight line. The blast plays from that direction at that length, dulled by the `6.1b` rule at `6.4c`'s strength and `6.8a` dB quieter. With no way round it stays at the true spot, a step duller and twice `6.8a` quieter, 18 dB at most. At most 144 rays and 4 searches a second.
+
+**Limits.** Starting values. One corner only. Grenade bounces and glass aren't included. A small object on the line, like a car, counts as blocked, so the blast is dulled a step.
+
+**Check.** A grenade behind a building, from the front and from behind an entrance, `6.8` off and on; blast.csv `reason`, `turnDeg`, `pathM`, `cutoffHz`.
+
 ## 10a, 10b: taken from Sound Engine Backport (0.6.35)
 
 **10a.** `Fixes/FoleyPresets.cs`, a postfix on `BetterAudio.LoadGroupPreset` and a prefix on `BetterSource.CheckBinauralAllowed`. Character and Weaponary get SEB's curves, spread, occlusion radius and HRTF; levels and the mixer stay SPT's. Curves are read when the voices are built, so the switch needs a restart.
