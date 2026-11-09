@@ -116,7 +116,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Raid: `6.1b` on and off with bots in other rooms; does the filter work through the Meta spatializer; is `6.1d` too dull on long routes
 - [x] Explosions from the opening, dulled by route; louder thump from the true spot (`6.4`-`6.4b`, `6.2h`, 0.6.41; starting values)
 - [x] Grenade bounces from the opening; thump with no wall in the way (`6.2i`, 0.6.42; starting values)
-- [ ] Raid: `6.4` on and off with grenades in another room; `6.4a` at 0.5 if disorienting; `6.2h` and `6.2i` by ear, close blasts first
+- [ ] Raid: `6.4` on and off with grenades in another room; `6.4a` at 0.5 if disorienting; `6.2h`, `6.2i` and `6.2j` (length, 0.6.43) by ear, close blasts first
 - [ ] G36 never blends indoor/outdoor (raid_20261109_083938: 0 of 26 shots; AK-74, AK-12 and MP5 all blended). Looks like one recording. Test an AK-12 at the same spot, then the G36 with setting 0 on SEB
 - [ ] Factory with `10b` off: raids before it read 0.34-0.52 "blocked" at 15-60 m, with it 0.18 (one raid each way can't separate this from where the bots were)
 - [ ] Later (user, 9 Nov 2026): the room changes the thump. A shot in a small hard room pushes more through the wall than one in a big hall; with your head next to the wall it's bigger and less pinpointed. Today only total distance and the walls count
@@ -181,7 +181,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 108 settings, what each does, and what still reads it
+- [ ] List all 109 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

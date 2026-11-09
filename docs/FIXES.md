@@ -563,6 +563,8 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 | 80 m | −12 dB |
 | 100 m | −14 dB |
 
+**0.6.43, length (`6.2j`, 1.5 s).** How long an explosion's thump plays, 0.2 to 5 s. It can't run past the end of the recording, and it stops without a fade, so a very short setting may end abruptly.
+
 **Limits.** The game's grenade group only, so not rockets. Same room, both outdoors or no baked route stay at the true spot. Flight time still uses the straight distance. It may feel disorienting the way 6.1 did on Factory: `6.4` off and `6.4a` at 0.5 are for that. A bot's pin and throw sounds aren't moved. The hideout wrote no logs in the session it was tried, so these may not run there: test in a raid.
 
 **Check.** Grenades in another room, `6.4` off and on, then `6.2h` and `6.2i` by ear, in the open as well; blast.csv `moved`, `reason`, `pathM`, `openings`, `turnDeg`, `movedDeg`, `cutoffHz`; thump.csv explosions with `walls` 0; summary BLAST FROM THE OPENING.

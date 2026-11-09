@@ -119,7 +119,7 @@ namespace RealSoundSimulation.Fixes
                 if (dist > ExplosionRangeM) return;
                 var m = new Measure();
                 MeasureWalls(lt.position, position, m);
-                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), Plugin.ThumpExplosionReach.Value, MaxLengthS, "");
+                Thump("explosion", bank, bank.PickSingleClip(0), position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), Plugin.ThumpExplosionReach.Value, Plugin.ThumpExplosionLengthS.Value, ""); // 0.6.43: "6.2j"
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.2 through-wall thump (explosion)", e); }
             finally { Perf.End(Perf.Part.ThroughWall); }

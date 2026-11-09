@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.43 — 9 Nov 2026 (6.2j: explosion thump length)
+**Run in game:** not yet.
+- **New `6.2j Explosion thump length s`** (1.5, 0.2 to 5, live). 1.5 s was the fixed length. It can't run past the end of the recording, and it stops without a fade.
+- Version 0.6.43. F12 now has 109 settings.
+
 ## 0.6.42 — 9 Nov 2026 (6.4: grenade bounces from the opening; thump in the open)
 **Run in game:** not yet. Levels are starting values.
 - **Grenade bounces now follow `6.4`, `6.4a` and `6.4b`.** User, 9 Nov 2026: "grenades bouncing on the ground noise still coming from true direction". Each grenade's own voice is re-placed each frame at the opening, with the route re-read every 0.1 s while the grenade moves or the voice plays. No thud for bounces.
