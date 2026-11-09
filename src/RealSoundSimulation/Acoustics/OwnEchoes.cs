@@ -578,15 +578,17 @@ namespace RealSoundSimulation.Acoustics
         // 0.6.14: 96 (raid 30: 48/48 busy, 57 cuts with no bots). Unity has ~196 real voices; the game peaked at 40 playing
         // sources with 16 bot shooters (raid 25). Not higher than 96.
         public const int PoolSize = 96;
-        private const double LoopSafetyS = 15.0;
+        private const double LoopSafetyS = 15.0, FadeEarlyS = 0.04;
+        private const float MinFadeS = 0.05f;
 
         private class Voice
         {
             public GameObject Go;
             public AudioSource Src;
             public AudioLowPassFilter Lp;
-            public double Start, BusyUntil, LoopStart;
-            public bool OpenLoop;
+            public double Start, BusyUntil, LoopStart, FadeStart, FadeEnd;
+            public float FadeBase;
+            public bool OpenLoop, Fading;
             public object Owner;
             public float Delay;
         }
@@ -645,7 +647,7 @@ namespace RealSoundSimulation.Acoustics
         }
 
         public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,
-                                float clipOffset = 0f, double loopStart = 0.0, float minCutoff = 400f, bool ignoreCap = false)
+                                float clipOffset = 0f, double loopStart = 0.0, float minCutoff = 400f, bool ignoreCap = false, float fadeS = 0f)
         {
             Build();
             double now = AudioSettings.dspTime;
@@ -677,6 +679,14 @@ namespace RealSoundSimulation.Acoustics
             pick.Src.time = clipOffset > 0f && clip != null && clip.length > 0f ? Mathf.Repeat(clipOffset, clip.length) : 0f; // 0.6.14: late loop echoes
             pick.Src.PlayScheduled(start);
             pick.Start = start; pick.Owner = owner; pick.Delay = delay; pick.OpenLoop = loop; pick.LoopStart = loopStart > 0.0 ? loopStart : start - delay;
+            pick.Fading = !loop && fadeS > 0f;
+            if (pick.Fading)
+            {
+                // 0.6.44: done a little before the scheduled end, so the last volume step of a frame-rate fade is already silent
+                pick.FadeEnd = start + duration - FadeEarlyS;
+                pick.FadeStart = pick.FadeEnd - Mathf.Max(fadeS - (float)FadeEarlyS, MinFadeS);
+                pick.FadeBase = pick.Src.volume;
+            }
             if (loop)
             {
                 pick.BusyUntil = start + LoopSafetyS;
@@ -717,7 +727,7 @@ namespace RealSoundSimulation.Acoustics
             foreach (Voice v in Pool)
             {
                 if (v.Src != null) v.Src.Stop();
-                v.BusyUntil = 0; v.OpenLoop = false; v.Owner = null;
+                v.BusyUntil = 0; v.OpenLoop = false; v.Owner = null; v.Fading = false;
             }
         }
 
@@ -728,7 +738,14 @@ namespace RealSoundSimulation.Acoustics
             double now = AudioSettings.dspTime;
             OwnEchoes.TickPending(now);
             foreach (Voice v in Pool)
+            {
                 if (v.OpenLoop && now > v.Start + LoopSafetyS - 0.1) { v.OpenLoop = false; v.Owner = null; }
+                if (!v.Fading) continue;
+                if (now >= v.BusyUntil) { v.Fading = false; continue; }
+                if (now <= v.FadeStart) continue;
+                float left = Mathf.Clamp01((float)((v.FadeEnd - now) / (v.FadeEnd - v.FadeStart)));
+                v.Src.volume = v.FadeBase * left * left;
+            }
         }
     }
 }

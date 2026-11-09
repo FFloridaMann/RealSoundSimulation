@@ -32,7 +32,7 @@ namespace RealSoundSimulation.Fixes
         private const float GunRangeM = 60f, ExplosionRangeM = 100f, RefM = 5f, MergeM = 0.6f, DefaultThickM = 0.2f, RefThickM = 0.2f, MaxThickDb = 12f,
             UntaggedDb = 20f, EarthDb = 75f, ThickMetalDb = 15f, SilencedReachDb = 20f, ReachFadeDb = 6f,
             MeasureEveryS = 0.25f, AutoGapS = 0.25f, AutoSliceS = 0.3f, MaxLengthS = 1.5f, ExplosionDb = 6f, SilencedDb = -10f, MinVolume = 0.002f,
-            WallLongM = 4f, WallWideM = 2f;
+            WallLongM = 4f, WallWideM = 2f, ExplosionFadeShare = 0.5f;
         private const int MaxCasts = 8, MaxAtOnce = 4;
 
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -152,7 +152,8 @@ namespace RealSoundSimulation.Fixes
             if (free < 0) return Skip(kind, "four playing", dist, m, spent, reach, vol, cutoff, delay, route, clip);
 
             double start = now + delay, length = Mathf.Min(clip.length, maxLen);
-            EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true);
+            // 0.6.44: an explosion's thump fades out over the second half of its length ("6.2j"), so a short setting doesn't cut off. User, 9 Nov 2026.
+            EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, fadeS: kind == "explosion" ? (float)length * ExplosionFadeShare : 0f);
             Ends[free] = start + length;
             if (busy + 1 > AtOnceMax) AtOnceMax = busy + 1;
             if (kind == "gun") PlayedGun++; else PlayedExplosion++;

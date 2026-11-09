@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.44 — 9 Nov 2026 (6.2j: the thump fades out)
+**Run in game:** not yet.
+- **An explosion's thump now fades out over the second half of `6.2j`**, so a short setting doesn't cut off. User, 9 Nov 2026. At the default 1.5 s it holds for 0.75 s and then fades, so it's a little shorter-sounding than the old hard stop at 1.5 s. Gun thumps are unchanged.
+- Version 0.6.44.
+
 ## 0.6.43 — 9 Nov 2026 (6.2j: explosion thump length)
 **Run in game:** not yet.
 - **New `6.2j Explosion thump length s`** (1.5, 0.2 to 5, live). 1.5 s was the fixed length. It can't run past the end of the recording, and it stops without a fade.

@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.43")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.6.44")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -178,7 +178,7 @@ namespace RealSoundSimulation
             ThumpExplosionReach = Config.Bind(fix, "6.2g Explosion reach dB", 80f, new ConfigDescription("The same for explosions. Live.", new AcceptableValueRange<float>(0f, 120f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpExplosionDb = Config.Bind(fix, "6.2h Explosion thump level dB", 12f, new ConfigDescription("0.6.41: extra level for an explosion's thump through walls, on top of 6.2a, so guns stay as they are. Live.", new AcceptableValueRange<float>(-12f, 24f), new ConfigurationManagerAttributes { Order = 93 }));
             ThumpOpenDb = Config.Bind(fix, "6.2i Open-air thump dB", -6f, new ConfigDescription("0.6.42: an explosion with no wall in the way gets the thump too, at 6.2h's level plus this. Lower = less. Live.", new AcceptableValueRange<float>(-24f, 6f), new ConfigurationManagerAttributes { Order = 93 }));
-            ThumpExplosionLengthS = Config.Bind(fix, "6.2j Explosion thump length s", 1.5f, new ConfigDescription("0.6.43: how long an explosion's thump plays. It can't run past the end of the recording. Live.", new AcceptableValueRange<float>(0.2f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
+            ThumpExplosionLengthS = Config.Bind(fix, "6.2j Explosion thump length s", 1.5f, new ConfigDescription("0.6.43: how long an explosion's thump plays. It fades out over the second half of this, so a short setting doesn't cut off. It can't run past the end of the recording. Live.", new AcceptableValueRange<float>(0.2f, 5f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastOpeningOn = Config.Bind(fix, "6.4 Blast from the opening", true, new ConfigDescription("0.6.41: an explosion in another room comes from the doorway, window or stairwell it reaches you through, at the length of that route. Since 0.6.42 the grenade's bounces do too. The thump (6.2) stays at the true spot. Same room, both outdoors, or no baked route = the true position. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));
             BlastOpeningStrength = Config.Bind(fix, "6.4a Blast opening strength", 1f, new ConfigDescription("How far towards the opening the blast is moved: 1 = all the way, 0.5 = halfway between the true direction and the opening. Live.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 93 }));
             BlastDullOn = Config.Bind(fix, "6.4b Dull the blast by its route", true, new ConfigDescription("0.6.41: the blast loses its highs by the way it got to you, with the same rule, strength and floor as gunshots (6.1c, 6.1d). Works with 6.4 off. Live.", null, new ConfigurationManagerAttributes { Order = 93 }));

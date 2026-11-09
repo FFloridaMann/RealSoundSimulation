@@ -235,7 +235,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.3`, `6.3a`-`6.3d` | explosion echoes: on, level, echoes per blast, length, range (0.6.39) | on, 0 dB, 6, 1.5 s, 120 m |
 | `6.2h` | extra level for an explosion's thump (0.6.41) | +12 dB |
 | `6.2i` | an explosion's thump with no wall in the way, on top of `6.2h` (0.6.42) | −6 dB |
-| `6.2j` | how long an explosion's thump plays (0.6.43) | 1.5 s |
+| `6.2j` | how long an explosion's thump plays; fades out over the second half (0.6.43, fade 0.6.44) | 1.5 s |
 | `6.4`, `6.4a`, `6.4b` | an explosion or grenade bounce in another room comes from the opening: on, how far, dulled by its route (0.6.41, bounces 0.6.42) | on, 1, on |
 | `9v` | the roof rain floor count includes large low-detail floors (0.6.36) | on |
 | `9w` | roof rain fades out where the game says indoors with no rain (0.6.36) | on |
