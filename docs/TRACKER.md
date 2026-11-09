@@ -3,7 +3,7 @@
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
 Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 
-**Now:** 0.6.31 (`9r` roof rain by material) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
+**Now:** 0.6.31 (`9r`) and 0.6.32 (`9s`) waiting for a rainy raid · **Next:** retune from that raid, then 6.2 (through walls)
 
 ---
 
@@ -76,7 +76,10 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] Raid 40: `9o` on: rain deep in buildings "mostly sounds better"
 - [x] Raid 41: the old top-roof test was wrong at 4,740 of 28,043 spots with floors above: `9p` confirmed
 - [ ] Raid: `9r` in a metal trailer or under tin
-- [ ] Probe memory (raid 41 tag 4: slow, or wrong for the space): design under review
+- [x] Probe memory reacts to real changes instead of speed (`9s`, 0.6.32; raid 41 tag 4)
+- [ ] Raid: walk into a roofed room and stop, repeat slowly, stand by a window (`9s` on and off)
+- [ ] Decide: rays traced from ahead of you for the walking lag
+- [ ] Decide: roof rain at a fixed level instead of the room's low game value (0.051)
 - [x] Roof material (4b phase 3): floors above take off their material's loss (`9p`, 0.6.29)
 - [ ] Retune: `9l` rain floor, `9k` exit credits, roof rain 0.85 and ×0.7, echo levels
 
@@ -144,8 +147,8 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 80 settings, what each does, and what still reads it
-- [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `1d`, `1e`, `3n`, `3o`)
+- [ ] List all 81 settings, what each does, and what still reads it
+- [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first
 - [ ] Defaults = the tested setup; plain-language descriptions

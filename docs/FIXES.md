@@ -459,6 +459,14 @@ How it works: [DESIGN.md](DESIGN.md) §2.6, §3.2b, §5.1b. Design and review: [
 
 The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor on the roof rain from `Materials.RoofRainGain`: thin metal 2.8, thick metal 1.6, thin wood and plastic 1.4, fabric 0.7, others 1. Not measured; set by ear. The mod can now raise the rain above the game's own level on a loud roof. Same recording, so no true patter yet (own sounds are logged for step E).
 
+## 9s: Sound reacts to real changes (0.6.32)
+
+**Problem (raid 41 tag 4).** Probe v2's memory was set by your speed, so stopping held on to the last place for 3 s and creeping into a different room reacted slowly.
+
+**Fix.** A 0.4 s estimate runs beside the 3 s memory. Three checks compare them: roof rain per upward path, the share of late sound that gets out, and the arrival direction. A difference larger than the fast estimate's own noise (3 sigma, with minimum differences) replaces the memory with the fast estimate, at most every 0.25 s. Consumers then smooth over 0.35 s for a second.
+
+**Check.** Walk a hallway into a roofed room and stop, repeat slowly, stand by a window for 30 s. It should settle within about 0.6 s; summary: changes while standing still should be few. Deep inside, with very few paths escaping, it can't tell and stays at 3 s.
+
 ## Fix 4: Off-map sounds as outdoor
 
 **Problem.** A sound placed outside every baked audio room has an "invalid" room. The propagation search then finds no route and returns **1.0, fully blocked** (`ParallelSoundPropagationCalculator.OnUpdate`). SPTBattleAmbience plays its fake distant battles 100–500 m away, often off the baked map.

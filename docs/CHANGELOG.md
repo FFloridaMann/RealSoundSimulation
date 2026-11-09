@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.6.32 — 8 Nov 2026 (the probe forgets when the space really changes)
+**Run in game:** not yet. From raid 41 tag 4 ("slow to play"; "at times you hear audio that doesn't make sense for the space") and a Fable design review.
+- **New `9s Sound reacts to real changes`** (on, live). Probe v2's memory depended on speed: 3 s below 0.5 m/s, 0.5 s above 1.5 m/s. So stopping stretched out where you had just been, and creeping through a door was the worst case. Now a 0.4 s estimate runs beside the 3 s memory. When they differ by more than chance explains (roof rain, how much sound gets out, or the direction it arrives from), the memory is replaced by the fast estimate. At most every 0.25 s. Off = memory by speed.
+- For 1 s after a change, the sounds that follow the probe smooth over 0.35 s. Otherwise few escaping paths still means a long average, so deep rooms don't flutter (a change from Fable's suggestion to drop that rule).
+- probe2.csv ends with `fastRoof, changes`; `memoryS` shows the time since the last change, up to 3 s. Summary counts changes by kind, and those while standing still, which should be few.
+- Not built: tracing some rays from ahead of you (would help the lag at walking speed).
+- Version 0.6.32.
+
 ## 0.6.31 — 8 Nov 2026 (roof rain level by roof material)
 **Run in game:** not yet. From raid 41 (raid_20261108_210319): rain in a metal trailer was quiet and didn't sound like metal; `9p` and `9q` couldn't help because there are no floors above.
 - **New `9r Roof rain by roof material`** (1, live): roof rain's volume follows the most common surface above you: thin metal ×2.8 (about +9 dB), thick metal ×1.6, thin wood and plastic ×1.4, fabric ×0.7, others ×1. Values set by ear, not measured. It's the same game recording, so it sounds louder on metal, not like patter. Own roof-rain sounds are logged for step E.
