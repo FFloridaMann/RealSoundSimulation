@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.2";
+        public const string Version = "0.7.3";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -133,6 +133,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
         internal static ConfigEntry<float> ConcussionPressureDb, EarsReachDb; // 0.6.60 "6.9m", "6.9l"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
+        internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
+        internal static ConfigEntry<float> ShotPitchPct, ShotVolumeDb; // 0.7.3
         internal static ConfigEntry<float> YourRoomDb; // 0.7.1 "6.9o"
         internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
@@ -177,6 +179,9 @@ namespace RealSoundSimulation
             // The big switches go first, so they are easy to find: concussion now, ear ringing and headsets when they are built.
             ConcussionPressureOn = Bind(general, "Concussion by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             YourRoomOn = Bind(general, "Your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
+            ShotVariationOn = Bind(general, "Shot-to-shot variation", true, "Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so no two shots, or their echoes, sound exactly alike. Its tail and echoes share the same shot's change. Off = every shot identical, as in the game.");
+            ShotPitchPct = Bind(general, "Variation pitch %", 2f, "How far each shot's pitch can vary, either way. 2 = up to 2% higher or lower. 0 = no pitch change.", R(0f, 6f));
+            ShotVolumeDb = Bind(general, "Variation volume dB", 1f, "How much quieter a shot can randomly be. 1 = up to 1 dB quieter. 0 = no volume change.", R(0f, 4f));
             SoftCutOn = Bind(general, "Soft concussion cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
             GunSounds = Bind(general, "Gun recordings", GunSoundSet.SPT, "Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings, once built into the seb_sounds folder with tools/build_seb_sounds.py. Changes at the next trigger pull. Was 0.");
             SebOnFullAuto = Bind(general, "SEB recordings on full-auto guns", false, "Also use SEB's recordings on guns that can fire full auto. Off because the game loops one recording while the trigger is held and SEB's are single shots, so bursts sound wrong. Was 0a.", null, adv);
@@ -358,6 +363,7 @@ namespace RealSoundSimulation
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("1d first burst", () => FirstBurstOcclusion.Apply(Harmony)); // 0.6.21
             Safe("1e shot overlap", () => ShotOverlap.Apply(Harmony)); // 0.6.23
+            Safe("shot variation", () => ShotVariation.Apply(Harmony)); // 0.7.3
             Safe("3o shot ring turn", () => OwnShotTurn.Apply(Harmony)); // 0.6.30
             Safe("bot shots log", () => BotShots.Apply(Harmony)); // 0.6.21
             Safe("route log", () => RouteLog.Apply(Harmony)); // 0.6.22

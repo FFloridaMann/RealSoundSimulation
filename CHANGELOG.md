@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.3 (not released yet): no two shots alike
+
+- Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so its echoes and tail vary with it. F12, General: **Shot-to-shot variation**, with **Variation pitch %** (2) and **Variation volume dB** (1) to test by ear. Not played yet.
+
 ## 0.7.2 (not released yet): better bug reports
 
 - The bug report zip now also lists your installed mods (BepInEx plugins and server mods, by name) and includes BepInEx's own log, so problems with other mods can be found.

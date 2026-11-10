@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.3 — 10 Nov 2026 (shot-to-shot variation)
+**Run in game:** not yet.
+- New `Fixes/ShotVariation.cs`: a first-priority prefix on `SuperBetterAudioQueue.Enqueue` multiplies `pitch` by 1 ± `Variation pitch %` and `volume` by up to −`Variation volume dB`, and scales `clipTime` by the pitch change. Every postfix on the same call (own echoes, bot echoes, shot logs) sees the varied values. One value per shot: a sample queued in the same frame on the same gun, or right after a firing loop (clipTime 0), reuses it. Brought back from the old Gun Audio mod (2%, about 1 dB), which the 1e port left out. Summary line SHOT VARIATION.
+- Settings: General → `Shot-to-shot variation` (on), `Variation pitch %` (2, 0–6), `Variation volume dB` (1, 0–4).
+
 ## 0.7.2 — 10 Nov 2026 (bug report: the player's setup)
 **Run in game:** not yet.
 - The bug report zip adds `mods.txt` (game version, every loaded BepInEx plugin with name, version, id and folder name, and the server mod folder names, read from `SPT_Runtime/user/mods`, `SPT/user/mods` or `user/mods`; names only, never full paths) and a copy of `BepInEx/LogOutput.log`, read with sharing because BepInEx keeps it open.
