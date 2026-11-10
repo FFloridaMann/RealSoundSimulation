@@ -171,6 +171,9 @@ namespace RealSoundSimulation
             const bool adv = true;
 
             // 1. General
+            // The big switches go first, so they are easy to find: concussion now, ear ringing and headsets when they are built.
+            ConcussionPressureOn = Bind(general, "Concussion by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
+            SoftCutOn = Bind(general, "Soft concussion cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
             GunSounds = Bind(general, "Gun recordings", GunSoundSet.SPT, "Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings, once built into the seb_sounds folder with tools/build_seb_sounds.py. Changes at the next trigger pull. Was 0.");
             SebOnFullAuto = Bind(general, "SEB recordings on full-auto guns", false, "Also use SEB's recordings on guns that can fire full auto. Off because the game loops one recording while the trigger is held and SEB's are single shots, so bursts sound wrong. Was 0a.", null, adv);
             RayQualityCfg = Bind(general, "Sound quality", AcousticProbe.RayQuality.Medium, "How many sound paths are traced through the map each second. Higher = steadier, more accurate sound deep inside buildings, for more CPU. Low costs about half of Medium, High twice, Ultra four times. Was 9g.");
@@ -230,9 +233,7 @@ namespace RealSoundSimulation
             ExplosionEchoDb = Bind(blasts, "Echo volume dB", 0f, "Raise or lower explosion echoes. Was 6.3a.", R(-24f, 12f));
             ShockOn = Bind(blasts, "Shock wave", true, "The part of a blast you feel: a pressure hit, a thump that grows up close, and the world dipping for a moment. Was 6.9.");
             ShockLevelDb = Bind(blasts, "Pressure hit volume dB", 0f, "Full strength from 5 m in, weaker further out by real blast pressure. Was 6.9a.", R(-24f, 12f));
-            ConcussionPressureOn = Bind(blasts, "Concussion by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             ConcussionPressureDb = Bind(blasts, "Concussion strength dB", 0f, "Makes blasts count as stronger or weaker for concussion. +6 is about like being two-thirds as far away. Was 6.9m.", R(-12f, 12f));
-            SoftCutOn = Bind(blasts, "Soft concussion cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
             FragmentPassOn = Bind(blasts, "Fragment pass-bys", true, "Fragments that pass you whizz along their real flight path, and crack when they come very close. Was 6.7f.");
             BlastOpeningStrength = Bind(blasts, "Doorway strength", 1f, "How far towards the opening the blast is moved. 1 = all the way, 0.5 = halfway. Was 6.4a.", R(0f, 1f), adv);
             BlastDullOn = Bind(blasts, "Muffle by route", true, "The blast loses its highs by the way it got to you. Was 6.4b.", null, adv);
