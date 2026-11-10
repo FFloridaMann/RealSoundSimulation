@@ -155,7 +155,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] G36 never blends indoor/outdoor (raid_20261109_083938: 0 of 26 shots; AK-74, AK-12 and MP5 all blended). Looks like one recording. Test an AK-12 at the same spot, then the G36 with setting 0 on SEB
 - [ ] Factory with `10b` off: raids before it read 0.34-0.52 "blocked" at 15-60 m, with it 0.18 (one raid each way can't separate this from where the bots were)
 - [ ] Later (user, 9 Nov 2026): the room changes the thump. A shot in a small hard room pushes more through the wall than one in a big hall; with your head next to the wall it's bigger and less pinpointed. Today only total distance and the walls count
-- [ ] Your own room counts for blasts (user, 10 Nov 2026): a blast getting into a small closed room you're in should build up there too, for the shock wave and concussion. Today only the blast's room is measured (`ShockWave.Dose`)
+- [x] Your own room counts for blasts, concussion part (user, 10 Nov 2026): built in 0.7.1 as `6.9n`/`6.9o`, see above
+- [ ] Your own room counts for the shock wave sound too: the hit's closed-room boost, repeat hits and push still use only the blast's room (`ShockWave.FireCore`)
 
 ## 6.3 · Echoes for bot gunshots and grenades
 - [x] One headroom cap counting every echo type (0.6.61; the thump and shock layers still go first, at most a few)
