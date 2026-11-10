@@ -2,6 +2,8 @@
 
 ## Sound Engine Backport, by red_the_fox
 
+Used with the author's permission: his room routes (pathing) and EFT 1.0 audio.
+
 https://sp-mod.com/mod/3314/sound-engine-backport
 
 Released under the MIT licence. Used in Real Sound Simulation:

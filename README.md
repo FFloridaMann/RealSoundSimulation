@@ -95,7 +95,7 @@ Rules the code follows:
 
 ## Credits
 
-- Footstep and handling settings and the routes between rooms come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox (MIT).
+- The routes between rooms, the footstep and handling settings, and the optional EFT 1.0 gun recordings come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox (MIT), used with his permission.
 - The soft concussion cut adapts [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony (MIT).
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
