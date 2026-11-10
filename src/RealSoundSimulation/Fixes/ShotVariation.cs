@@ -46,7 +46,12 @@ namespace RealSoundSimulation.Fixes
                 {
                     float p = Plugin.ShotPitchPct.Value / 100f;
                     float db = Plugin.ShotVolumeDb.Value;
-                    last.PitchMul = 1f + Random.Range(-p, p);
+                    // 0.7.6: a firing loop keeps the game's pitch (volume still varies). The loop's rounds are baked into its
+                    // recording, and the game starts the burst's tail at a whole number of rounds counted with its own pitch
+                    // (WeaponSoundPlayer.StopFiringLoop: rounds x BeatLn / _pitch). A loop 2% fast is 40 ms ahead after 2 s
+                    // of fire, so its next round had already begun when the tail cut in: a doubled last shot (or a gap, 2%
+                    // slow). The tail after the loop shares this value as before, so it keeps the game's pitch too.
+                    last.PitchMul = clipTime <= 0f ? 1f : 1f + Random.Range(-p, p);
                     float drop = Random.Range(0f, db);
                     last.VolumeMul = Mathf.Pow(10f, -drop / 20f);
                     Varied++; _sumAbsPitch += Mathf.Abs(last.PitchMul - 1f); _sumDb += drop;

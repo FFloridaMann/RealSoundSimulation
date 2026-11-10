@@ -39,6 +39,7 @@ namespace RealSoundSimulation.Fixes
         [ThreadStatic] private static bool _ownShot;
         [ThreadStatic] private static bool _isTail;
         private static float _indoorWeight = float.NaN; // for the current own shot/tail (NaN = leave the game's pick)
+        private static float _usedWeight = float.NaN;   // 0.7.6: what is played: after the steepness curve (3j) and the glide
         private static float _lastAimEnc = float.NaN, _lastAimDist = float.NaN, _lastAimClosure = float.NaN;
 
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -70,7 +71,7 @@ namespace RealSoundSimulation.Fixes
                 postfix: new HarmonyMethod(typeof(GunEnvironmentBlend), nameof(PickPostfix)));
         }
 
-        public static void Reset() { Blended = 0; _openEased = float.NaN; _openAt = -100f; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
+        public static void Reset() { Blended = 0; _glided = float.NaN; _glideAt = -100f; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
 
         internal static bool IsOwn(WeaponSoundPlayer wsp)
         {
@@ -80,7 +81,7 @@ namespace RealSoundSimulation.Fixes
 
         private static void FirePrefix(WeaponSoundPlayer __instance, Vector3 shotPosition, Vector3 shotDirection)
         {
-            _ownShot = false; _isTail = false; _indoorWeight = float.NaN;
+            _ownShot = false; _isTail = false; _indoorWeight = float.NaN; _usedWeight = float.NaN;
             try
             {
                 if (!IsOwn(__instance) || !Plugin.GunEnvBlendOn.Value) return;
@@ -98,8 +99,9 @@ namespace RealSoundSimulation.Fixes
                     if (!float.IsNaN(_lastSphere) && !float.IsNaN(_lastLobe)) { LobeDiffSum += _lastSphere - _lastLobe; LobeDiffN++; }
                     _lastMuzzleDist = Vector3.Distance(shotPosition, EnclosureProbe.LastOrigin);
                     _indoorWeight = EnclosureWeight(_lastAimClosure);
+                    _usedWeight = Glide(Steep(_indoorWeight));
                 }
-                else _indoorWeight = DoorwayWeight();
+                else { _indoorWeight = DoorwayWeight(); _usedWeight = Steep(_indoorWeight); }
             }
             catch (Exception e) { _ownShot = false; DiagRunner.ReportOnce("fix 3c own gunshot (fire)", e); }
         }
@@ -115,14 +117,14 @@ namespace RealSoundSimulation.Fixes
         // The tail at the end of a burst: same weight as the burst's last shot, re-read for doorway mode.
         private static void TailPrefix(WeaponSoundPlayer __instance)
         {
-            _ownShot = false; _isTail = true; _indoorWeight = float.NaN;
+            _ownShot = false; _isTail = true; _indoorWeight = float.NaN; _usedWeight = float.NaN;
             try
             {
                 if (!Plugin.GunEnvBlendOn.Value || !IsOwn(__instance)) return;
                 _ownShot = true;
-                _indoorWeight = Plugin.OwnShotSource.Value == OwnShotBlendSource.Enclosure && EnclosureProbe.Valid
-                    ? EnclosureWeight(_lastAimClosure)
-                    : DoorwayWeight();
+                bool enclosure = Plugin.OwnShotSource.Value == OwnShotBlendSource.Enclosure && EnclosureProbe.Valid;
+                _indoorWeight = enclosure ? EnclosureWeight(_lastAimClosure) : DoorwayWeight();
+                _usedWeight = enclosure ? Glide(Steep(_indoorWeight)) : Steep(_indoorWeight);
             }
             catch (Exception e) { _ownShot = false; DiagRunner.ReportOnce("fix 3c own gunshot (tail)", e); }
         }
@@ -176,13 +178,14 @@ namespace RealSoundSimulation.Fixes
         // the room read 0.69). These two are measured right now: the sky straight above your head and the roof over the
         // muzzle. When both are open the indoor share is capped, down to OpenAirMax with the setting at 1. Under an overhang
         // (roof above your head) nothing changes.
-        // 0.7.5: eased and softened. raid_20261110_181920 tags 2 and 3: at a roof edge the head reading (five rays straight up,
-        // so it moves in steps of 0.2) went 1 -> 0.4 between two shots 0.2 s apart and the shot jumped from 70% to 15% indoor;
-        // moving along the edge it flipped 15/60/17/58%. Now: the head and muzzle readings are averaged (one flickering ray
-        // matters less), the openness glides with a 0.5 s time constant (a quiet gap longer than QuietResetS starts fresh,
-        // since nothing was heard changing), and the pull starts at 30% open and is full only at 90%.
-        private const float OpenAirMax = 0.15f, OpenFrom = 0.3f, OpenFull = 0.9f, OpenTauS = 0.5f, QuietResetS = 3f;
-        private static float _openEased = float.NaN, _openAt = -100f;
+        // 0.7.5: softened. raid_20261110_181920 tags 2 and 3: at a roof edge the head reading (five rays straight up, so it
+        // moves in steps of 0.2) went 1 -> 0.4 between two shots 0.2 s apart and the shot jumped from 70% to 15% indoor; moving
+        // along the edge it flipped 15/60/17/58%. The head and muzzle readings are averaged (one flickering ray matters less).
+        // 0.7.6: the 0.7.5 glide on the openness is gone (see Glide below: the played weight glides instead), and the pull is
+        // full at 75% open (0.7.5 had 90%). With 90% the very shot this was made for (raid_20261110_174955 at 50 s:
+        // head 49% and muzzle 28% roofed, so 62% open) was capped to 53%, the 53% it already had: nothing changed.
+        // At 75% it is capped to 32%. Head under a roof and muzzle 30-45% roofed (an overhang): capped to 97% at most, so still untouched.
+        private const float OpenAirMax = 0.15f, OpenFrom = 0.3f, OpenFull = 0.75f;
         private static float OpenAirCap(float w)
         {
             float pull = Mathf.Clamp01(Plugin.OpenAirPull.Value);
@@ -190,12 +193,29 @@ namespace RealSoundSimulation.Fixes
             float zenith = EnclosureProbe.ZenithClosure, muzzleRoof = EnclosureProbe.MuzzleRoof;
             if (float.IsNaN(zenith)) return w;
             float open = float.IsNaN(muzzleRoof) ? 1f - zenith : 0.5f * ((1f - zenith) + (1f - muzzleRoof));
-            float now = Time.time, dt = now - _openAt;
-            if (float.IsNaN(_openEased) || dt > QuietResetS || dt < 0f) _openEased = open;
-            else _openEased += (open - _openEased) * (1f - Mathf.Exp(-dt / OpenTauS));
-            _openAt = now;
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OpenFrom, OpenFull, _openEased)) * pull;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OpenFrom, OpenFull, open)) * pull;
             return Mathf.Min(w, Mathf.Lerp(1f, OpenAirMax, t));
+        }
+
+        // 0.7.6: the glide between shots, on the weight that is played (after the steepness curve), not on the openness.
+        // 0.7.5 eased only the open-air reading, so every other cause of a jump stayed: raid_20261110_181920 tag 5 (636-642 s,
+        // the pull not acting at all) measured 0.44-0.57 shot to shot and played 46/68/33/43/32/41/37/36/59% indoor, because
+        // the steepness curve is at its steepest around an even split (0.47 -> 0.37, 0.52 -> 0.59); the aim cone's nine rays
+        // do the same indoors (618.9 s: one shot at 37% between shots at 71%). Now whatever moved the weight, the played
+        // value moves towards it with a 0.5 s time constant, counted in real time between your shots: shots 0.2 s apart take
+        // a third of the step, shots a second apart nearly all of it, and after QuietResetS without a shot the next one
+        // starts fresh (nothing was heard changing, and stepping outside must not leave an indoor shot behind).
+        // Not per frame on purpose: that would lag the first shot after you move, which is what 0.7.4 set out to remove.
+        private const float GlideTauS = 0.5f, QuietResetS = 3f;
+        private static float _glided = float.NaN, _glideAt = -100f;
+        private static float Glide(float used)
+        {
+            if (float.IsNaN(used)) return used;
+            float now = Time.time, dt = now - _glideAt;
+            if (float.IsNaN(_glided) || dt > QuietResetS || dt < 0f) _glided = used;
+            else _glided += (used - _glided) * (1f - Mathf.Exp(-dt / GlideTauS));
+            _glideAt = now;
+            return _glided;
         }
 
         // 0.6.0: fix 9a - gunshots use probe v2 (when it's running)
@@ -241,7 +261,7 @@ namespace RealSoundSimulation.Fixes
         private static void PickPostfix(SoundBank __instance, ref AudioClip clip1, ref AudioClip clip2, ref float proportions, int environment)
         {
             if (!_ownShot || clip1 == null || clip2 != null) return; // only single-clip picks (own shots at distance 0)
-            float w = Steep(_indoorWeight);
+            float w = _usedWeight; // 0.7.6: steepened and glided once per shot in the prefixes (was Steep(_indoorWeight) here)
             LastWeightUsed = w;
             LastMixed = false;
             bool applied = false;

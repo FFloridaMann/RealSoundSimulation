@@ -657,7 +657,8 @@ namespace RealSoundSimulation.Acoustics
         public static int Allowed()
         {
             if (_realVoices < 0) _realVoices = AudioSettings.GetConfiguration().numRealVoices;
-            return Mathf.Clamp(_realVoices - Diagnostics.DiagRunner.LastPlayingInContainers - Fixes.OpeningSounds.Voices - ReserveVoices, 16, PoolSize);
+            // 0.7.6: the room tail's voices (at most 6) are counted too
+            return Mathf.Clamp(_realVoices - Diagnostics.DiagRunner.LastPlayingInContainers - Fixes.OpeningSounds.Voices - Fixes.RoomTail.Voices - ReserveVoices, 16, PoolSize);
         }
 
         public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,

@@ -2,6 +2,14 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.6 (not released yet): steadier shots at roof edges
+
+- Your shot's indoor/outdoor mix now glides from one shot to the next whatever caused the change (a roof edge, turning to fire out of a window, a small wobble in the measurement), instead of only when the sky opened up. Shots a second or more apart still take the new mix almost at once, and the first shot after a few quiet seconds is always fresh.
+- Open air pulls to outdoor a little more firmly again: the last version had softened it so far that the shot it was made for, just outside a building, was left half indoor.
+- The measured room tail now uses at most three tails at once (the oldest gives way in fast fire), and its voices are counted so echoes never push the game's own sounds out.
+- Automatic fire keeps its normal pitch: a varied pitch could put a burst's last shot slightly out of step. Volume still varies, and single shots vary as before.
+- Not played yet.
+
 ## 0.7.5 (not released yet): smoother open-air pull
 
 - Stepping out from under a roof edge, your shot now glides from indoor to outdoor over about half a second instead of jumping between two shots, and moving along a roof edge no longer flips it back and forth. Not played yet.
