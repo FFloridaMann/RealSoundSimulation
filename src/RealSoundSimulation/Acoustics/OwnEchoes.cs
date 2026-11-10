@@ -45,6 +45,7 @@ namespace RealSoundSimulation.Acoustics
         [ThreadStatic] private static bool _own;
         [ThreadStatic] private static bool _tail;
         [ThreadStatic] private static AudioClip _echoClip;
+        internal static AudioClip DryClip => _echoClip; // 0.7.4: the room tail uses the same dry recording
         private static Vector3 _aim = Vector3.forward;
         private static int _callId, _tapsForCall = -1;
 

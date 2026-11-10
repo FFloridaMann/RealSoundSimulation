@@ -95,6 +95,8 @@ namespace RealSoundSimulation.Diagnostics
             finally { Perf.End(Perf.Part.DiagTick); }
             try { AudioCounters.Sample(); } // 0.6.20: one read per counter, also during the back-off (spawn frames are the ones to see)
             catch (Exception e) { ReportOnce("audio counters", e); }
+            try { RoomTail.Tick(); } // 0.7.4: not a diagnostic; lets the tail voice go after quiet seconds
+            catch (Exception e) { ReportOnce("room tail (tick)", e); }
             if (backoff) return;
             Perf.Begin();
             try { EnvProbe.Tick(now); }
@@ -162,7 +164,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); BotEchoes.Reset(); BlastFromOpening.Reset(); BlastRecording.Reset(); ShockWave.Reset(); ConcussionProof.Reset(); FragmentPassBy.Reset(); ClosedDoors.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); ShotVariation.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
+            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); BotEchoes.Reset(); BlastFromOpening.Reset(); BlastRecording.Reset(); ShockWave.Reset(); ConcussionProof.Reset(); FragmentPassBy.Reset(); ClosedDoors.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); ShotVariation.Reset(); RoomTail.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -538,6 +540,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.Append(ExplosionEchoes.Summary());
             sb.Append(BotEchoes.Summary()); // 0.6.61
             sb.Append(ShotVariation.Summary()); // 0.7.3
+            sb.Append(RoomTail.Summary()); // 0.7.4
             sb.Append(BlastFromOpening.Summary()); // 0.6.41
             sb.Append(BlastRecording.Summary()); // 0.6.49
             sb.Append(ShockWave.Summary()); // 0.6.53

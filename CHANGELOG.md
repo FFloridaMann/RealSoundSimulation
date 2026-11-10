@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.4 (not released yet): your shot in the real room
+
+- **Measured room tail:** your shot's reverb tail now comes from the room the mod measures: as long as the room really rings, duller in soft rooms than hard ones, and as loud as the shot is indoor. The game's own reverb is turned down under it. F12, Your gun: on/off, volume, length and how far the game's reverb is turned down.
+- **Open air pulls to outdoor:** with open sky above you and over the muzzle, your shot is mixed firmly outdoor, even right after you step out of a building. In the last raid this changed 13 of 56 shots, all outdoors (one went from 53% indoor to 26%).
+- Not played yet.
+
 ## 0.7.3 (not released yet): no two shots alike
 
 - Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so its echoes and tail vary with it. F12, General: **Shot-to-shot variation**, with **Variation pitch %** (2) and **Variation volume dB** (1) to test by ear. Not played yet.

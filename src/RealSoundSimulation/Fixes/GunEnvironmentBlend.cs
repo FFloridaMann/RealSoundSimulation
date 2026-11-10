@@ -72,7 +72,7 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset() { Blended = 0; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
 
-        private static bool IsOwn(WeaponSoundPlayer wsp)
+        internal static bool IsOwn(WeaponSoundPlayer wsp)
         {
             BaseSoundPlayer.IObserverToPlayerBridge b = BridgeRef(wsp);
             return b != null && b.PointOfView == EPointOfView.FirstPerson;
@@ -168,7 +168,24 @@ namespace RealSoundSimulation.Fixes
                 case SmallSpaceRule.Soft: size = 1f - (1f - size) * 0.3f; break; // 0.5 -> 0.85
             }
             _lastRoomUsed = room;
-            return Mathf.Clamp01(w * size);
+            return OpenAirCap(Mathf.Clamp01(w * size));
+        }
+
+        // 0.7.4: in open air the shot is outdoor. The room reading above (probe v2) lags as you walk out of a building
+        // (raid_20261110_174955 at 50 s: muzzle in the open, half the sky open, aiming 23 m out, still mixed 53% indoor because
+        // the room read 0.69). These two are measured right now: the sky straight above your head and the roof over the
+        // muzzle. When both are open the indoor share is capped, down to OpenAirMax with the setting at 1. Under an overhang
+        // (roof above your head) nothing changes.
+        private const float OpenAirMax = 0.15f, OpenFrom = 0.2f, OpenFull = 0.6f;
+        private static float OpenAirCap(float w)
+        {
+            float pull = Mathf.Clamp01(Plugin.OpenAirPull.Value);
+            if (pull <= 0f) return w;
+            float zenith = EnclosureProbe.ZenithClosure, muzzleRoof = EnclosureProbe.MuzzleRoof;
+            if (float.IsNaN(zenith)) return w;
+            float open = Mathf.Min(1f - zenith, float.IsNaN(muzzleRoof) ? 1f - zenith : 1f - muzzleRoof);
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OpenFrom, OpenFull, open)) * pull;
+            return Mathf.Min(w, Mathf.Lerp(1f, OpenAirMax, t));
         }
 
         // 0.6.0: fix 9a - gunshots use probe v2 (when it's running)
@@ -274,7 +291,8 @@ namespace RealSoundSimulation.Fixes
             // 0.3.3: plus "5a Hard room reverb boost dB" scaled by how much this is a hard closed room (stairwell).
             float hr = HardRoomNow();
             float hardRoom = float.IsNaN(hr) ? 0f : hr;
-            float boost = Plugin.OwnReverbBoostDb.Value + Plugin.HardRoomReverbDb.Value * hardRoom;
+            float boost = Plugin.OwnReverbBoostDb.Value + Plugin.HardRoomReverbDb.Value * hardRoom
+                + (Plugin.RoomTailOn.Value ? Plugin.GameReverbUnderTailDb.Value : 0f); // 0.7.4: the measured tail takes over
             LastReverbBoost = boost;
             foreach (BetterSource bs in q.AudioSources)
             {

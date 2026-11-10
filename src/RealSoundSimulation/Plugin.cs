@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.3";
+        public const string Version = "0.7.4";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -135,6 +135,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
         internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
         internal static ConfigEntry<float> ShotPitchPct, ShotVolumeDb; // 0.7.3
+        internal static ConfigEntry<bool> RoomTailOn; // 0.7.4
+        internal static ConfigEntry<float> RoomTailDb, RoomTailLength, GameReverbUnderTailDb, OpenAirPull; // 0.7.4
         internal static ConfigEntry<float> YourRoomDb; // 0.7.1 "6.9o"
         internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
@@ -197,6 +199,11 @@ namespace RealSoundSimulation
             EchoMaxTaps = Bind(gun, "Echoes per shot", 4, "The loudest this many reflections play for each shot. Was 6b.", N(1, 8));
             OwnReverbBoostDb = Bind(gun, "Room reverb boost dB", 0f, "Raise or lower the game's own room reverb on your shots. 0 = the game's level. Was 5.", R(-12f, 12f));
             GunEnvBlendOn = Bind(gun, "Indoor/outdoor blend", true, "Your shot mixes the game's indoor and outdoor recordings by how enclosed the space really is, instead of switching from one to the other. Was 3c.");
+            OpenAirPull = Bind(gun, "Open air pulls to outdoor", 1f, "With open sky above you and over the muzzle, your shot is mixed firmly outdoor (at most 15% indoor at 1), even right after you step out of a building. Under an overhang nothing changes. 0 = off.", R(0f, 1f));
+            RoomTailOn = Bind(gun, "Measured room tail", true, "Your shot's reverb tail comes from the room the mod measures: as long as the room really rings, duller in soft rooms than hard ones, and as loud as the shot is indoor. The game's own reverb is turned down under it.");
+            RoomTailDb = Bind(gun, "Room tail volume dB", 0f, "Raise or lower the measured room tail. Try +6 to hear exactly what it does.", R(-24f, 12f));
+            RoomTailLength = Bind(gun, "Room tail length x", 1f, "Scales the measured reverb time. 1 = as measured.", R(0.3f, 2f));
+            GameReverbUnderTailDb = Bind(gun, "Game reverb under the tail dB", -6f, "How far the game's own reverb on your shots is turned down while the measured tail is on, so the two don't double up. 0 = leave it.", R(-24f, 0f));
             EchoFar = Bind(gun, "Far echoes", true, "Also echo off building faces, cliffs and hills 30 to 250 m away. Was 6d.", null, adv);
             EchoHardRoomDb = Bind(gun, "Hard room echo boost dB", 4f, "In bare concrete stairwells and corridors your echoes are louder and up to 3 more play, by how hard and closed the room is. Was 6e.", R(0f, 12f), adv);
             HardRoomReverbDb = Bind(gun, "Hard room reverb boost dB", 6f, "Extra room reverb on your shots in bare concrete stairwells and corridors, by how hard and closed the room is. 0 = off. Was 5a.", R(0f, 12f), adv);
@@ -364,6 +371,7 @@ namespace RealSoundSimulation
             Safe("1d first burst", () => FirstBurstOcclusion.Apply(Harmony)); // 0.6.21
             Safe("1e shot overlap", () => ShotOverlap.Apply(Harmony)); // 0.6.23
             Safe("shot variation", () => ShotVariation.Apply(Harmony)); // 0.7.3
+            Safe("room tail", () => RoomTail.Apply(Harmony)); // 0.7.4
             Safe("3o shot ring turn", () => OwnShotTurn.Apply(Harmony)); // 0.6.30
             Safe("bot shots log", () => BotShots.Apply(Harmony)); // 0.6.21
             Safe("route log", () => RouteLog.Apply(Harmony)); // 0.6.22

@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.4 — 10 Nov 2026 (measured room tail; open air pulls to outdoor)
+**Run in game:** not yet.
+- New `Fixes/RoomTail.cs`: own single shots and burst tails play their dry (outdoor) recording, at the shot's varied pitch and volume x the indoor weight, into one 2D `AudioReverbFilter` (wet only, early reflections off: the echoes do those). decayTime = probe v2 `Rt60` x `Room tail length x` (0.2-4 s; 0.8 s if no reading), decayHFRatio 0.45-0.95 and roomHF -1400 to -250 mB by hard room, reverbDelay and reflectionsDelay from the mean free path. The voice plays silence while you shoot so a tail isn't cut when a sample ends, and stops after 8 quiet s. The game's Meta reverb copy gets `Game reverb under the tail dB` (-6). Full-auto loops get no tail of their own; the burst's tail sample does. Summary line ROOM TAIL.
+- `GunEnvironmentBlend.OpenAirCap`: the indoor weight is capped by lerp(1, 0.15, smoothstep(0.2..0.6 of min(open sky above the head, open roof over the muzzle)) x `Open air pulls to outdoor`). Both are measured this frame by the enclosure probe, unlike probe v2's room reading, which lags when you walk out (raid_20261110_174955 at 50 s: 0.53 indoor in the open). Replayed on that raid: 13 of 56 shots change, all outdoors.
+- Settings in Your gun: `Open air pulls to outdoor` (1), `Measured room tail` (on), `Room tail volume dB` (0), `Room tail length x` (1), `Game reverb under the tail dB` (-6). 166 settings.
+
 ## 0.7.3 — 10 Nov 2026 (shot-to-shot variation)
 **Run in game:** not yet.
 - New `Fixes/ShotVariation.cs`: a first-priority prefix on `SuperBetterAudioQueue.Enqueue` multiplies `pitch` by 1 ± `Variation pitch %` and `volume` by up to −`Variation volume dB`, and scales `clipTime` by the pitch change. Every postfix on the same call (own echoes, bot echoes, shot logs) sees the varied values. One value per shot: a sample queued in the same frame on the same gun, or right after a firing loop (clipTime 0), reuses it. Brought back from the old Gun Audio mod (2%, about 1 dB), which the 1e port left out. Summary line SHOT VARIATION.
