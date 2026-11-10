@@ -55,7 +55,7 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [x] Raid + review routes.csv (raid 36, Factory: 156 of 171 shots had a route; median 33 deg from the true direction, 40% over 45; best opening changed 7 times; 9 shots from a floor below had no baked route)
 - [x] Move bot gunshots to the opening they come through (`6.1`, 0.6.24)
 - [x] Raid: compare `6.1` on and off with a bot in another room (raid 38: kept on; moved 31 deg on average; user: on sounded better, given gunshots through walls are coming)
-- [ ] Decide: footsteps and other sounds too?
+- [x] Decide: footsteps and other sounds too? Yes (user, 10 Nov 2026): step F
 - [ ] Check: bot gunshots underground vs above ground
 - [ ] Floors with no baked route (raid 36: 9 shots from 5 m below): needs the through-floor path in 6.2, not "fully blocked"
 - [ ] Check: bot gunshots when you cross a threshold
@@ -192,6 +192,20 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [x] `0 Gun sounds` switch SPT / SEB (0.6.3)
 - [ ] One SEB take per round while the trigger is held
 - [ ] Varied takes, tail on release, 2–3 takes overlap at most
+
+## F · Footsteps and everyday sounds (user, 10 Nov 2026)
+- [ ] Footsteps from other rooms come from the opening, muffled by their route (6.1's rules)
+- [ ] Healing, eating, drinking and gear handling get the same
+- [ ] Through walls by material (6.2) for the louder ones
+- [ ] Own on/off switch at the top of F12
+- [ ] Raid: footsteps upstairs and in the next room, on and off
+
+## B · Bots feel blasts too (user, 10 Nov 2026)
+- [ ] Find what SAIN and the game read for a bot's hearing and aim after an explosion
+- [ ] Use the same blast pressure (`ShockWave.Dose`): concussed or deafened by the route, the walls and the blast's room
+- [ ] Without SAIN: the game's own bot hearing; with SAIN: its hearing and aim
+- [ ] Own on/off switch at the top of F12 (it changes how fights play)
+- [ ] Raid: grenades into a room of bots, on and off
 
 ## C · Supersonic crack by calibre
 - [ ] Solutions doc 2.9: where and when the crack plays
