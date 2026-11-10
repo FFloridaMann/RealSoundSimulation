@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.0 — 10 Nov 2026 (new name; F12 regrouped)
+**Run in game:** not yet.
+- Renamed to Real Sound Simulation: plugin ID `ffloridamann.realsoundsimulation`, DLLs `RealSoundSimulation.dll` and `RealSoundSimulation.Dsp.dll`, folder `BepInEx/plugins/FFloridaMann-RealSoundSimulation`, logs in `BepInEx/RealSoundSimulationLogs`. Settings are carried over from the old config file once, at install.
+- F12 regrouped into eight sections by what you hear, with plain names. 38 settings show by default, 118 behind "Advanced settings". Each description ends with the old code (for example "Was 6.3i"), which these docs still use.
+- README, roadmap and changelog rewritten in plain language; the detailed docs moved to `docs/dev`.
+
 ## 0.6.61 — 9 Nov 2026 (6.3h: bot gunshot echoes and voice priority)
 **Run in game:** not yet. It compiles; every number is a starting guess.
 - **New `6.3h Bot gunshot echoes`** (on, live). A bot's shot echoes off walls that it and you can both reach. When a wall is in the way and a route is known, the echoes start from the opening nearest you. The search uses the same 25-ray fan as explosion echoes, on the worker threads, and is reused for 1.5 s, so a burst costs one search.
