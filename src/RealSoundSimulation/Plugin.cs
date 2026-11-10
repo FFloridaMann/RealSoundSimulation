@@ -322,7 +322,7 @@ namespace RealSoundSimulation
 
             // 7. Performance
             OwnEchoShare = Bind(perf, "Echo voices kept for your gun", 48, "Other guns' echoes leave this many echo voices free for yours (at most half of what's free right now). Was 6.3n.", N(16, 96));
-            BotEchoCeiling = Bind(perf, "Most voices for other guns' echoes", 24, "The most voices other guns' echoes can hold at once. Was 6.3k.", N(0, 64));
+            BotEchoCeiling = Bind(perf, "Most voices for other gun echoes", 24, "The most voices other guns' echoes can hold at once. Was 6.3k.", N(0, 64));
             EchoReplaceOn = Bind(perf, "Replace the quietest echo", true, "At the voice limit, a new echo takes over from the other-gun echo you can hear least, with a short fade. Off = the new echo doesn't start. Was 6.3p.", null, adv);
 
             // 8. Diagnostics
