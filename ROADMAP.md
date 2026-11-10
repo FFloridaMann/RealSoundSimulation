@@ -25,7 +25,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 
 1. **Raid testing and tuning** of everything in the section above.
 2. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
-3. **Headsets.** Your ear protection shapes what you hear, including how concussion hits you. `(5)`
+3. **Headsets and ear ringing.** A headsets revamp: your ear protection shapes what you hear, including how concussion hits you. Without ear pro, your ears ring from gunfire by the ammo, the suppressor and the gun's real loudness, using Bring Back Concussion's ringing sounds. Both get their own switch at the top of F12. `(5)`
 4. **EFT 1.0 recordings on full-auto guns.** One take per round while the trigger is held. `(6b)`
 5. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
 6. **Every gun.** A pass over each gun's recordings and loudness. `(7)`

@@ -182,9 +182,10 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 ## 5 · Headset (moved after step 6)
 - [ ] Tune the concussion's ears level by the ear-pro worn (`6.9h`-`6.9m`)
 - [x] Headset sound processing + bench (offline)
-- [ ] Bring it into the game
+- [ ] Headsets revamp: bring the headset processing into the game, with its own on/off switch at the top of F12 (user, 10 Nov 2026)
 - [ ] Tune it
 - [ ] Re-check the 4b mix through it
+- [ ] Ear ringing from gunfire with no ear pro, using Bring Back Concussion's ringing sounds (credit harmony): by ammo, suppressor and the gun's real loudness; its own on/off switch at the top of F12 (user, 10 Nov 2026)
 
 ## 6b · SEB on full-auto guns
 - [x] `0 Gun sounds` switch SPT / SEB (0.6.3)
