@@ -1,8 +1,8 @@
 # How Real Sound Simulation works
 
-This document explains the code: what runs where, what it hooks in the game, and how the pieces talk to each other. For *why* each fix exists, read [FIXES.md](FIXES.md). For the log files, read [DIAGNOSTICS.md](DIAGNOSTICS.md). For the game's own audio system, read [../01_How_SPT_Tarkov_Audio_Works.md](../01_How_SPT_Tarkov_Audio_Works.md).
+This document explains the code: what runs where, what it hooks in the game, and how the pieces talk to each other. For *why* each fix exists, read [FIXES.md](FIXES.md). For the log files, read [DIAGNOSTICS.md](DIAGNOSTICS.md). For the game's own audio system, read [../01_How_SPT_Tarkov_Audio_Works.md](research/How_SPT_Tarkov_Audio_Works.md).
 
-Current version: **0.2.2** (see [CHANGELOG.md](CHANGELOG.md)).
+Current version: **0.2.2** (see [CHANGELOG.md](CHANGELOG-DETAILED.md)).
 
 ## The three projects
 

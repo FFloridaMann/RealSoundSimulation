@@ -1,7 +1,7 @@
 # Tracker
 
 One line per piece of work, in work order. Tick a box when it's done (on GitHub you can tick it straight from the phone).
-Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
+Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 
 **Now:** grenades from the opening, bounces and open-air thump (`6.4`, `6.2i`, 0.6.41-0.6.42) built, not raided: grenades in another room and in the open, in a raid (the hideout has the thump and echoes since 0.6.45, but no opening, bounces or logs). Route dulling (`6.1b`, 0.6.40) ran in two raids, not yet confirmed by ear. Explosion echoes (`6.3`, 0.6.39) also need a no-AI raid. 6.2 (0.6.38) needs a louder test and a `6.1` test on Factory · **Next:** bot echoes, the second half of 6.3. Further rain tuning is in step E
 
@@ -69,7 +69,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] shots.csv: time is the game clock, not raid seconds (fixed 0.6.21)
 
 ## M · Realistic materials
-- [x] Research each surface: [MATERIALS.md](MATERIALS.md) (absorption by frequency, transmission loss; no usable scattering data)
+- [x] Research each surface: [MATERIALS.md](dev/MATERIALS.md) (absorption by frequency, transmission loss; no usable scattering data)
 - [x] One table, `Acoustics/Materials.cs`; fix 6 echoes use it (`6g`, 0.6.25)
 - [x] Raid 39: compare `6g` on and off: "def sounds better", stays on
 - [x] Probe v2 uses the table too (`9o`, 0.6.27)

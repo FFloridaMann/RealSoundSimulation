@@ -1,6 +1,6 @@
 # Current design: how indoor and outdoor sound works
 
-**State: 0.6.8** (7 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
+**State: 0.6.8** (7 Nov 2026), with the default settings (which are the tested setup). **Probe v2** (§2.6) is new in 0.6.0 and runs alongside; its two test switches (fix 9 for the ambience, 9a for gunshots) are off by default until a raid has checked them. This doc describes what the plugin does **now**. It is not a history: why things changed, and what was tried first, is in [CHANGELOG.md](CHANGELOG-DETAILED.md), [FIXES.md](FIXES.md) and [AMBIENCE.md](AMBIENCE.md). When the code changes, this doc changes in the same commit.
 
 ---
 
@@ -166,7 +166,7 @@ Up to 4 echoes per shot (`6b`; up to 3 more in hard rooms), each a delayed, quie
 ---
 
 ## 6. Known limits (now)
-Things this design does not do yet. Each has a place in [ROADMAP.md](ROADMAP.md).
+Things this design does not do yet. Each has a place in [ROADMAP.md](ROADMAP-DETAILED.md).
 - **Roof holes:** a bombed-out patch of roof isn't found; "floors above" only looks straight up (AMBIENCE.md §9).
 - **Roof material:** roof rain sounds the same under concrete, metal or glass (step 4b phase 3).
 - **Only two elevations** (0° and 15°) for exposure; openings well above or below you count less than they should.

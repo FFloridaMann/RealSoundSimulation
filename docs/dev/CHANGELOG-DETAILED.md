@@ -651,7 +651,7 @@ Raid 22 (0.6.0, 9 and 9a on): "really good", garage "big improvement". Still: in
 - **New fix 5 (experiment):** own-gun room reverb boost, which raises or lowers the sends of the game's hidden Meta reverb copy of your shots.
 - **Correction:** the earlier claim that your own shots get no room acoustics was wrong. The game already plays a reverb-only copy through Meta XR (see FIXES.md, fix 5).
 - Summary gains a META XR ACOUSTICS section. Self-check: 75 targets, all verified.
-- Added [ROADMAP.md](ROADMAP.md).
+- Added [ROADMAP.md](ROADMAP-DETAILED.md).
 
 ## 0.2.1 — 6 Nov 2026
 **Run in game:** raid 5 (11:28). Loaded (self-check 11:24), no errors, the ambience startup error is gone.

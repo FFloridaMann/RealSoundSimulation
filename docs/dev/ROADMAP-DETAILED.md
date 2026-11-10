@@ -4,7 +4,7 @@ The order of work and why. Agreed 6 Nov 2026, reordered 8 Nov 2026.
 
 - **Each step ends with a test raid**; the next step uses what that raid showed.
 - **Step numbers are names, not positions.** They stay fixed so older notes, the changelog and settings still match. For example, the headset is still "step 5" though it now comes after step 6.
-- **Checklist of every step and its substeps: [TRACKER.md](TRACKER.md).**
+- **Checklist of every step and its substeps: [TRACKER.md](../TRACKER.md).**
 - How things work right now: [DESIGN.md](DESIGN.md). Details of each fix: [FIXES.md](FIXES.md).
 
 ## At a glance

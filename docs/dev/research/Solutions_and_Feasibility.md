@@ -1,6 +1,6 @@
 # Making SPT audio realistic *and* consistent: solutions and feasibility
 
-*Solutions doc. Read [01_How_SPT_Tarkov_Audio_Works.md](01_How_SPT_Tarkov_Audio_Works.md) first. The `#n` references point to the inconsistency table in its section 6.*
+*Solutions doc. Read [01_How_SPT_Tarkov_Audio_Works.md](How_SPT_Tarkov_Audio_Works.md) first. The `#n` references point to the inconsistency table in its section 6.*
 
 ## The strategy in one paragraph
 
@@ -47,7 +47,7 @@ Test spots:
 
 ## Phase 1: server-only retune (zero client cost, survives client updates best)
 
-Everything here lives in `database/settings.json → config.AudioSettings`. SPT 4's typed `AudioSettings` record keeps unknown fields through `[JsonExtensionData]`, so a C# server mod can edit `DatabaseService` settings at load. Or test by hand-editing the JSON copy first. Keep the original in [data/settings_AudioSettings.json](data/settings_AudioSettings.json).
+Everything here lives in `database/settings.json → config.AudioSettings`. SPT 4's typed `AudioSettings` record keeps unknown fields through `[JsonExtensionData]`, so a C# server mod can edit `DatabaseService` settings at load. Or test by hand-editing the JSON copy first. Keep the original in [data/settings_AudioSettings.json](../../../data/settings_AudioSettings.json).
 
 | # | Change | Path | From → to (starting point; tune by ear) | Fixes | Perf |
 |---|---|---|---|---|---|

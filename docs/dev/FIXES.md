@@ -304,7 +304,7 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 **Glass facades and window bars (0.4.2).** The aim cone also casts against the glass and bar layers, which the sound-blocking rays pass through. Intact glass gives glass reflections and bars give weak, dull ones (grate). Shards and other obstructions are ignored.
 
-**Check.** Steps are in [ROADMAP.md](ROADMAP.md#testing-step-4-next-raid-no-ai-needed). Logs:
+**Check.** Steps are in [ROADMAP.md](ROADMAP-DETAILED.md#testing-step-4-next-raid-no-ai-needed). Logs:
 - `echoes.csv`: one row per echo played, with kind, surface, path, delay, level, directivity, filter, and direction relative to where you face.
 - `summary.txt`, OWN GUN ECHOES section: echoes per sample, by kind, mean level and path, voices used and stolen, and which surfaces were hit. "None" means no bullet material tag was found on that collider.
 
@@ -767,11 +767,11 @@ Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's g
 
 ## Planned (not built)
 
-Order and status: [ROADMAP.md](ROADMAP.md).
+Order and status: [ROADMAP.md](ROADMAP-DETAILED.md).
 
 - **Remote gunshots at your threshold:** smooth the switch between the "same room" and "different room" occlusion calculations when you cross a doorway.
 
-From [../02_Solutions_and_Feasibility.md](../02_Solutions_and_Feasibility.md) and the raid findings, in rough order:
+From [../02_Solutions_and_Feasibility.md](research/Solutions_and_Feasibility.md) and the raid findings, in rough order:
 - **Distant obstruction:** run at least a cheap terrain/building check for sounds beyond their occlusion range (raid 3: nothing past about 250 m is ever obstructed).
 - **Portal positioning (2.1):** sounds heard through a doorway should come *from the doorway*, not through the wall.
 - **Air absorption (2.5):** high frequencies fade with distance; the game computes this but never applies it. (Fix 6 applies it to its own echoes; other sounds still lack it.)

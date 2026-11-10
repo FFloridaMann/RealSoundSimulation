@@ -110,7 +110,7 @@ Each player gets **one container at the spine** (`ProcessSourceOcclusion(IPlayer
 
 ## 3. Every tuning value that matters lives on the server
 
-`ClientAudioSettings` is filled from `settings.json → config.AudioSettings`. `SpatialAudioSystem.method_0()` applies `OcclusionSettings.locationOcclusionSettings`, and `BetterAudio.ApplySpatialSettingsFromBackend` applies the per-group JSON. **An SPT server mod can retune almost all of this without patching the client.** The full dump is in [data/settings_AudioSettings.json](data/settings_AudioSettings.json), with a readable summary in [data/occlusion_presets_summary.txt](data/occlusion_presets_summary.txt).
+`ClientAudioSettings` is filled from `settings.json → config.AudioSettings`. `SpatialAudioSystem.method_0()` applies `OcclusionSettings.locationOcclusionSettings`, and `BetterAudio.ApplySpatialSettingsFromBackend` applies the per-group JSON. **An SPT server mod can retune almost all of this without patching the client.** The full dump is in [data/settings_AudioSettings.json](../../../data/settings_AudioSettings.json), with a readable summary in [data/occlusion_presets_summary.txt](../../../data/occlusion_presets_summary.txt).
 
 Key live values:
 
