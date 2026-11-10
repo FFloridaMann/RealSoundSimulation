@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.5 (not released yet): smoother open-air pull
+
+- Stepping out from under a roof edge, your shot now glides from indoor to outdoor over about half a second instead of jumping between two shots, and moving along a roof edge no longer flips it back and forth. Not played yet.
+
 ## 0.7.4 (not released yet): your shot in the real room
 
 - **Measured room tail:** your shot's reverb tail now comes from the room the mod measures: as long as the room really rings, duller in soft rooms than hard ones, and as loud as the shot is indoor. The game's own reverb is turned down under it. F12, Your gun: on/off, volume, length and how far the game's reverb is turned down.

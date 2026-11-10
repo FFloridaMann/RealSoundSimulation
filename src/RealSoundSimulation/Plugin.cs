@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.4";
+        public const string Version = "0.7.5";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;

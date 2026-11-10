@@ -2,6 +2,10 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.5 — 10 Nov 2026 (open-air pull eased)
+**Run in game:** not yet.
+- `OpenAirCap`: openness = the average of the open sky above the head and the open roof over the muzzle (was the lower of the two), eased with a 0.5 s time constant between calls (reset after 3 s without a shot and at raid start), mapped 0.3..0.9 (was 0.2..0.6). raid_20261110_181920 tags 2 and 3: the five-ray head reading stepped 1 -> 0.4 at a roof edge and the shot jumped 70% -> 15% indoor between shots 0.2 s apart; replayed, the cap now goes 1.00, 0.96, 0.76, 0.46 over 0.7 s.
+
 ## 0.7.4 — 10 Nov 2026 (measured room tail; open air pulls to outdoor)
 **Run in game:** not yet.
 - New `Fixes/RoomTail.cs`: own single shots and burst tails play their dry (outdoor) recording, at the shot's varied pitch and volume x the indoor weight, into one 2D `AudioReverbFilter` (wet only, early reflections off: the echoes do those). decayTime = probe v2 `Rt60` x `Room tail length x` (0.2-4 s; 0.8 s if no reading), decayHFRatio 0.45-0.95 and roomHF -1400 to -250 mB by hard room, reverbDelay and reflectionsDelay from the mean free path. The voice plays silence while you shoot so a tail isn't cut when a sample ends, and stops after 8 quiet s. The game's Meta reverb copy gets `Game reverb under the tail dB` (-6). Full-auto loops get no tail of their own; the burst's tail sample does. Summary line ROOM TAIL.

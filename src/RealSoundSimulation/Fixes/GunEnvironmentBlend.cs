@@ -70,7 +70,7 @@ namespace RealSoundSimulation.Fixes
                 postfix: new HarmonyMethod(typeof(GunEnvironmentBlend), nameof(PickPostfix)));
         }
 
-        public static void Reset() { Blended = 0; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
+        public static void Reset() { Blended = 0; _openEased = float.NaN; _openAt = -100f; _lastAimEnc = _lastAimDist = _lastAimClosure = float.NaN; LobeDiffSum = 0f; LobeDiffN = 0; _pendingN = 0; LastWeightUsed = float.NaN; }
 
         internal static bool IsOwn(WeaponSoundPlayer wsp)
         {
@@ -176,15 +176,25 @@ namespace RealSoundSimulation.Fixes
         // the room read 0.69). These two are measured right now: the sky straight above your head and the roof over the
         // muzzle. When both are open the indoor share is capped, down to OpenAirMax with the setting at 1. Under an overhang
         // (roof above your head) nothing changes.
-        private const float OpenAirMax = 0.15f, OpenFrom = 0.2f, OpenFull = 0.6f;
+        // 0.7.5: eased and softened. raid_20261110_181920 tags 2 and 3: at a roof edge the head reading (five rays straight up,
+        // so it moves in steps of 0.2) went 1 -> 0.4 between two shots 0.2 s apart and the shot jumped from 70% to 15% indoor;
+        // moving along the edge it flipped 15/60/17/58%. Now: the head and muzzle readings are averaged (one flickering ray
+        // matters less), the openness glides with a 0.5 s time constant (a quiet gap longer than QuietResetS starts fresh,
+        // since nothing was heard changing), and the pull starts at 30% open and is full only at 90%.
+        private const float OpenAirMax = 0.15f, OpenFrom = 0.3f, OpenFull = 0.9f, OpenTauS = 0.5f, QuietResetS = 3f;
+        private static float _openEased = float.NaN, _openAt = -100f;
         private static float OpenAirCap(float w)
         {
             float pull = Mathf.Clamp01(Plugin.OpenAirPull.Value);
             if (pull <= 0f) return w;
             float zenith = EnclosureProbe.ZenithClosure, muzzleRoof = EnclosureProbe.MuzzleRoof;
             if (float.IsNaN(zenith)) return w;
-            float open = Mathf.Min(1f - zenith, float.IsNaN(muzzleRoof) ? 1f - zenith : 1f - muzzleRoof);
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OpenFrom, OpenFull, open)) * pull;
+            float open = float.IsNaN(muzzleRoof) ? 1f - zenith : 0.5f * ((1f - zenith) + (1f - muzzleRoof));
+            float now = Time.time, dt = now - _openAt;
+            if (float.IsNaN(_openEased) || dt > QuietResetS || dt < 0f) _openEased = open;
+            else _openEased += (open - _openEased) * (1f - Mathf.Exp(-dt / OpenTauS));
+            _openAt = now;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(OpenFrom, OpenFull, _openEased)) * pull;
             return Mathf.Min(w, Mathf.Lerp(1f, OpenAirMax, t));
         }
 
