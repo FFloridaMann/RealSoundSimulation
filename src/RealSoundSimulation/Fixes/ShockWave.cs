@@ -56,7 +56,7 @@ namespace RealSoundSimulation.Fixes
             _way = default;
             _lastExtra = 0f;
             Skips.Clear(); Ways.Clear();
-            Played = ThumpDoubled = Ducks = Followed = Repeats = Pushes = 0;
+            Played = ThumpDoubled = Ducks = Followed = Repeats = Pushes = YourRoomAdded = YourRoomSame = 0;
             _volSum = 0;
         }
 
@@ -159,7 +159,8 @@ namespace RealSoundSimulation.Fixes
         private static void Fire(Held h, Way w)
         {
             Measure(h.Pos);
-            Dose(h.Dist, h.Walls, h.LossDb, h.WallFade, w, out float dose, out float duration);
+            Dose(h.Dist, h.Walls, h.LossDb, h.WallFade, w, h.Listener, out float dose, out float duration);
+            if (_youState == "added") YourRoomAdded++; else if (_youState == "same room") YourRoomSame++;
             ConcussionProof.Deliver(h.Pos, dose, duration);
             bool felt = ConcussionProof.WillCut(h.Dist, dose);
             if (felt) { ConcussionProof.FeltOn(); ConcussionProof.Felt++; }
@@ -170,8 +171,30 @@ namespace RealSoundSimulation.Fixes
         // 0.6.60: how hard a blast hits you, for concussion. Same way through the building as the hit, but on the research (FIXES.md): a confined space raises the peak only a little and mostly makes the pressure last.
         //   dose      dB against open air at 5 m. The way's pressure, plus up to 5 dB in a very small enclosed room and 0.5 dB in a very big one. Inside 2.5 m it never falls below -2 dB, so a thin wall right next to a grenade still rattles you.
         //   duration  0 to 1, how long it lasts: by how shut in and how small the blast's room is, broken windows counting as open, and less the more of a detour it took to reach you.
-        private static void Dose(float dist, int walls, float lossDb, float wallFade, Way w, out float db, out float duration)
+        // 0.7.1 "6.9n": the room you're in counts too. User, 10 Nov 2026: "a blast getting into a small room you're standing in should build up too".
+        //   Research (FIXES.md 6.9n): a wave that comes through an opening loses some peak at the opening, then bounces off the walls of the room it enters. In small-scale two-room tests the receiving room saw several
+        //   peaks over a longer time, the biggest often not the first, up to about 3.7 times free field at one wall gauge, with the most build-up near walls and corners; more open area venting the room lowers it.
+        //   The long gas pressure stays mostly in the blast's own room. So your room adds less than the blast's: up to "6.9o" dB (3) in a very small closed room, nothing in a big or open one, and a little
+        //   length. Only for a blast that reaches you through the air from somewhere else; in the same room (no wall on the line, closer than about twice your room's mean wall distance) the blast's room already counts it.
+        private const float SameRoomTimes = 2f, SameRoomPadM = 1f, EarDownM = 0.6f, YourRoomLength = 0.3f, YourRoomFullDb = 3f;
+        private static int _youFrame = -1;
+        private static Vector3 _youAt;
+        private static float _youOpen, _youRoom;
+        internal static float LastBlastRoomDb, LastYourRoomDb, LastYourRoomM = float.NaN;
+        internal static string LastYourRoom = "";
+        private static string _youState = "";
+        public static int YourRoomAdded, YourRoomSame;
+
+        private static void MeasureYou(Vector3 ear)
         {
+            if (_youFrame == Time.frameCount && (_youAt - ear).sqrMagnitude < SameM * SameM) return;
+            _youOpen = BlastRecording.MeasureAt(ear + Vector3.down * EarDownM, out _youRoom); // MeasureAt lifts 0.6 m off a blast point; from the ear, measure at ear height
+            _youFrame = Time.frameCount; _youAt = ear;
+        }
+
+        private static void Dose(float dist, int walls, float lossDb, float wallFade, Way w, Transform listener, out float db, out float duration)
+        {
+            LastBlastRoomDb = LastYourRoomDb = 0f; LastYourRoomM = float.NaN; _youState = LastYourRoom = "";
             float through = wallFade > 0f ? PressureDb(dist) - lossDb * Plugin.ThumpWallLoss.Value : float.NegativeInfinity;
             float via = float.NegativeInfinity, bends = 0f, closure = 0f;
             bool open = walls == 0 || w.Kind == WayKind.Clear;
@@ -189,17 +212,37 @@ namespace RealSoundSimulation.Fixes
             float openShare = _measuredOpen, room = _measuredRoom;
             float enclosed = usesWay ? 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(BlastRecording.AllIndoorBelow, Plugin.BlastOutdoorShare.Value, openShare)) : 0f;
             float small = Mathf.InverseLerp(BigRoomM, SmallRoomM, room);
-            db = best + enclosed * Mathf.Lerp(0.5f, 5f, small) + Plugin.ConcussionPressureDb.Value;
+            float blastDb = enclosed * Mathf.Lerp(0.5f, 5f, small);
+            float youShare = 0f;
+            if (!Plugin.YourRoomOn.Value) _youState = "off";
+            else if (!usesWay) _youState = "through wall";
+            else if (listener == null) _youState = "no listener";
+            else
+            {
+                MeasureYou(listener.position);
+                LastYourRoomM = _youRoom;
+                if (walls == 0 && dist < SameRoomTimes * _youRoom + SameRoomPadM) _youState = "same room";
+                else
+                {
+                    float youEnclosed = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(BlastRecording.AllIndoorBelow, Plugin.BlastOutdoorShare.Value, _youOpen));
+                    youShare = youEnclosed * Mathf.InverseLerp(BigRoomM, SmallRoomM, _youRoom);
+                    _youState = youShare > 0.01f ? "added" : "open or big";
+                }
+            }
+            float youDb = youShare * Plugin.YourRoomDb.Value;
+            LastBlastRoomDb = blastDb; LastYourRoomDb = youDb; LastYourRoom = _youState;
+            db = best + blastDb + youDb + Plugin.ConcussionPressureDb.Value;
             if (dist < RightNextToM) db = Mathf.Max(db, RightNextToDb);
-            duration = Mathf.Clamp01(enclosed * Mathf.Lerp(0.4f, 1f, small) * (open ? 1f : usesWay ? 1f / (1f + bends + closure) : 0.25f));
+            duration = Mathf.Clamp01(enclosed * Mathf.Lerp(0.4f, 1f, small) * (open ? 1f : usesWay ? 1f / (1f + bends + closure) : 0.25f)
+                + youShare * YourRoomLength * Mathf.Clamp01(Plugin.YourRoomDb.Value / YourRoomFullDb));
         }
 
         // For 6.2's thump, which runs before the shock wave and may not have the corner search's answer yet.
-        public static float PeekDose(Vector3 pos, float dist, int walls, float lossDb, float wallFade)
+        public static float PeekDose(Vector3 pos, float dist, int walls, float lossDb, float wallFade, Transform listener)
         {
             Way w = _way.Kind != WayKind.None && (_way.At - pos).sqrMagnitude < SameM * SameM ? _way : default;
             Measure(pos);
-            Dose(dist, walls, lossDb, wallFade, w, out float db, out float _);
+            Dose(dist, walls, lossDb, wallFade, w, listener, out float db, out float _);
             return db;
         }
 

@@ -30,7 +30,7 @@ namespace RealSoundSimulation.Fixes
     internal class ConcussionProof : MonoBehaviour
     {
         public const string Header = "t,closeness,endDb,cutS,tailS,holdS,fadeS,tinnitus";
-        public const string DoseHeader = "t,doseDb,equivalentM,earsEquivalentM,earsCloseness,concussed,duration,ringOnly";
+        public const string DoseHeader = "t,doseDb,equivalentM,earsEquivalentM,earsCloseness,concussed,duration,ringOnly,blastRoomDb,yourRoomDb,yourRoomM,yourRoom"; // 0.7.1: the last four, 6.9n
         private const string OtherMod = "com.harmonyzt.BringBackConcussion", CutType = "BringBackConcussion.Patches.ExplosionSoundCutoff", ProximityType = "BringBackConcussion.Patches.ExplosionProximityPatch";
         private const float NoCutAtOrBelow = 0.05f, CutsBelow = 0.95f, DefaultFadeS = 6f, WriteStepDb = 0.01f, PendingMaxS = 0.25f, SamePosM = 1f, RingMinS = 1.5f, RingMaxS = 4f;
         private const int GunsIndex = 1, MaxPending = 6;
@@ -205,7 +205,8 @@ namespace RealSoundSimulation.Fixes
         private static void DoseRow(float doseDb, float equiv, float earsEquiv, float ears, bool concussed, float duration, bool ringOnly)
         {
             if (!DiagLog.IsOpen) return;
-            DiagLog.Row("concdose.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(float.IsInfinity(doseDb) ? -999f : doseDb, "0.0"), DiagLog.F(float.IsInfinity(equiv) ? 999f : equiv, "0.0"), DiagLog.F(float.IsInfinity(earsEquiv) ? 999f : earsEquiv, "0.0"), DiagLog.F(ears, "0.00"), concussed ? "1" : "0", DiagLog.F(duration, "0.00"), ringOnly ? "1" : "0"));
+            DiagLog.Row("concdose.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(float.IsInfinity(doseDb) ? -999f : doseDb, "0.0"), DiagLog.F(float.IsInfinity(equiv) ? 999f : equiv, "0.0"), DiagLog.F(float.IsInfinity(earsEquiv) ? 999f : earsEquiv, "0.0"), DiagLog.F(ears, "0.00"), concussed ? "1" : "0", DiagLog.F(duration, "0.00"), ringOnly ? "1" : "0",
+                DiagLog.F(ShockWave.LastBlastRoomDb, "0.0"), DiagLog.F(ShockWave.LastYourRoomDb, "0.0"), DiagLog.F(ShockWave.LastYourRoomM, "0.0"), ShockWave.LastYourRoom));
         }
 
         public static void FeltOn()
@@ -317,6 +318,6 @@ namespace RealSoundSimulation.Fixes
             for (int i = 0; i < Keys.Length; i++) if (!string.IsNullOrEmpty(Keys[i])) m.SetFloat(Keys[i], Start[i]);
         }
 
-        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), walled off {Dropped}, by distance as a fallback {Plain}  (concussion.csv, concdose.csv)\n";
+        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), walled off {Dropped}, by distance as a fallback {Plain}; your room (6.9n {(Plugin.YourRoomOn.Value ? $"ON, up to +{Plugin.YourRoomDb.Value:0.#} dB" : "off")}) added to {ShockWave.YourRoomAdded}, same room as the blast {ShockWave.YourRoomSame}  (concussion.csv, concdose.csv)\n";
     }
 }

@@ -129,6 +129,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Raid: a grenade in a building you're outside of; check blast.csv and glass.csv `reason` and `pathM`
 - [x] Concussion by blast pressure, with an ears level and a concussion level (`6.9k`-`6.9m`, 0.6.60; hand-set)
 - [ ] Raid: grenades in the same room, a small room, a big hall, through an open door and behind a solid wall; check concdose.csv and set `6.9l` and `6.9m` by ear
+- [x] Your room builds up a blast that comes in from elsewhere (`6.9n`, `6.9o`, 0.7.1; hand-set)
+- [ ] Raid: a grenade in a hall while you're in a small side room with the door open, `6.9n` off and on; check concdose.csv `yourRoomDb`
 - [x] Soft concussion cut: world goes at once, blast tail fades, felt layers survive (`6.9h`-`6.9j`, 0.6.58; by ear)
 - [ ] Raid: a grenade inside 6.5 m, `6.9h` off and on; set `6.9i` and `6.9j` by ear; check concussion.csv
 - [ ] Ask harmony how he wants the credit and year written (`THIRD_PARTY_NOTICES.md`)
@@ -255,7 +257,7 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Server settings (solutions doc phase 1)
 
 ## S · Settings clean-up (near the end)
-- [ ] List all 156 settings, what each does, and what still reads it
+- [ ] List all 158 settings, what each does, and what still reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o`)
 - [ ] Group by what you hear: own gun, bot gunfire, rain and ambience, diagnostics
 - [ ] Migrate renamed settings so your values survive; back up the config first

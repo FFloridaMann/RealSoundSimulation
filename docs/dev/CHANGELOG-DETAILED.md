@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.1 — 10 Nov 2026 (6.9n: your room builds up blasts)
+**Run in game:** not yet. The 3 dB top is hand-set from small-scale tests.
+- **New `6.9n Your room builds up blasts`** (on, live, in General next to the other concussion switches) and `6.9o Your room build-up` (3 dB, 0 to 6, advanced, Explosions). User: "a blast getting into a small room you're standing in should build up too". Until now only the blast's room counted in the concussion dose.
+- Your room is measured with the same 48 rays as the blast's (6.6's MeasureAt, from ear height, cached per frame). A blast that reaches you through the air from elsewhere adds up to `6.9o` dB in a very small closed room, nothing in a big one (14 m mean wall distance) or an open one, and up to 0.3 more duration. Not added through a wall, or in the same room as the blast (no wall on the line and closer than twice your room's mean wall distance plus 1 m), where the blast's room already counts.
+- concdose.csv gets blastRoomDb, yourRoomDb, yourRoomM and yourRoom (added, same room, open or big, through wall, off). The CONCUSSION SOUND CUT summary line counts them.
+- Version 0.7.1. F12 now has 158 settings (39 by default, 119 advanced).
+
 ## 0.7.0 — 10 Nov 2026 (new name; F12 regrouped)
 **Run in game:** not yet.
 - Renamed to Real Sound Simulation: plugin ID `ffloridamann.realsoundsimulation`, DLLs `RealSoundSimulation.dll` and `RealSoundSimulation.Dsp.dll`, folder `BepInEx/plugins/FFloridaMann-RealSoundSimulation`, logs in `RealSoundSimulation Logs`. Settings are carried over from the old config file once, at install.

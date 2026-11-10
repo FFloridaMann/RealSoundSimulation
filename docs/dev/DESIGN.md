@@ -245,6 +245,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.9d`, `6.9e`, `6.9f`, `6.9g` | shock wave in buildings: corner loss, enclosed boost, repeat hits, slow push (0.6.54) | 6 dB, 6 dB, 3, 0 dB |
 | `6.9h`, `6.9i`, `6.9j` | soft concussion cut: on, blast tail fade, felt layers' level (0.6.58) | on, 0.8 s, 0 dB |
 | `6.9k`, `6.9l`, `6.9m` | concussion by blast pressure: on, ears reach, strength (0.6.60) | on, +6 dB, 0 dB |
+| `6.9n`, `6.9o` | your room builds up a blast from elsewhere: on, most it adds (0.7.1) | on, 3 dB |
 | `6.7c`, `6.7d`, `6.7e` | fragment hits from other rooms by route: on, dulling, loss per opening (0.6.55) | on, 1, 4 dB |
 | `6.7f`, `6.7g`, `6.7h`, `6.7i` | fragment pass-bys: on, level, reach, per grenade (0.6.56) | on, 0 dB, 5 m, 4 |
 | `6.7`, `6.7a`, `6.7b` | glass from other rooms by route: on, dulling strength, loss per opening (0.6.49) | on, 1, 4 dB |

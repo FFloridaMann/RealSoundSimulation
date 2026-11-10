@@ -685,6 +685,18 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 - **Enclosed.** By how shut in the blast point is (the rays from `6.6`): up to `6.9e` dB, `6.9f` repeat hits spaced by twice the room's mean hit distance over the speed of sound (6 to 50 ms) at −5, −9, −13, −17 dB, and a 55 to 36 Hz swell of 0.25 to 0.7 s (`6.9g`), longer in a small or shut room. Corridors aren't treated specially.
 - **Dip.** Applied on top of whatever else sets the control each frame, and put back only on a control nobody else has moved. Its depth follows the way.
 
+## 6.9n: Your room builds up blasts (0.7.1)
+
+**Problem.** `6.9k`'s room boost looks only at the blast's room. User, 10 Nov 2026: "a blast getting into a small room you're standing in should build up too". A blast in a big hall that comes through a door into a closet you're in got the hall's +0.5 dB and nothing for the closet.
+
+**Research** (summaries; small-scale tests). A wave entering a room through an opening loses some peak at the opening (diffraction, with a negative phase from its edges), then reflects off the walls of the room it enters. In a two-room test (Ruscade et al., IntechOpen 2019) the receiving room saw several peaks over about 6 ms, the biggest often not the first, up to about 3.7 times free field at one wall gauge, with corners the worst spots. A bigger opening let in more impulse; more vent area in the room lowers impulse across its walls (vented cubic room tests, vent ratio 0.04 to 0.16). Reviews of façade-opening ingress (Eytan et al. 2024, 2026) agree that opening size and room size shape the interior loading, but no source gave a clean rule for room size. The long gas-pressure phase belongs to the room the charge is in.
+
+**Fix.** `ShockWave.Dose` measures your room with the same 48 rays as the blast's (`BlastRecording.MeasureAt` from ear height, once per frame). For a blast that reaches you through the air from elsewhere, it adds `6.9o` dB (3) × how enclosed your room is × how small it is (3 m mean wall distance full, 14 m none), and up to 0.3 more duration. Less than the blast room's 5 dB, because the gas phase stays behind. Not added when the blast comes through a wall, or when it's in your room: no wall on the straight line and closer than 2 × your room's mean wall distance + 1 m.
+
+**Limits.** Where you stand in the room (against a wall, in a corner) isn't counted. The opening's size isn't measured; your room's openness stands in for it. The 3 dB top is hand-set.
+
+**Check.** concdose.csv `blastRoomDb`, `yourRoomDb`, `yourRoomM`, `yourRoom`: a grenade in a hall while you're in a small side room with the door open, then the same from the hall.
+
 ## 6.9k: Concussion by blast pressure (0.6.60)
 
 **Problem.** Bring Back Concussion scales by straight-line distance, up to a 7 m radius, and gives every concussion the same strength and length. Walls, rooms and doors don't count.

@@ -2,6 +2,11 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.1 (not released yet): your room builds up blasts
+
+- A blast that gets into a small closed room you're in, through a door or window, now hits a bit harder and lasts a bit longer, because it bounces around your room. Big or open rooms add nothing. It's less than a blast going off in your own room.
+- Switch it in F12, General: "Your room builds up blasts". Not played yet.
+
 ## 0.7.0 (not released yet)
 
 - New name: Real Sound Simulation.

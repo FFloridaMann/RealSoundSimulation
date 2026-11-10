@@ -12,7 +12,7 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // RealSoundSimulation Logs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.7.0")]
+    [BepInPlugin(Guid, "Real Sound Simulation", "0.7.1")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
@@ -131,6 +131,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
         internal static ConfigEntry<float> ConcussionPressureDb, EarsReachDb; // 0.6.60 "6.9m", "6.9l"
+        internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
+        internal static ConfigEntry<float> YourRoomDb; // 0.7.1 "6.9o"
         internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
         internal static ConfigEntry<bool> FragmentPassOn; // 0.6.56 "6.7f"
@@ -173,6 +175,7 @@ namespace RealSoundSimulation
             // 1. General
             // The big switches go first, so they are easy to find: concussion now, ear ringing and headsets when they are built.
             ConcussionPressureOn = Bind(general, "Concussion by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
+            YourRoomOn = Bind(general, "Your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
             SoftCutOn = Bind(general, "Soft concussion cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
             GunSounds = Bind(general, "Gun recordings", GunSoundSet.SPT, "Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings, once built into the seb_sounds folder with tools/build_seb_sounds.py. Changes at the next trigger pull. Was 0.");
             SebOnFullAuto = Bind(general, "SEB recordings on full-auto guns", false, "Also use SEB's recordings on guns that can fire full auto. Off because the game loops one recording while the trigger is held and SEB's are single shots, so bursts sound wrong. Was 0a.", null, adv);
@@ -262,6 +265,7 @@ namespace RealSoundSimulation
             ShockRepeats = Bind(blasts, "Repeat hits", 3, "Indoors the shock arrives as a train of fading pulses, spaced by the size of the room. Was 6.9f.", N(0, 4), adv);
             ShockPushDb = Bind(blasts, "Slow push dB", 0f, "The long low swell after the hit in a closed space. -24 = off. Was 6.9g.", R(-24f, 12f), adv);
             EarsReachDb = Bind(blasts, "Ears reach dB", 6f, "How much further the hearing cut and ringing reach than full concussion. Was 6.9l.", R(0f, 18f), adv);
+            YourRoomDb = Bind(blasts, "Your room build-up dB", 3f, "The most your own room adds to a blast that comes in from elsewhere, in a very small closed room. Was 6.9o.", R(0f, 6f), adv);
             BlastTailFadeS = Bind(blasts, "Tail fade s", 0.8f, "How long the blast's tail and echoes take to fade when concussion cuts your hearing. Was 6.9i.", R(0.1f, 3f), adv);
             FeltThroughCutDb = Bind(blasts, "Felt through the cut dB", 0f, "Volume of the thump and pressure hit you still feel when concussion cuts your hearing. Was 6.9j.", R(-24f, 12f), adv);
             FragmentPassDb = Bind(blasts, "Pass-by volume dB", 0f, "How loud a fragment passing 1 m away is. Was 6.7g.", R(-24f, 12f), adv);

@@ -201,7 +201,7 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.58: **concussion.csv**, one row per soft cut: `t`, `closeness` (0 to 1), `endDb`, `cutS` (world sounds), `tailS` (Guns), `holdS`, `fadeS`, `tinnitus` (1 = the game's ringing was playing, so it drives Main and Guns).
 
-0.6.60: **concdose.csv**, one row per explosion rated by pressure: `t`, `doseDb` (against open air at 5 m, −999 = no way through), `equivalentM`, `earsEquivalentM`, `earsCloseness`, `concussed`, `duration` (0 to 1), `ringOnly`.
+0.6.60: **concdose.csv**, one row per explosion rated by pressure: `t`, `doseDb` (against open air at 5 m, −999 = no way through), `equivalentM`, `earsEquivalentM`, `earsCloseness`, `concussed`, `duration` (0 to 1), `ringOnly`. 0.7.1 (6.9n) adds `blastRoomDb` (the blast room's boost), `yourRoomDb` (your room's), `yourRoomM` (your room's mean wall distance) and `yourRoom` (added, same room, open or big, through wall, no listener, off).
 
 0.6.61: **botechoes.csv**, one row per set of bot echoes: `t`, `shooter`, `sample` (`shot`, `loop`, `tail`), `distM`, `viaOpening` (1 = from the opening), `answer` (`searched`, `cached`, `stale`), `walls` (usable echoes found), `wanted`, `played`, `dropped` (limit), `replaced` (took over from another bot echo), `gated` (too quiet), `botVoices`, `allowed`, `topDb`. **voices.csv**, every 0.5 s: `t`, `gameSources`, `allowed`, `echoVoices`, `own`, `bot`, `other`. Summary: BOT ECHOES and ECHO VOICE PRIORITY; the number to watch is "your echoes not started ... while a bot echo held a voice", which should be 0 with `6.3p` on.
 
