@@ -34,21 +34,21 @@ Press F12 and open **Real Sound Simulation**. The settings are grouped by what y
 
 | Section | What's in it |
 |---|---|
-| 1. General | The concussion switches, gun recordings, sound quality, footsteps and handling, bug report logs |
+| 1. General | The concussion switches, gun recordings, sound quality, footsteps and handling, bug report logs and their mark key |
 | 2. Your gun | Echoes, room reverb, indoor/outdoor blend |
 | 3. Other guns | Sound from the doorway, muffling by route, echoes |
 | 4. Explosions | Thump, echoes, shock wave, concussion, fragments |
 | 5. Rain and outdoors | Outside sound indoors, roof rain |
 | 6. Doors and walls | Sound through walls, closed doors, breaking glass |
 | 7. Performance | How many echo voices other guns may use |
-| 8. Diagnostics | The overlay, the F10 mark key and the probes |
+| 8. Diagnostics | The overlay and the probes |
 
 The everyday settings show by default. Tick **Advanced settings** at the top of F12 for the fine-tuning ones. Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does.
 
 ## Reporting a bug
 
 1. In F12 → Real Sound Simulation → **1. General**, turn on **Bug report logs**.
-2. Play one raid. Wherever something sounds wrong, press **F10**: the spot is saved with what the mod measured there.
+2. Play one raid. Wherever something sounds wrong, press **F10**: the spot is saved with what the mod measured there. If F10 clashes with another mod, change **Bug report mark key** right below the switch.
 3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`) and then the **RealSoundSimulation Logs** folder.
 4. Send the newest **Bug report** zip, and say roughly when and where in the raid it happened.
 
