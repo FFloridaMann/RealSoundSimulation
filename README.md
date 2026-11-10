@@ -52,7 +52,7 @@ The everyday settings show by default. Tick **Advanced settings** at the top of 
 3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`) and then the **RealSoundSimulation Logs** folder.
 4. Send the newest **Bug report** zip, and say roughly when and where in the raid it happened.
 
-Turn Bug report logs off again afterwards; it writes several MB per raid.
+Expect slightly lower FPS during that raid. When it ends, stay on the raid results screen for a few seconds before closing the game, so the zip can finish. Then turn Bug report logs off again; it writes several MB per raid.
 
 ## Performance
 
