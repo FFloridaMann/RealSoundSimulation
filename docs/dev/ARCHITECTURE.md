@@ -92,8 +92,8 @@ Plugin.cs                    entry point: settings (F12), installs every patch, 
 ### Startup order (`Plugin.Awake`)
 
 1. Bind every setting (F12 sections "0. Gun sounds", "1. Diagnostics" and "2. Fixes (all off means vanilla audio)").
-2. Run `PatchSelfCheck`, which writes `BepInEx/RealSoundSimulationLogs/selfcheck.txt`. **A fresh timestamp on this file is how you know the plugin loaded.**
-3. Install the Harmony patches: timing, shot probe, env probe, then fixes 1, 2, 3, 3c, 4 and 6. Each install is wrapped in `Safe()`, so one failing patch doesn't stop the others; failures are written to the BepInEx log and `RealSoundSimulationLogs/errors.txt`.
+2. Run `PatchSelfCheck`, which writes `RealSoundSimulation Logs/selfcheck.txt`. **A fresh timestamp on this file is how you know the plugin loaded.**
+3. Install the Harmony patches: timing, shot probe, env probe, then fixes 1, 2, 3, 3c, 4 and 6. Each install is wrapped in `Safe()`, so one failing patch doesn't stop the others; failures are written to the BepInEx log and `RealSoundSimulation Logs/errors.txt`.
 4. Add four components to the plugin's GameObject: `DiagRunner` (diagnostics), `DoorwayBlend` (fix 3), `EnclosureProbe` (acoustics) and `EchoVoices` (fix 6). All four run every frame.
 
 The whole of `Awake` is wrapped too: if loading fails, `errors.txt` says "PLUGIN FAILED TO LOAD" with the reason.

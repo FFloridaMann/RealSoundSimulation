@@ -34,18 +34,25 @@ Press F12 and open **Real Sound Simulation**. The settings are grouped by what y
 
 | Section | What's in it |
 |---|---|
-| 1. General | Gun recordings, sound quality, footsteps and handling |
+| 1. General | The concussion switches, gun recordings, sound quality, footsteps and handling, bug report logs |
 | 2. Your gun | Echoes, room reverb, indoor/outdoor blend |
 | 3. Other guns | Sound from the doorway, muffling by route, echoes |
 | 4. Explosions | Thump, echoes, shock wave, concussion, fragments |
 | 5. Rain and outdoors | Outside sound indoors, roof rain |
 | 6. Doors and walls | Sound through walls, closed doors, breaking glass |
 | 7. Performance | How many echo voices other guns may use |
-| 8. Diagnostics | Logs and the F10 mark key |
+| 8. Diagnostics | The overlay, the F10 mark key and the probes |
 
 The everyday settings show by default. Tick **Advanced settings** at the top of F12 for the fine-tuning ones. Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does.
 
-If something sounds wrong, press **F10** on the spot. It's saved with what the mod measured there, which makes it much easier to track down.
+## Reporting a bug
+
+1. In F12 → Real Sound Simulation → **1. General**, turn on **Bug report logs**.
+2. Play one raid. Wherever something sounds wrong, press **F10**: the spot is saved with what the mod measured there.
+3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`) and then the **RealSoundSimulation Logs** folder.
+4. Send the newest **Bug report** zip, and say roughly when and where in the raid it happened.
+
+Turn Bug report logs off again afterwards; it writes several MB per raid.
 
 ## Performance
 
@@ -81,7 +88,7 @@ Rules the code follows:
 
 - Nothing allocates on the audio thread.
 - No Harmony patches on Burst job `Execute` methods; they run native code, so the patch would never fire.
-- Patch named members only. Every patch target is checked at startup and listed in `BepInEx/RealSoundSimulationLogs/selfcheck.txt`.
+- Patch named members only. Every patch target is checked at startup and listed in `RealSoundSimulation Logs/selfcheck.txt`.
 - Setting names never contain `=` `'` `"` `\` `[` `]`, tabs or newlines. BepInEx throws on them and the plugin silently fails to load.
 - Every feature can be switched in F12 and logs what it decided, so it can be compared in a raid and checked from the logs.
 - Docs change in the same commit as the code.

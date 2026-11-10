@@ -8,7 +8,7 @@ using HarmonyLib;
 namespace RealSoundSimulation.Diagnostics
 {
     // Resolves every game member the planned fixes depend on and reports which exist in this client build.
-    // Run at startup; after any SPT/EFT update, read BepInEx/RealSoundSimulationLogs/selfcheck.txt first.
+    // Run at startup; after any SPT/EFT update, read RealSoundSimulation Logs/selfcheck.txt first.
     internal static class PatchSelfCheck
     {
         private struct Target

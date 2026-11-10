@@ -4,9 +4,12 @@ Newest first. Each version: what changed, and whether it has been run in game.
 
 ## 0.7.0 — 10 Nov 2026 (new name; F12 regrouped)
 **Run in game:** not yet.
-- Renamed to Real Sound Simulation: plugin ID `ffloridamann.realsoundsimulation`, DLLs `RealSoundSimulation.dll` and `RealSoundSimulation.Dsp.dll`, folder `BepInEx/plugins/FFloridaMann-RealSoundSimulation`, logs in `BepInEx/RealSoundSimulationLogs`. Settings are carried over from the old config file once, at install.
+- Renamed to Real Sound Simulation: plugin ID `ffloridamann.realsoundsimulation`, DLLs `RealSoundSimulation.dll` and `RealSoundSimulation.Dsp.dll`, folder `BepInEx/plugins/FFloridaMann-RealSoundSimulation`, logs in `RealSoundSimulation Logs`. Settings are carried over from the old config file once, at install.
 - F12 regrouped into eight sections by what you hear, with plain names. 38 settings show by default, 118 behind "Advanced settings". Each description ends with the old code (for example "Was 6.3i"), which these docs still use.
 - README, roadmap and changelog rewritten in plain language; the detailed docs moved to `docs/dev`.
+- Concussion by blast pressure and Soft concussion cut are the first two settings in General.
+- `Write logs` is now **Bug report logs** in General, off by default. Logs go to `RealSoundSimulation Logs` in the SPT folder (was a folder under `BepInEx`). At raid end the raid folder, selfcheck.txt, patches.txt and errors.txt are zipped on a worker thread as `Bug report <date>_<time>.zip`.
+- "Respect no-rain rooms" (9w) keeps working with logging off: the game's indoor/outdoor room state is recorded before the logging check.
 
 ## 0.6.61 — 9 Nov 2026 (6.3h: bot gunshot echoes and voice priority)
 **Run in game:** not yet. It compiles; every number is a starting guess.
@@ -681,7 +684,7 @@ Raid 22 (0.6.0, 9 and 9a on): "really good", garage "big improvement". Still: in
 **Run in game:** raids 2 and 3.
 - Added the doorway logging: `transitions.csv`, `ambience.csv`, and a transitions section in the summary.
 - Added an `occluder` column to `containers.csv`.
-- Plugin errors are now also written to `RealSoundSimulationLogs/errors.txt`, because BepInEx's `LogOutput.log` wasn't being written.
+- Plugin errors are now also written to `RealSoundSimulation Logs/errors.txt`, because BepInEx's `LogOutput.log` wasn't being written.
 
 ## 0.1.0 — 6 Nov 2026
 **Run in game:** raid 1.

@@ -5,7 +5,8 @@ What changed, as you'd notice it in game. The full technical log is [docs/dev/CH
 ## 0.7.0 (not released yet)
 
 - New name: Real Sound Simulation.
-- The F12 page is regrouped by what you hear (General, Your gun, Other guns, Explosions, Rain and outdoors, Doors and walls, Performance, Diagnostics) with plain names. Fine-tuning settings are behind "Advanced settings". Each one's description ends with its old code.
+- The F12 page is regrouped by what you hear (General, Your gun, Other guns, Explosions, Rain and outdoors, Doors and walls, Performance, Diagnostics) with plain names. Fine-tuning settings are behind "Advanced settings". Each one's description ends with its old code. The concussion switches are at the top.
+- **Bug report logs** (General, off by default): one raid's logs packed into a zip in the RealSoundSimulation Logs folder in your SPT folder, ready to send.
 
 ## 0.6.61 (9 Nov 2026): other guns echo
 

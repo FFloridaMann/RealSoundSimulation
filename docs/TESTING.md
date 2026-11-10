@@ -58,7 +58,7 @@ Tell me in plain words ("Premium pumping too long, Budget click too loud"). Thos
 The plugin is already installed at `G:\SPT\BepInEx\plugins\FFloridaMann-RealSoundSimulation`. It **changes no sound**; it only watches and logs.
 
 1. Start SPT as usual.
-2. Check `G:\SPT\BepInEx\RealSoundSimulationLogs\selfcheck.txt`. It should say "All targets present."
+2. Check `G:\SPT\RealSoundSimulation Logs\selfcheck.txt`. It should say "All targets present."
 3. Pick **Customs** or **Woods** (open ground for the 250 m test), plus a building with stairs if you can.
 4. Press **F9** in raid for the overlay. The first column is **P** when a sound is coming through rooms and portals, **O** when it's blocked in the same room. `occl` turns red above 0.55, where gunshots switch to the muffled mixer.
 5. Things worth doing:
@@ -66,7 +66,7 @@ The plugin is already installed at `G:\SPT\BepInEx\plugins\FFloridaMann-RealSoun
    - Have a bot walk around on the floor above or below you.
    - Walk through a doorway while a fight is going on. This tests the indoor/outdoor snap.
 6. Extract or die normally. The summary is written at raid end.
-7. Tell me "done". I'll read `G:\SPT\BepInEx\RealSoundSimulationLogs\raid_<time>\` (summary.txt, shots.csv, containers.csv, rolloff_dump.txt, timing.csv) and `BepInEx\LogOutput.log`.
+7. Tell me "done". I'll read `G:\SPT\RealSoundSimulation Logs\raid_<time>\` (summary.txt, shots.csv, containers.csv, rolloff_dump.txt, timing.csv) and `BepInEx\LogOutput.log`.
 
 What the logs will decide:
 
@@ -79,7 +79,7 @@ What the logs will decide:
 | Are we near the voice limit? | playing sources vs realVoices |
 | How much budget do we have? | `timing.csv`, PERFORMANCE section |
 
-If anything looks off (stutter, errors in `LogOutput.log`), set `Write logs = false` in F12 → Real Sound Simulation, or delete the plugin folder.
+If anything looks off (stutter, errors in `LogOutput.log`), set `Bug report logs = false` in F12 → Real Sound Simulation, or delete the plugin folder.
 
 ### Baseline note (6 Nov 2026)
 

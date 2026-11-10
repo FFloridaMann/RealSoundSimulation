@@ -1,9 +1,9 @@
 # Diagnostics: what gets logged and how to read it
 
-Everything goes to `G:\SPT\BepInEx\RealSoundSimulationLogs\`. Logging is controlled in F12 → Real Sound Simulation → "1. Diagnostics" (`Write logs`, on by default). It runs whether or not any fix is on.
+Everything goes to `G:\SPT\RealSoundSimulation Logs\`. Logging is switched by F12 → Real Sound Simulation → "1. General" → `Bug report logs` (off by default since 0.7.0; it was `Write logs`). At raid end the raid folder, selfcheck.txt, patches.txt and errors.txt are packed into `Bug report <date>_<time>.zip` in the same folder. It runs whether or not any fix is on.
 
 ```
-RealSoundSimulationLogs\
+RealSoundSimulation Logs\
   selfcheck.txt           written at every game launch
   patches.txt             0.6.20: latest copy of the raid-start shared-patch report (also in each raid folder)
   audio-counters.txt      0.6.20: latest list of the Unity profiler counters this game offers (also in each raid folder)

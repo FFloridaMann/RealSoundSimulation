@@ -50,7 +50,9 @@ namespace RealSoundSimulation.Diagnostics
         };
         private static float _lastFlush;
 
-        public static string RootDir => Path.Combine(BepInEx.Paths.BepInExRootPath, "RealSoundSimulationLogs");
+        // 0.7.0: in the SPT folder itself, next to EscapeFromTarkov.exe, so players can find it to send a bug report.
+        public const string FolderName = "RealSoundSimulation Logs";
+        public static string RootDir => Path.Combine(BepInEx.Paths.GameRootPath, FolderName);
         public static string RaidDir { get; private set; }
         // 0.6.15: "Write logs" is live - switched off in raid, no more rows are built or written (callers check IsOpen);
         // the summary is still written (HasRaidDir)
@@ -162,7 +164,35 @@ namespace RealSoundSimulation.Diagnostics
             RaidDir = null;
         }
 
-        // Plugin errors also go to RealSoundSimulationLogs/errors.txt, because BepInEx's LogOutput.log is not always readable.
+        // 0.7.0: one zip per raid for bug reports: the raid folder plus the startup self-check, the shared-patch list and any
+        // errors. Built on a worker thread after the files are closed, so raid end doesn't hitch.
+        public static void ZipForBugReport(string raidDir)
+        {
+            if (raidDir == null || !Directory.Exists(raidDir)) return;
+            string root = RootDir;
+            string zip = Path.Combine(root, "Bug report " + Path.GetFileName(raidDir).Replace("raid_", "") + ".zip");
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    if (File.Exists(zip)) File.Delete(zip);
+                    using (var archive = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create))
+                    {
+                        string folder = Path.GetFileName(raidDir);
+                        foreach (string f in Directory.GetFiles(raidDir))
+                            System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(archive, f, folder + "/" + Path.GetFileName(f));
+                        foreach (string name in new[] { "selfcheck.txt", "patches.txt", "errors.txt" })
+                        {
+                            string f = Path.Combine(root, name);
+                            if (File.Exists(f)) System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(archive, f, name);
+                        }
+                    }
+                }
+                catch (Exception e) { Error("bug report zip failed: " + e.Message); }
+            });
+        }
+
+        // Plugin errors also go to RealSoundSimulation Logs/errors.txt, because BepInEx's LogOutput.log is not always readable.
         public static void Error(string text)
         {
             try

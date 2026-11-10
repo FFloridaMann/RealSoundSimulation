@@ -200,8 +200,10 @@ namespace RealSoundSimulation.Diagnostics
 
         private void RaidEnd()
         {
+            string raidDir = DiagLog.RaidDir;
             if (DiagLog.HasRaidDir) DiagLog.Text("summary.txt", BuildSummary());
             DiagLog.Close();
+            if (raidDir != null && Plugin.LogsOn.Value) DiagLog.ZipForBugReport(raidDir); // 0.7.0
             Plugin.Safe("audio counters", AudioCounters.Stop); // 0.6.20
             _overlayText = "";
             if (_audioProbe != null) { Destroy(_audioProbe); _audioProbe = null; } // 0.6.20

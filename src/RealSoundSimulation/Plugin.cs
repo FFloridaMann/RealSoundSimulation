@@ -11,7 +11,7 @@ using UnityEngine;
 namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
-    // BepInEx/RealSoundSimulationLogs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
+    // RealSoundSimulation Logs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
     [BepInPlugin(Guid, "Real Sound Simulation", "0.7.0")]
     public class Plugin : BaseUnityPlugin
     {
@@ -179,6 +179,7 @@ namespace RealSoundSimulation
             RayQualityCfg = Bind(general, "Sound quality", AcousticProbe.RayQuality.Medium, "How many sound paths are traced through the map each second. Higher = steadier, more accurate sound deep inside buildings, for more CPU. Low costs about half of Medium, High twice, Ultra four times. Was 9g.");
             ShotOverlapOn = Bind(general, "Shots ring out under the next", true, "Every gun, yours and everyone else's. The game stops a shot dead when the same gun's next sound starts; with this on it rings out underneath. Off = the game's behaviour. Was 1e.");
             FoleyPresetsOn = Bind(general, "Footsteps and handling like EFT 1.0", true, "Footsteps, gear and weapon handling use EFT 1.0's distance curves, stereo spread and 3D processing, from Sound Engine Backport by red_the_fox. Volumes stay the same. Restart the game to switch. Was 10a.");
+            LogsOn = Bind(general, "Bug report logs", false, "Found a bug? Turn this on, play one raid, and press F10 wherever something sounds wrong. After the raid, send the newest Bug report zip from the RealSoundSimulation Logs folder in your SPT folder (next to EscapeFromTarkov.exe). Off for normal play. Starts at the next raid. Was Write logs.");
 
             // 2. Your gun
             EchoOn = Bind(gun, "Echoes", true, "Your shots echo off the real surfaces around you (walls, ceilings, building faces, hills), each delayed by its distance and coloured by its material. Was 6.");
@@ -327,8 +328,7 @@ namespace RealSoundSimulation
             EchoReplaceOn = Bind(perf, "Replace the quietest echo", true, "At the voice limit, a new echo takes over from the other-gun echo you can hear least, with a short fade. Off = the new echo doesn't start. Was 6.3p.", null, adv);
 
             // 8. Diagnostics
-            LogsOn = Bind(diag, "Write logs", true, "Write CSV logs and a summary per raid to BepInEx/RealSoundSimulationLogs. Turning it on starts at the next raid.");
-            MarkKey = Bind(diag, "Mark key", new KeyboardShortcut(KeyCode.F10), "Press in raid where something sounds wrong. It marks the spot in marks.csv with what the mod measured there.");
+            MarkKey = Bind(diag, "Mark key", new KeyboardShortcut(KeyCode.F10), "With Bug report logs on, press in raid where something sounds wrong. It marks the spot with what the mod measured there.");
             OverlayOn = Bind(diag, "Overlay", false, "Show the live sound overlay (top left) in raid.", null, adv);
             OverlayKey = Bind(diag, "Overlay key", new KeyboardShortcut(KeyCode.F9), "Show or hide the overlay.", null, adv);
             OverlayRows = Bind(diag, "Overlay rows", 14, "How many of the nearest sounds the overlay lists.", N(4, 40), adv);

@@ -69,12 +69,12 @@ namespace RealSoundSimulation.Diagnostics
 
         private static void RoomPostfix(ISpatialAudioRoom room, EAudioRoomTypeMask roomType)
         {
-            if (!DiagLog.IsOpen) return;
             try
             {
                 bool indoor = !roomType.IsOutdoor();
                 if (_haveRoomState && indoor == _lastRoomIndoor) return; // indoor->indoor room changes are not doorway crossings
-                _haveRoomState = true; _lastRoomIndoor = indoor;
+                _haveRoomState = true; _lastRoomIndoor = indoor; // 0.7.0: kept with logging off too; "Respect no-rain rooms" reads it
+                if (!DiagLog.IsOpen) return;
                 var e = new Ev { T = Time.time - _raidStart, Indoor = indoor, Pos = ListenerPos() };
                 RoomEvents.Add(e);
                 Write("room", e, indoor ? "blend by doorway distance" : "0.3", ShotProbe.RoomName(room));
