@@ -167,6 +167,7 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [x] At the limit, replace the quietest playing echo with a 40 ms fade (`6.3p`, 0.6.61; only bot echoes can be replaced)
 - [x] F12 settings: ceiling, threshold, your gun's share (`6.3k`, `6.3m`, `6.3n`, 0.6.61)
 - [ ] Raid with bots: your own echoes never pushed out by bot echoes; how many bot echoes don't start
+- [ ] Tune from raids: if it sounds off or there are lots of drops, change the limits, even if your own gun loses some echo bounces (user, 9 Nov 2026)
 - [x] Grenade and explosion echoes (`6.3`, `6.3a`-`6.3d`, 0.6.39; starting values)
 - [ ] Raid: explosion echoes in a concrete room and outdoors, `6.3` on and off; do they duck with Bring Back Concussion?
 - [ ] Tune `6.3a` to `6.3d` by ear
@@ -213,11 +214,15 @@ Why each step sits where it does: [ROADMAP.md](ROADMAP.md).
 - [ ] Give things up in stages: fewer echoes per shooter, then shorter, then zero-voice, never a hard stop
 - [ ] Masking: thin out everyone else's echoes while you're firing
 - [ ] Lower the echo ceiling when the audio thread falls behind
+- [ ] Retune the voice priority from raids (`6.3j`, `6.3k`, `6.3m`, `6.3n`, `6b`); your gun's echo count can come down if it helps the whole mix
 - [ ] Test on Factory and Labs (the most echoes at once)
 - [ ] Release build, 1: `9w` no longer depends on logging (`EnvProbe.RoomPostfix` records the room state first)
 - [ ] Release build, 2: one master diagnostics switch; keep `DiagRunner`'s raid resets and the three probes running
 - [ ] Release build, 3: count `LastPlayingInContainers` on its own for `OwnEchoes`, stop building container rows
 - [ ] Release build, 4: one raid with FrameDiag and logging off: `DiagRunner` spikes gone, roof rain still fades in no-rain rooms
+- [ ] Code pass, 1: acoustic probe (~0.10 ms/frame) and enclosure probe, same results for less work
+- [ ] Code pass, 2: `ClosedDoors` re-scanning every 3–4 s (~60 ms) during the deploy countdown
+- [ ] Code pass, 3: load-in spikes in `AmbienceMix` (110–165 ms) and `DoorwayBlend` (37–55 ms)
 
 ## CO · Co-op: players hear each other's echoes (after E)
 - [ ] Check how the mod treats another human's gun (a bot's, or wrongly your own?)
