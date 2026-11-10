@@ -164,6 +164,47 @@ namespace RealSoundSimulation.Diagnostics
             RaidDir = null;
         }
 
+        // 0.7.2: every loaded BepInEx plugin (name, version, id) and the server mod folders, by name only (no full paths,
+        // so nothing of the player's own folders ends up in a report).
+        private static string ModList()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Game {UnityEngine.Application.version}  Real Sound Simulation {Plugin.Version}  {DateTime.Now:yyyy-MM-dd HH:mm}");
+            sb.AppendLine();
+            sb.AppendLine("BepInEx plugins (name | version | id | folder):");
+            try
+            {
+                var rows = new List<string>();
+                foreach (var kv in BepInEx.Bootstrap.Chainloader.PluginInfos)
+                {
+                    var m = kv.Value.Metadata;
+                    string dir = "";
+                    try { dir = Path.GetFileName(Path.GetDirectoryName(kv.Value.Location)); } catch { }
+                    rows.Add($"  {m.Name} | {m.Version} | {m.GUID} | {dir}");
+                }
+                rows.Sort(StringComparer.OrdinalIgnoreCase);
+                foreach (string r in rows) sb.AppendLine(r);
+            }
+            catch (Exception e) { sb.AppendLine("  (could not list: " + e.Message + ")"); }
+            sb.AppendLine();
+            sb.AppendLine("Server mods (folder names):");
+            foreach (string sub in new[] { @"SPT_Runtime\user\mods", @"SPT\user\mods", @"user\mods" })
+            {
+                string dir = Path.Combine(BepInEx.Paths.GameRootPath, sub);
+                if (!Directory.Exists(dir)) continue;
+                try
+                {
+                    var names = new List<string>();
+                    foreach (string d in Directory.GetDirectories(dir)) names.Add(Path.GetFileName(d));
+                    names.Sort(StringComparer.OrdinalIgnoreCase);
+                    foreach (string n in names) sb.AppendLine("  " + n);
+                }
+                catch (Exception e) { sb.AppendLine("  (could not list: " + e.Message + ")"); }
+                break;
+            }
+            return sb.ToString();
+        }
+
         // 0.7.0: one zip per raid for bug reports: the raid folder plus the startup self-check, the shared-patch list and any
         // errors. Built on a worker thread after the files are closed, so raid end doesn't hitch.
         public static void ZipForBugReport(string raidDir)
@@ -171,6 +212,8 @@ namespace RealSoundSimulation.Diagnostics
             if (raidDir == null || !Directory.Exists(raidDir)) return;
             string root = RootDir;
             string zip = Path.Combine(root, "Bug report " + Path.GetFileName(raidDir).Replace("raid_", "") + ".zip");
+            string mods = ModList(); // read here, on the main thread
+            string bepinexLog = Path.Combine(BepInEx.Paths.BepInExRootPath, "LogOutput.log");
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -185,6 +228,16 @@ namespace RealSoundSimulation.Diagnostics
                         {
                             string f = Path.Combine(root, name);
                             if (File.Exists(f)) System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(archive, f, name);
+                        }
+                        // 0.7.2: the player's own setup, which differs from the developer's
+                        using (var w = new StreamWriter(archive.CreateEntry("mods.txt").Open(), new UTF8Encoding(false)))
+                            w.Write(mods);
+                        if (File.Exists(bepinexLog))
+                        {
+                            // BepInEx keeps this file open while the game runs, so read it with sharing allowed
+                            using (var src = new FileStream(bepinexLog, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                            using (var dst = archive.CreateEntry("LogOutput.log").Open())
+                                src.CopyTo(dst);
                         }
                     }
                 }

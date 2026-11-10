@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.2 — 10 Nov 2026 (bug report: the player's setup)
+**Run in game:** not yet.
+- The bug report zip adds `mods.txt` (game version, every loaded BepInEx plugin with name, version, id and folder name, and the server mod folder names, read from `SPT_Runtime/user/mods`, `SPT/user/mods` or `user/mods`; names only, never full paths) and a copy of `BepInEx/LogOutput.log`, read with sharing because BepInEx keeps it open.
+- `Plugin.Version` constant; the description moved into the repo as `FORGE-PAGE.md` and the README points to it.
+
 ## 0.7.1 — 10 Nov 2026 (6.9n: your room builds up blasts)
 **Run in game:** not yet. The 3 dB top is hand-set from small-scale tests.
 - **New `6.9n Your room builds up blasts`** (on, live, in General next to the other concussion switches) and `6.9o Your room build-up` (3 dB, 0 to 6, advanced, Explosions). User: "a blast getting into a small room you're standing in should build up too". Until now only the blast's room counted in the concussion dose.

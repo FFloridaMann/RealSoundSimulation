@@ -12,10 +12,11 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // RealSoundSimulation Logs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", "0.7.1")]
+    [BepInPlugin(Guid, "Real Sound Simulation", Version)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
+        public const string Version = "0.7.2";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;

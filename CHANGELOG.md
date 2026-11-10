@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.2 (not released yet): better bug reports
+
+- The bug report zip now also lists your installed mods (BepInEx plugins and server mods, by name) and includes BepInEx's own log, so problems with other mods can be found.
+
 ## 0.7.1 (not released yet): your room builds up blasts
 
 - A blast that gets into a small closed room you're in, through a door or window, now hits a bit harder and lasts a bit longer, because it bounces around your room. Big or open rooms add nothing. It's less than a blast going off in your own room.
