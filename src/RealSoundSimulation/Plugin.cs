@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.15";
+        public const string Version = "0.7.17";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -138,6 +138,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> EarRingOn; // 0.7.13 "5r"
         internal static ConfigEntry<bool> BodySoundsOn; // 0.7.15 "F"
         internal static ConfigEntry<float> BodySoundsRangeM, BodySoundsFloorStrength; // 0.7.15 "Fa", "Fb"
+        internal static ConfigEntry<bool> BodySecondOn; // 0.7.17 "Fc"
+        internal static ConfigEntry<float> BodySecondWithinDb, BodySecondRangeM; // 0.7.17 "Fd", "Fe"
         internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingRecovery, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
         internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
@@ -194,7 +196,7 @@ namespace RealSoundSimulation
             // 01 | GENERAL
             ConcussionPressureOn = Bind(s01, "Concussion - by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             SoftCutOn = Bind(s01, "Concussion - soft hearing cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
-            BodySoundsOn = Bind(s01, "Footsteps and body sounds - simulated", false, "Other people's footsteps, gear, looting, voices, meds, food and reloads reach you the way gunshots do: through the floor when they're above or below you (footsteps as a dull thud from where they really are), from the doorway or stairwell when there's a way round, muffled by the route. Your own sounds don't change. Off = the game's own. Was F.");
+            BodySoundsOn = Bind(s01, "Footsteps and body sounds - simulated", false, "Other people's footsteps, gear, looting, voices, meds, food and reloads reach you the way gunshots do: through walls, doors, windows and floors by their material (from where the person really is), and round through doorways and stairwells, muffled by the route. Both ways at once when both are loud enough. Your own sounds don't change. Off = the game's own. Was F.");
             EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", true, "Without a headset, loud shots near you bring in a ring: a faint one after a few shots, a strong one after a lot, and the world gets a bit quieter. Supersonic ammo rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. Small rooms ring more. A headset takes off half and stops the ring. Was 5r.");
             YourRoomOn = Bind(s01, "Concussion - your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
             ShotVariationOn = Bind(s01, "Shot variation - on", true, "Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so no two shots, or their echoes, sound exactly alike. Its tail and echoes share the same shot's change. Off = every shot identical, as in the game.");
@@ -244,7 +246,10 @@ namespace RealSoundSimulation
             GunCornerOn = Bind(s03, "Direction - around corners outdoors", true, "Outdoors, a shot from behind a building comes from around its corner, muffled. Was 6.8b.", null, adv);
             TailHandoffOn = Bind(s03, "Tails - ring out on a spare voice", true, "When another gun fires again while its last shot is still ringing, that ring finishes on a spare voice instead of being cut off. Needs Shots ring out under the next. Off = cut as before. Was 1f.");
             BodySoundsRangeM = Bind(s08, "Body sounds - range m", 40f, "Footsteps and body sounds are simulated for people within this distance. Was Fa.", R(10f, 80f), adv);
-            BodySoundsFloorStrength = Bind(s08, "Body sounds - floor muffling", 1f, "How much a floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
+            BodySoundsFloorStrength = Bind(s08, "Body sounds - wall and floor muffling", 1f, "How much a wall, door, window, floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
+            BodySecondOn = Bind(s08, "Body sounds - both ways at once", true, "A body sound that reaches you both through a wall and round through a doorway plays both ways, when the quieter way is loud enough to hear. Off = only the louder way. Needs Footsteps and body sounds - simulated. Was Fc.");
+            BodySecondWithinDb = Bind(s08, "Body sounds - second way within dB", 10f, "The quieter way plays only if it is at most this much quieter than the louder one. Was Fd.", R(0f, 30f), adv);
+            BodySecondRangeM = Bind(s08, "Body sounds - second way range m", 25f, "The quieter way plays only for people this close. Was Fe.", R(5f, 60f), adv);
             RouteDullOn = Bind(s03, "Muffling - by route", true, "A shot from another room loses its highs by the way it got to you: a wall on the straight line, each turn and each extra opening. Was 6.1b.");
             RouteDullStrength = Bind(s03, "Muffling - strength", 1f, "How strongly the route muffles a shot. 0 = not at all, 2 = twice as much. Was 6.1c.", R(0f, 2f), adv);
             RouteDullMinHz = Bind(s03, "Muffling - most muffled Hz", 800f, "The most a route can muffle a shot. Lower = more muffled on long routes. Was 6.1d.", R(400f, 4000f), adv);

@@ -13,30 +13,39 @@ namespace RealSoundSimulation.Fixes
     // 0.7.15 "F": other people's footsteps and body sounds reach you the way gunshots do. User, 10 Nov 2026: "it still is at times hard to
     // tell if someone is above or below you". The game plays these at the person's real position and leaves the height to the spatializer,
     // which headphones barely carry; what tells you someone is upstairs is the way the sound gets to you.
-    //   sounds   footsteps (NestedStepSoundSource, and from 0.7.16 EFT 1.0's extra step layer outdoors), gear rustle, searching and looting, voices, and everything their hands play
-    //            (meds, food and drink, reloads, handling: BaseSoundPlayer's clip source). Other people only, within "F range" m.
-    //   floor    something above or below you (more than 1.8 m up or down, with a floor or ceiling on the straight line between): the sound
-    //            stays where they really are, so the spatializer keeps the height, and goes through the floor by its material and thickness
-    //            (ThroughWall's measure). Footsteps keep their low thud; voices, zippers and meds come through very muffled.
-    //   route    a voice, zipper or med from another floor with a stairwell or open route comes from that opening, muffled by the route,
-    //            like gunshots (PortalPositioning's routes and rule). Footsteps stay the thud through the floor. Same floor, another room:
-    //            everything comes from the doorway.
+    //   sounds   footsteps (NestedStepSoundSource, and EFT 1.0's extra step layer outdoors), gear rustle, searching and looting, voices, and
+    //            everything their hands play (meds, food and drink, reloads, handling: BaseSoundPlayer's clip source). Other people only,
+    //            within "Fa" m.
+    //
+    // 0.7.17 "Fc"/"Fd": both ways at once. User: "does it come through walls (like thin wood glass doors etc)", then "why not both the wall
+    // and path?". Real sound reaches you both through what's in between and round through the openings; the louder way sets the direction.
+    //   wall     anything on the straight line (a wall, a door, glass, a floor): its loss by material and thickness (ThroughWall's measure,
+    //            125 Hz) x "Fb". The sound stays where they really are, so the spatializer keeps the direction and height, low-passed by
+    //            that loss. Footsteps through a floor count 10 dB louder: a step is felt through the structure.
+    //   route    round through the openings (PortalPositioning's routes): the extra length in dB + 4 dB per opening + 3 dB per 90 degrees
+    //            of turn. The sound comes from the opening, at the route's length, dulled by 6.1b's rule.
+    //   main     the game's own voice for the sound follows whichever loses less.
+    //   second   the other way plays on a voice from the echo pool, at its own place, muffling and level, but only when it's within "Fd"
+    //            dB of the main one (quieter isn't heard), within "Fe" m, at most MaxSecond at once, nearest first. It counts as a bot
+    //            echo, so it never takes voices your gun needs.
     //   else     same room or the open: unchanged.
     // Our own low-pass on each source, on top of the game's occlusion. Moved sources are put back when they no longer need it.
     [DefaultExecutionOrder(32001)]
     internal class BodySounds : MonoBehaviour
     {
         private const float ScanEveryS = 0.1f, WallsEveryS = 0.5f, FloorDyM = 1.8f, FloorNormalY = 0.7f, HeadUpM = 1.0f, SmoothS = 0.15f,
-            FullAtEffect = 0.3f, NearFadeM = 1f, OffHz = 22000f, LossLowDb = 15f, LossHighDb = 50f,
-            StepFloorTopHz = 900f, StepFloorLowHz = 250f, AirFloorTopHz = 500f, AirFloorLowHz = 150f;
-        private const int MaxHits = 16;
+            FullAtEffect = 0.3f, NearFadeM = 1f, OffHz = 22000f, LossLowDb = 5f, LossHighDb = 50f, StepThroughFloorDb = 10f,
+            StepWallTopHz = 1500f, StepWallLowHz = 250f, AirWallTopHz = 3000f, AirWallLowHz = 150f,
+            RouteDbPerOpening = 4f, RouteDbPer90 = 3f, SpeedOfSound = 343f, SecondMinCutHz = 100f;
+        private const int MaxHits = 16, MaxSecond = 6;
 
         private static readonly AccessTools.FieldRef<Player, BetterSource> StepRef = AccessTools.FieldRefAccess<Player, BetterSource>("NestedStepSoundSource");
         private static readonly AccessTools.FieldRef<Player, BetterSource> GearRef = AccessTools.FieldRefAccess<Player, BetterSource>("_gearSource");
         private static readonly AccessTools.FieldRef<Player, BetterSource> SearchRef = AccessTools.FieldRefAccess<Player, BetterSource>("_searchSource");
         private static readonly AccessTools.FieldRef<Player, BetterSource> SpeechRef = AccessTools.FieldRefAccess<Player, BetterSource>("_speechSource");
-        // 0.7.16: EFT 1.0's extra footstep layer (surface detail, only while the person is outdoors) plays on a source of its own
-        private static readonly AccessTools.FieldRef<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController> LayerRef = AccessTools.FieldRefAccess<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController>("_specificStepAudioController");
+        // EFT 1.0's extra footstep layer (surface detail, only while the person is outdoors) plays on a source of its own
+        private static readonly AccessTools.FieldRef<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController> LayerRef =
+            AccessTools.FieldRefAccess<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController>("_specificStepAudioController");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BetterSource> ClipsRef = AccessTools.FieldRefAccess<BaseSoundPlayer, BetterSource>("_clipsSource");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, bool> ReleasedRef = AccessTools.FieldRefAccess<BaseSoundPlayer, bool>("_isClipSourceReleased");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -44,49 +53,70 @@ namespace RealSoundSimulation.Fixes
         private static readonly AccessTools.FieldRef<SpatialAudioSystem, Dictionary<int, SoundOcclusionProcessor>> ProcessorsRef =
             AccessTools.FieldRefAccess<SpatialAudioSystem, Dictionary<int, SoundOcclusionProcessor>>("_registeredPlayerProcessors");
 
-        private enum Mode : byte { None, Route, Floor }
+        private enum Way : byte { None, Wall, Route }
+
+        // One sound's two ways for this person right now (footsteps and airborne sounds differ).
+        private struct Paths
+        {
+            public Way Main, Second;
+            public float MainCut, SecondCut, SecondDeltaDb, AppliedCut;
+            public Way LastMain;
+        }
 
         private class Body
         {
             public Player P;
             public int Id;
             public bool HasRoute, Blocked, Floor, Init;
-            public Vector3 Near, CurDir;
-            public float Path, CurDist, LossDb, NextScan, NextWalls, StepCut = OffHz, AirCut = OffHz, Blend;
+            public Vector3 Near, CurDir, Head;
+            public float Path, Straight, CurDist, LossDb, NextScan, NextWalls, Blend;
             public int Portals, HeldRoute = -1, Walls;
             public uint HeldPair;
-            public Mode StepMode, AirMode, LastStepMode, LastAirMode;
+            public Paths Step, Air;
             public readonly List<BaseSoundPlayer> Hands = new List<BaseSoundPlayer>();
-            public BetterSource Layer; // the 1.0 step layer's source last seen
             public readonly Dictionary<BaseSoundPlayer, BetterSource> HandSrc = new Dictionary<BaseSoundPlayer, BetterSource>(); // the source each was last seen playing on
+            public BetterSource Layer; // the 1.0 step layer's source last seen
+            public Vector3 RoutePos => CurDir.normalized * CurDist;   // relative to the listener
         }
+
+        private struct Owner { public Body B; public bool Step; }
 
         private static readonly Dictionary<int, Body> Bodies = new Dictionary<int, Body>();
         private static readonly Dictionary<BetterSource, Vector3> MovedFrom = new Dictionary<BetterSource, Vector3>(); // original local position
         private static readonly HashSet<BetterSource> Filtered = new HashSet<BetterSource>();
         private static readonly HashSet<BetterSource> TouchedNow = new HashSet<BetterSource>();
+        private static readonly Dictionary<BetterSource, Owner> Owners = new Dictionary<BetterSource, Owner>(); // whose sound a source plays, from the last frame
+        private static readonly Dictionary<AudioSource, AnimationCurve> Rolloffs = new Dictionary<AudioSource, AnimationCurve>();
+        private static readonly double[] SecondEnds = new double[MaxSecond];
         private static readonly RaycastHit[] Hits = new RaycastHit[MaxHits];
         private static readonly List<int> Gone = new List<int>();
+        private static BetterSource _dupSrc; private static int _dupFrame = -1;
+        private static Vector3 _listener;
 
-        public static int Handled, HandsSeen;
-        public static long FloorFrames, RouteFrames, SourcesMoved;
+        public static int Handled, HandsSeen, SecondPlayed, SecondTooQuiet, SecondFull, SecondFar, SecondNoVoice;
+        public static long FloorFrames, RouteFrames, WallFrames, SourcesMoved;
         public static float LowestStepHz = OffHz, LowestAirHz = OffHz;
 
         public static void Apply(Harmony h)
         {
             h.Patch(AccessTools.Method(typeof(BaseSoundPlayer), nameof(BaseSoundPlayer.PlayClipInternal)),
                 postfix: new HarmonyMethod(typeof(BodySounds), nameof(HandsPostfix)));
+            // every body sound starts here (the source types call it first); the second way is copied from it
+            h.Patch(AccessTools.Method(typeof(BetterSource), nameof(BetterSource.Play)),
+                postfix: new HarmonyMethod(typeof(BodySounds), nameof(PlayPostfix)));
         }
 
         public static void Reset()
         {
             NeutralAll();
-            Bodies.Clear(); MovedFrom.Clear(); Filtered.Clear();
-            Handled = HandsSeen = 0; FloorFrames = RouteFrames = SourcesMoved = 0; LowestStepHz = LowestAirHz = OffHz;
+            Bodies.Clear(); MovedFrom.Clear(); Filtered.Clear(); Owners.Clear(); Rolloffs.Clear();
+            for (int i = 0; i < MaxSecond; i++) SecondEnds[i] = 0;
+            Handled = HandsSeen = SecondPlayed = SecondTooQuiet = SecondFull = SecondFar = SecondNoVoice = 0;
+            FloorFrames = RouteFrames = WallFrames = SourcesMoved = 0; LowestStepHz = LowestAirHz = OffHz;
         }
 
         // Someone's hands played a sound (meds, food, a reload): remember the sound player so its source is treated while it plays.
-        private static void HandsPostfix(BaseSoundPlayer __instance)
+        private static void HandsPostfix(BaseSoundPlayer __instance, AudioClip clip, float volume)
         {
             if (!Plugin.BodySoundsOn.Value) return;
             try
@@ -94,9 +124,28 @@ namespace RealSoundSimulation.Fixes
                 BaseSoundPlayer.IObserverToPlayerBridge b = BridgeRef(__instance);
                 if (b == null || b.PointOfView == EPointOfView.FirstPerson || !(b.iPlayer is Player p)) return;
                 Body body = Get(p);
-                if (body != null && !body.Hands.Contains(__instance)) { body.Hands.Add(__instance); HandsSeen++; }
+                if (body == null) return;
+                if (!body.Hands.Contains(__instance)) { body.Hands.Add(__instance); HandsSeen++; }
+                // the very first sound of a newly seen hands source isn't in Owners yet: copy its second way from here
+                BetterSource src = ReleasedRef(__instance) ? null : ClipsRef(__instance);
+                if (src != null && !(_dupSrc == src && _dupFrame == Time.frameCount)) Second(body, false, src, clip, volume);
             }
             catch (Exception e) { DiagRunner.ReportOnce("F body sounds (hands)", e); }
+        }
+
+        private static void PlayPostfix(BetterSource __instance, AudioClip clip1, AudioClip clip2, float balance, float volume, bool oneShot)
+        {
+            if (!Plugin.BodySoundsOn.Value || !Plugin.BodySecondOn.Value || Owners.Count == 0) return;
+            try
+            {
+                if (!Owners.TryGetValue(__instance, out Owner o) || o.B == null) return;
+                if (!oneShot && clip1 != null) return; // a looping sound: the main voice carries it
+                AudioClip clip = clip1 != null && (clip2 == null || balance >= 0.5f) ? clip1 : clip2;
+                float part = clip == clip1 ? (clip2 != null ? balance : 1f) : (clip1 != null ? 1f - balance : 1f);
+                Second(o.B, o.Step, __instance, clip, volume * part);
+                _dupSrc = __instance; _dupFrame = Time.frameCount;
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("F body sounds (second way)", e); }
         }
 
         private static Body Get(Player p)
@@ -114,6 +163,7 @@ namespace RealSoundSimulation.Fixes
             {
                 if (MovedFrom.Count > 0 || Filtered.Count > 0) NeutralAll();
                 if (Bodies.Count > 0) Bodies.Clear();
+                Owners.Clear();
                 return;
             }
             try
@@ -124,7 +174,9 @@ namespace RealSoundSimulation.Fixes
                 if (lt == null || gw is HideoutGameWorld || gw.AllAlivePlayersList == null) return;
                 Player me = gw.MainPlayer;
                 Vector3 l = lt.position;
+                _listener = l;
                 float now = Time.time, dt = Mathf.Max(Time.unscaledDeltaTime, 0f), range = Plugin.BodySoundsRangeM.Value;
+                Owners.Clear();
 
                 foreach (Player p in gw.AllAlivePlayersList)
                 {
@@ -168,14 +220,16 @@ namespace RealSoundSimulation.Fixes
             catch (Exception e) { DiagRunner.ReportOnce("F body sounds", e); }
         }
 
-        // Where this person is to you: a floor between you, a route through openings, or neither.
+        // Where this person is to you: what's on the straight line (and whether it's a floor), and the route through openings.
         private static void Scan(SpatialAudioSystem sas, Vector3 l, Body b, float now)
         {
             b.NextScan = now + ScanEveryS;
             Vector3 s = b.P.Position + Vector3.up * HeadUpM, d = s - l;
             float len = d.magnitude;
+            b.Head = s; b.Straight = Mathf.Max(len, 0.5f);
             int mask = sas.OcclusionSettings != null ? sas.OcclusionSettings.commonSettings.occlusionLayerMask.value : 1;
-            b.Blocked = false; bool floorHit = false;
+            bool wasBlocked = b.Blocked, floorHit = false;
+            b.Blocked = false;
             if (len > 0.01f)
             {
                 CountedRay.Rays++;
@@ -183,9 +237,9 @@ namespace RealSoundSimulation.Fixes
                 b.Blocked = n > 0;
                 for (int i = 0; i < n; i++) if (Mathf.Abs(Hits[i].normal.y) >= FloorNormalY) { floorHit = true; break; }
             }
-            bool wasFloor = b.Floor;
             b.Floor = floorHit && Mathf.Abs(d.y) > FloorDyM;
-            if (b.Floor && (now >= b.NextWalls || !wasFloor))
+            if (!b.Blocked) b.LossDb = 0f;
+            else if (now >= b.NextWalls || !wasBlocked)
             {
                 b.LossDb = ThroughWall.LossDb(l, s, out b.Walls);
                 b.NextWalls = now + WallsEveryS;
@@ -202,32 +256,34 @@ namespace RealSoundSimulation.Fixes
             b.Blend = Mathf.Clamp01(c.PropagationEffect / FullAtEffect);
         }
 
-        // Footsteps: through the floor when there is one, else from the doorway. Everything airborne: from the opening when there's a route, else through the floor.
         private static void Decide(Vector3 l, Body b, float dt)
         {
-            bool route = b.HasRoute && b.Blocked && b.Blend > 0f;
-            b.StepMode = b.Floor ? Mode.Floor : route ? Mode.Route : Mode.None;
-            b.AirMode = route ? Mode.Route : b.Floor ? Mode.Floor : Mode.None;
-
-            Vector3 s = b.P.Position + Vector3.up * HeadUpM;
-            float routeHz = route ? PortalPositioning.DullHzFor(s - l, b.Near - l, b.Blocked, b.Portals, Plugin.RouteDullStrength.Value) : OffHz;
-            float t = Mathf.InverseLerp(LossLowDb, LossHighDb, b.LossDb * Plugin.BodySoundsFloorStrength.Value);
-            float stepTarget = b.StepMode == Mode.Floor ? Mathf.Lerp(StepFloorTopHz, StepFloorLowHz, t) : b.StepMode == Mode.Route ? routeHz : OffHz;
-            float airTarget = b.AirMode == Mode.Floor ? Mathf.Lerp(AirFloorTopHz, AirFloorLowHz, t) : b.AirMode == Mode.Route ? routeHz : OffHz;
             float k = 1f - Mathf.Exp(-dt / SmoothS);
-            b.StepCut = b.StepMode != b.LastStepMode && b.LastStepMode == Mode.None ? stepTarget : Mathf.Exp(Mathf.Lerp(Mathf.Log(b.StepCut), Mathf.Log(stepTarget), k));
-            b.AirCut = b.AirMode != b.LastAirMode && b.LastAirMode == Mode.None ? airTarget : Mathf.Exp(Mathf.Lerp(Mathf.Log(b.AirCut), Mathf.Log(airTarget), k));
-            b.LastStepMode = b.StepMode; b.LastAirMode = b.AirMode;
-            if (b.StepMode == Mode.Floor || b.AirMode == Mode.Floor) FloorFrames++;
-            if (b.StepMode == Mode.Route || b.AirMode == Mode.Route) RouteFrames++;
-            if (b.StepMode != Mode.None && b.StepCut < LowestStepHz) LowestStepHz = b.StepCut;
-            if (b.AirMode != Mode.None && b.AirCut < LowestAirHz) LowestAirHz = b.AirCut;
+            Vector3 toS = b.Head - l;
+            bool wallOk = b.Blocked;
+            bool routeOk = b.Blocked && b.HasRoute && b.Blend > 0f;
+            float wallDb = b.LossDb * Plugin.BodySoundsFloorStrength.Value;
+            float routeDb = 0f, routeHz = OffHz;
+            if (routeOk)
+            {
+                Vector3 toNear = b.Near - l;
+                float turn = Vector3.Angle(toS, toNear) * Mathf.Clamp01(toNear.magnitude / NearFadeM);
+                routeDb = 20f * Mathf.Log10(Mathf.Max(b.Path, b.Straight) / b.Straight) + RouteDbPerOpening * Mathf.Max(b.Portals, 1) + RouteDbPer90 * turn / 90f;
+                routeHz = PortalPositioning.DullHzFor(toS, toNear, true, b.Portals, Plugin.RouteDullStrength.Value);
+            }
+            Choose(ref b.Step, wallOk, routeOk, b.Floor ? wallDb - StepThroughFloorDb : wallDb, routeDb, routeHz, true, k);
+            Choose(ref b.Air, wallOk, routeOk, wallDb, routeDb, routeHz, false, k);
+            if (b.Floor && (b.Step.Main == Way.Wall || b.Air.Main == Way.Wall)) FloorFrames++;
+            else if (b.Step.Main == Way.Wall || b.Air.Main == Way.Wall) WallFrames++;
+            if (b.Step.Main == Way.Route || b.Air.Main == Way.Route) RouteFrames++;
+            if (b.Step.Main != Way.None && b.Step.AppliedCut < LowestStepHz) LowestStepHz = b.Step.AppliedCut;
+            if (b.Air.Main != Way.None && b.Air.AppliedCut < LowestAirHz) LowestAirHz = b.Air.AppliedCut;
 
-            // where a routed sound comes from: towards the opening, at the route's length (as 6.1), smoothed
-            Vector3 toS = s - l; float straight = toS.magnitude;
+            // where the route way comes from: towards the opening, at the route's length (as 6.1), smoothed
+            float straight = toS.magnitude;
             if (straight < 0.01f) return;
             Vector3 dirS = toS / straight, dirT = dirS; float distT = straight;
-            if (route)
+            if (routeOk)
             {
                 Vector3 toNear = b.Near - l; float nearM = toNear.magnitude;
                 float blend = b.Blend * Mathf.Clamp01(nearM / NearFadeM) * Mathf.Clamp01(Plugin.PortalStrength.Value);
@@ -237,25 +293,90 @@ namespace RealSoundSimulation.Fixes
             else { b.CurDir = Vector3.Slerp(b.CurDir, dirT, k); b.CurDist = Mathf.Lerp(b.CurDist, distT, k); }
         }
 
+        // The main voice follows the way that loses less; the other is the second way if it's close enough to be heard.
+        private static void Choose(ref Paths p, bool wallOk, bool routeOk, float wallDb, float routeDb, float routeHz, bool step, float k)
+        {
+            float t = Mathf.InverseLerp(LossLowDb, LossHighDb, Mathf.Max(wallDb, 0f));
+            float wallHz = step ? Mathf.Lerp(StepWallTopHz, StepWallLowHz, t) : Mathf.Lerp(AirWallTopHz, AirWallLowHz, t);
+            p.Second = Way.None; p.SecondDeltaDb = 0f;
+            if (wallOk && (!routeOk || wallDb <= routeDb))
+            {
+                p.Main = Way.Wall; p.MainCut = wallHz;
+                if (routeOk) { p.Second = Way.Route; p.SecondCut = routeHz; p.SecondDeltaDb = routeDb - wallDb; }
+            }
+            else if (routeOk)
+            {
+                p.Main = Way.Route; p.MainCut = routeHz;
+                if (wallOk) { p.Second = Way.Wall; p.SecondCut = wallHz; p.SecondDeltaDb = wallDb - routeDb; }
+            }
+            else { p.Main = Way.None; p.MainCut = OffHz; }
+            if (p.Second != Way.None && p.SecondDeltaDb > Plugin.BodySecondWithinDb.Value) p.Second = Way.None;
+
+            float target = p.Main == Way.None ? OffHz : p.MainCut;
+            p.AppliedCut = p.Main != p.LastMain || p.AppliedCut <= 0f ? target : Mathf.Exp(Mathf.Lerp(Mathf.Log(p.AppliedCut), Mathf.Log(target), k)); // a new way starts as it is
+            p.LastMain = p.Main;
+        }
+
         private static void Treat(BetterSource src, Body b, bool step, Vector3 l)
         {
             if (src == null || !TouchedNow.Add(src)) return;
-            Mode mode = step ? b.StepMode : b.AirMode;
-            float cut = step ? b.StepCut : b.AirCut;
-            if (mode == Mode.None) { Neutral(src); return; }
+            Owners[src] = new Owner { B = b, Step = step };
+            Paths p = step ? b.Step : b.Air;
+            if (p.Main == Way.None) { Neutral(src); return; }
 
-            if (mode == Mode.Route && Plugin.PortalPositioningOn.Value)
+            if (p.Main == Way.Route && Plugin.PortalPositioningOn.Value)
             {
                 Transform t = src.transform;
                 if (!MovedFrom.ContainsKey(src)) { MovedFrom[src] = t.localPosition; SourcesMoved++; }
-                t.position = l + b.CurDir.normalized * b.CurDist;
+                t.position = l + b.RoutePos;
             }
             else Unmove(src);
 
-            bool on = cut < OffHz * 0.95f;
-            PortalPositioning.Filter(src.source1, cut, on);
+            bool on = p.AppliedCut < OffHz * 0.95f;
+            PortalPositioning.Filter(src.source1, p.AppliedCut, on);
             if (on) Filtered.Add(src); else Filtered.Remove(src);
         }
+
+        // ---------------- the second way ----------------
+
+        private static void Second(Body b, bool step, BetterSource src, AudioClip clip, float volume)
+        {
+            if (clip == null || !Plugin.BodySecondOn.Value) return;
+            Paths p = step ? b.Step : b.Air;
+            if (p.Main == Way.None) return;
+            if (p.Second == Way.None) { if (p.Main != Way.None) SecondTooQuiet++; return; }
+            if (b.Straight > Plugin.BodySecondRangeM.Value) { SecondFar++; return; }
+            double now = AudioSettings.dspTime;
+            int slot = -1;
+            for (int i = 0; i < MaxSecond; i++) if (SecondEnds[i] <= now) { slot = i; break; }
+            if (slot < 0) { SecondFull++; return; }
+
+            AudioSource a = src.source1;
+            float dist = b.Straight;
+            float level = Mathf.Clamp01(volume * src.BaseVolume * src.OcclusionVolumeFactor * Rolloff(a, dist)) * Mathf.Pow(10f, -p.SecondDeltaDb / 20f);
+            if (level < 0.001f) { SecondTooQuiet++; return; }
+            float pitch = a != null && a.pitch > 0f ? a.pitch : 1f;
+            Vector3 pos; float delay;
+            if (p.Second == Way.Route) { pos = _listener + b.RoutePos; delay = Mathf.Max(0f, (Mathf.Max(b.Path, b.Straight) - b.Straight) / SpeedOfSound); }
+            else { pos = b.Head; delay = 0f; }
+            double len = clip.length / pitch;
+            EchoVoices.Play(src, clip, pos, now + delay, len, false, level, pitch, p.SecondCut, delay, 0f, 0.0, SecondMinCutHz, false, 0f, EchoClass.Bot, 1);
+            if (EchoVoices.LastDropped) { SecondNoVoice++; return; }
+            SecondEnds[slot] = now + delay + len;
+            SecondPlayed++;
+        }
+
+        // How loud the game's own voice is at this distance, by its roll-off curve (read once per source).
+        private static float Rolloff(AudioSource a, float dist)
+        {
+            if (a == null) return 1f;
+            float max = Mathf.Max(a.maxDistance, 0.01f);
+            if (a.rolloffMode != AudioRolloffMode.Custom) return Mathf.Clamp01(a.minDistance / Mathf.Max(dist, a.minDistance));
+            if (!Rolloffs.TryGetValue(a, out AnimationCurve c)) Rolloffs[a] = c = a.GetCustomCurve(AudioSourceCurveType.CustomRolloff);
+            return c != null ? Mathf.Clamp01(c.Evaluate(Mathf.Clamp01(dist / max))) : 1f;
+        }
+
+        // ---------------- putting sources back ----------------
 
         private static void Unmove(BetterSource src)
         {
@@ -282,8 +403,9 @@ namespace RealSoundSimulation.Fixes
         public static string Summary()
         {
             if (!Plugin.BodySoundsOn.Value && Handled == 0) return "BODY SOUNDS (F off)\n";
-            return $"BODY SOUNDS (F {(Plugin.BodySoundsOn.Value ? "ON" : "off")}, range {Plugin.BodySoundsRangeM.Value:0} m, floor x{Plugin.BodySoundsFloorStrength.Value:0.00}): people handled {Handled}, hands sound players seen {HandsSeen}; " +
-                   $"person-frames through a floor {FloorFrames}, from an opening {RouteFrames}; sources moved {SourcesMoved}; lowest footstep cutoff {LowestStepHz:0} Hz, lowest airborne {LowestAirHz:0} Hz\n";
+            return $"BODY SOUNDS (F {(Plugin.BodySoundsOn.Value ? "ON" : "off")}, range {Plugin.BodySoundsRangeM.Value:0} m, walls and floors x{Plugin.BodySoundsFloorStrength.Value:0.00}; second way {(Plugin.BodySecondOn.Value ? $"ON within {Plugin.BodySecondWithinDb.Value:0} dB, {Plugin.BodySecondRangeM.Value:0} m" : "off")}): " +
+                   $"people handled {Handled}, hands sound players seen {HandsSeen}; person-frames through a floor {FloorFrames}, through a wall {WallFrames}, from an opening {RouteFrames}; sources moved {SourcesMoved}; " +
+                   $"lowest footstep cutoff {LowestStepHz:0} Hz, lowest airborne {LowestAirHz:0} Hz; second way played {SecondPlayed}, too quiet or none {SecondTooQuiet}, too far {SecondFar}, {MaxSecond} already playing {SecondFull}, no echo voice free {SecondNoVoice}\n";
         }
     }
 }

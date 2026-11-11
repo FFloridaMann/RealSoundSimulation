@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.17 (not released yet): body sounds through walls, and both ways at once
+
+- With **Footsteps and body sounds - simulated** on, other people's footsteps, voices, gear, looting, meds and food now also come through walls, doors and windows, not only floors: thin wood, plasterboard and glass let them through from where the person really is, dull; thick concrete sends them round through the doorway.
+- Both ways at once: when a sound reaches you through a wall and round through a doorway at levels close enough to hear both (within 10 dB), both play, each from its own place with its own muffling. Switch **Body sounds - both ways at once** (08) to compare.
+- EFT 1.0's extra footstep layer outdoors is treated like the rest of the footsteps.
+
 ## 0.7.15 (not released yet): footsteps and body sounds, as a switch
 
 - New switch **Footsteps and body sounds - simulated** (01 GENERAL), off by default.

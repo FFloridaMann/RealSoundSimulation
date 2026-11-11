@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.17 — 10 Nov 2026 (F: walls, both ways at once, 1.0 step layer)
+**Run in game:** not yet.
+- User: "does it come through walls (like thin wood glass doors etc)", then "why not both the wall and path?", and "add it" (the EFT 1.0 step layer).
+- `BodySounds`: the straight-line loss (`ThroughWall.LossDb`, 125 Hz, by material and thickness) is now read for any blocked line, not only floors, x `Body sounds - wall and floor muffling`. Route loss = 20 log10(route / straight) + 4 dB per opening + 3 dB per 90 degrees of turn. The game's voice follows the smaller loss: through -> true position, low-pass footsteps 1500..250 Hz and airborne 3000..150 Hz over 5..50 dB; route -> 6.1's position and 6.1b's cutoff. Footsteps through a floor count 10 dB less loss.
+- Second way: a `BetterSource.Play` postfix (and `BaseSoundPlayer.PlayClipInternal` for a hands source's first sound) copies the clip onto an echo voice (`EchoClass.Bot`, so the bot budget and your gun's reserve apply) at the other way's place, cutoff and level (the game voice's level from volume x base volume x occlusion x its roll-off curve, less the difference), delayed by the extra route length when it goes round. Only within `Body sounds - second way within dB` (10) and `... range m` (25), 6 at once, loops excluded.
+- EFT 1.0's step layer: `Player._specificStepAudioController` as `PlayerStepLayerAudioController._source`, treated as footsteps; made neutral when the game releases it (going indoors).
+- Settings: `Body sounds - floor muffling` is now `Body sounds - wall and floor muffling`; new `Body sounds - both ways at once` (08, on), `... second way within dB`, `... second way range m` (08, Advanced). Summary BODY SOUNDS counts through-wall frames and second ways played or skipped.
+
 ## 0.7.15 — 10 Nov 2026 (F: footsteps and body sounds)
 **Run in game:** not yet.
 - User: "can we build the footstep and body sounds, and med food etc? it stills is at times hard to tell of someone is above or below you or right".
