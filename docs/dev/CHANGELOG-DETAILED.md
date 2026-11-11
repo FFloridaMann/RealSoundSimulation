@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.12 — 10 Nov 2026 (1f: tails on a spare voice)
+**Run in game:** not yet.
+- Fika test raid (raid_20261110_205738_p44660) tag 1, "shots getting cut off (first few distant shots)": an AK at 36 m, two shots 0.23 s apart, the first's 2.05 s tail cut with 88% left; a G36 the same (72%, 82%). 29 of 86 bot sounds cut (34%), in line with earlier solo raids (23-64%), so not Fika.
+- Cause: `SuperBetterAudioQueue` has two `SuperSource` voices; an auto gun's single shot enqueues a body loop and a tail, so the next shot's tail lands on the voice still ringing the last tail. 1e only stops the game ending non-loops early; a third sound still took the voice back.
+- `ShotOverlap.HandOff` (in the 1e `Update` replacement): if the voice about to be reused is playing a non-loop with 0.15 s or more left, and the gun isn't first-person, a spare `ReverbSuperSource` is borrowed from `BetterAudio.SourceGroups[Gunshots]` (only while its free stack has more than 6), given the ringing voice's position, rolloff, priority, mixer group, stereo off and occlusion registration (`SpatialAudioSystem.ProcessSourceOcclusion` with the gun's player), and put in the queue's slot. The ringing voice finishes where it is and is released 0.1 s after its scheduled end (`ShotOverlap.Tick`, from `DiagRunner`), with our route filter switched off first (`PortalPositioning.FilterOff`). Queue release returns the spare as usual.
+- New setting `Tails - ring out on a spare voice` (03, on). BOT GUNSHOTS summary: how many rang out on a spare voice, how often the pool had none to spare, most ringing at once. The cut-off count above it is still measured at queue time, so it doesn't drop.
+
 ## 0.7.11 — 10 Nov 2026 (Fika: headless off, log folders)
 **Run in game:** not yet (solo start-up should be unchanged; Fika untested).
 - Read-only review of Fika 2.4.6 client / 2.4.2 server (separate session): no patch overlap (124 Fika targets, none on audio, weapon sounds, glass, doors, explosions or `DoContusion`); observed players fire through `ObservedFirearmController` -> `WeaponSoundPlayer.FireBullet` and report third-person, so `OwnEchoes`/`BotEchoes` sort them as other guns; Fika client grenades explode once on the host's packet; `GamePlayerOwner.MyPlayer` exists in `CoopGame`, so raid detection holds.

@@ -170,6 +170,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine(Cut > 0
                 ? $"  cut off by the same gun's next sound{(Plugin.ShotOverlapOn.Value ? " (1e on: only a third sound taking back the oldest voice)" : "")}: {Cut} ({100.0 * Cut / Math.Max(played, 1):0}% of queued), average {CutSum / Cut:0.00} s lost, {100.0 * CutShareSum / Cut:0}% of the sound"
                 : "  cut off by the same gun's next sound: 0");
+            sb.AppendLine($"  of those, rang out on a spare voice instead (1f {(Plugin.TailHandoffOn.Value ? "ON" : "off")}): {Fixes.ShotOverlap.HandedOff}; no spare voice left in the game's pool: {Fixes.ShotOverlap.NoSpare}; most ringing at once {Fixes.ShotOverlap.MaxRinging}");
             sb.AppendLine($"  gun voices taken from the gun closest to finishing because the pool was empty (1e): {Fixes.ShotOverlap.Taken}; pool empty and no gun could give any: {Fixes.ShotOverlap.TakenNone}");
             sb.AppendLine($"  first bursts started muffled (1d): {Fixes.FirstBurstOcclusion.Seeded}; shooter in clear line of sight, left alone: {Fixes.FirstBurstOcclusion.ClearLine}");
             return sb.ToString();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RealSoundSimulation.Diagnostics;
+using Audio.SpatialSystem;
 using EFT;
 using HarmonyLib;
 using UnityEngine;
@@ -17,6 +18,13 @@ namespace RealSoundSimulation.Fixes
     // Holding a voice a little longer could leave the game's gun pool empty, and FireBullet then plays nothing at all. So if
     // a gun finds no free voices, the gun closest to finishing (not firing, never yours) gives up its two: a fading tail is
     // cut rather than a shot going silent. Only runs when the pool is actually empty.
+    //
+    // 0.7.12 "1f": a ringing tail rings out on a spare voice. A gun still has only two voices, and an automatic gun fired in single shots
+    // or short bursts uses both for every shot (the bang and its tail), so the next shot took back a voice whose tail was still ringing
+    // (Fika test raid, tag 1: an AK's 2 s tail cut after 0.23 s; 23-64% of bot sounds in earlier raids). Now, for anyone else's gun,
+    // the ringing voice is taken out of the gun's pair and left to finish where it is, and a spare voice from the game's own gun pool
+    // takes its place. The tail keeps everything the game gave it: its position, occlusion, mixer group and our route muffling.
+    // Spare voices are only taken while the game's pool has more than a few left, so no gun ever goes without; otherwise it's cut as before.
     internal static class ShotOverlap
     {
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -33,6 +41,14 @@ namespace RealSoundSimulation.Fixes
             AccessTools.FieldRefAccess<WeaponSoundPlayer, float>("_delay");
 
         private const double ReleaseMargin = 1.0;
+        private const double MinLeftS = 0.15, FreeAfterS = 0.1;
+        private const int SpareReserve = 6;
+
+        private struct Ringing { public BetterSource Src; public double Until; }
+        private static readonly Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer> OwnerOf = new Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer>();
+        private static readonly Dictionary<BetterSource, double> EndOf = new Dictionary<BetterSource, double>();
+        private static readonly List<Ringing> RingingOut = new List<Ringing>();
+        public static int HandedOff, NoSpare, MaxRinging;
 
         private static readonly HashSet<WeaponSoundPlayer> Holders = new HashSet<WeaponSoundPlayer>();
         private static bool _stealing;
@@ -49,7 +65,67 @@ namespace RealSoundSimulation.Fixes
                 postfix: new HarmonyMethod(typeof(ShotOverlap), nameof(BorrowPostfix)));
         }
 
-        public static void Reset() { Holders.Clear(); Taken = TakenNone = 0; _stealing = false; }
+        public static void Reset()
+        {
+            Holders.Clear(); Taken = TakenNone = 0; _stealing = false;
+            foreach (Ringing r in RingingOut) Free(r.Src);
+            RingingOut.Clear(); OwnerOf.Clear(); EndOf.Clear();
+            HandedOff = NoSpare = MaxRinging = 0;
+        }
+
+        // Called every frame in raid: a tail that has rung out gives its voice back to the game.
+        public static void Tick()
+        {
+            if (RingingOut.Count == 0) return;
+            double now = AudioSettings.dspTime;
+            for (int i = RingingOut.Count - 1; i >= 0; i--)
+            {
+                if (now < RingingOut[i].Until) continue;
+                Free(RingingOut[i].Src);
+                RingingOut.RemoveAt(i);
+            }
+        }
+
+        private static void Free(BetterSource s)
+        {
+            try
+            {
+                if (s == null) return; // destroyed with the raid
+                PortalPositioning.FilterOff(s);
+                s.Release();
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("1f tail hand-off (free)", e); }
+        }
+
+        // "1f": the voice about to be reused is still ringing a tail with time left. Swap a spare voice in for it and let it finish.
+        private static SuperSource HandOff(SuperBetterAudioQueue q, int idx, SuperSource ringing, double newStart)
+        {
+            if (!EndOf.TryGetValue(ringing, out double end)) return null;
+            if (end - Math.Max(newStart, AudioSettings.dspTime) < MinLeftS) return null;
+            if (!OwnerOf.TryGetValue(q, out WeaponSoundPlayer w) || w == null) return null;
+            BaseSoundPlayer.IObserverToPlayerBridge b = BridgeRef(w);
+            if (b == null || b.PointOfView == EPointOfView.FirstPerson) return null; // your own gun keeps its two voices
+            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return null;
+            BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
+            var pool = ba.SourceGroups != null ? ba.SourceGroups[(int)BetterAudio.AudioSourceGroupType.Gunshots] as BetterAudio.NonspatialAudioMixer<Audio.ReverbSubsystem.ReverbSuperSource> : null;
+            if (pool == null || pool.stack_0.Count <= SpareReserve) { NoSpare++; return null; }
+            var spare = pool.BorrowSource() as SuperSource;
+            if (spare == null) return null;
+            spare.transform.position = ringing.transform.position;
+            spare.SetRolloff(ringing.MaxDistance);
+            spare.SetPriority(ringing.source1.priority);
+            spare.SetMixerGroup(ringing.source1.outputAudioMixerGroup);
+            spare.EnableStereo(false);
+            spare.IncludeInOcclusionProcess(true);
+            if (MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && b.iPlayer != null)
+                MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ProcessSourceOcclusion(b.iPlayer, spare);
+            q.AudioSources[idx] = spare;
+            EndOf.Remove(ringing);
+            RingingOut.Add(new Ringing { Src = ringing, Until = end + FreeAfterS });
+            if (RingingOut.Count > MaxRinging) MaxRinging = RingingOut.Count;
+            HandedOff++;
+            return spare;
+        }
 
         private static bool UpdatePrefix(SuperBetterAudioQueue __instance)
         {
@@ -67,14 +143,20 @@ namespace RealSoundSimulation.Fixes
                 var previous = (SuperSource)sources[__instance._lastSource];
                 __instance._lastSource = __instance._lastSource == 0 ? 1 : 0;
                 var next = (SuperSource)sources[__instance._lastSource];
+                if (Plugin.TailHandoffOn.Value && !next.Loop && next.source1 != null && next.source1.isPlaying)
+                {
+                    SuperSource spare = HandOff(__instance, __instance._lastSource, next, sample.Start);
+                    if (spare != null) next = spare;
+                }
 
                 next.Loop = looping;
                 if (previous.Loop) previous.SetScheduledEndTime(sample.Start); // the one change: anything but a loop rings on
                 sample.PlayOn(next);
                 __instance._nextUpdate = sample.Start;
 
-                if (!looping) next.SetScheduledEndTime(sample.End);
-                else if (__instance._samples.Count >= 1)
+                if (!looping) { next.SetScheduledEndTime(sample.End); EndOf[next] = sample.End; }
+                else EndOf.Remove(next);
+                if (looping && __instance._samples.Count >= 1)
                 {
                     SuperAudioSample following = __instance._samples.Peek();
                     if (following != null) next.SetScheduledEndTime(following.Start);
@@ -93,8 +175,10 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.ShotOverlapOn.Value) return;
             try
             {
-                if (QueueRef(__instance) == null) return;
+                SuperBetterAudioQueue q = QueueRef(__instance);
+                if (q == null) return;
                 Holders.Add(__instance);
+                OwnerOf[q] = __instance; // 1f: which gun a queue belongs to (queues are pooled and change hands)
                 // The game keeps a non-auto gun's voices 1 s past the recording but doesn't count the sound's flight time, so at
                 // range a ringing shot could be released before it finishes.
                 if (__instance.Non_auto)

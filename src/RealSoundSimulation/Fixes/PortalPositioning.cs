@@ -305,6 +305,14 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        // 0.7.12: a voice going back to the game (a tail that rang out on its own, 1f) loses our route filter.
+        internal static void FilterOff(BetterSource v)
+        {
+            if (!(v is SuperSource ss)) return;
+            SetFilter(ss.source1, DullOffHz, false);
+            SetFilter(ss.source2, DullOffHz, false);
+        }
+
         private static void SetFilter(AudioSource a, float cutoff, bool on)
         {
             if (a == null) return;

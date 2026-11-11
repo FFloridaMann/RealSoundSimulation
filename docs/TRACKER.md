@@ -232,7 +232,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Tune tail length
 - [ ] Rain (moved here 8 Nov, user): roof rain level (`9t`, `9r`, `9u`, `9v`, `9w`), the in-and-out deep inside, a distance fade for outside sound on bounced paths
 - [ ] Own roof-rain sounds: patter loops per roof material, generated offline (or with step 7)
-- [ ] Short bursts: give a ringing tail its own voice or fade it, instead of the next tail stopping it (two voices per gun, raid 38)
+- [x] Short bursts: give a ringing tail its own voice instead of the next tail stopping it (two voices per gun, raid 38; 1f, 0.7.12, other guns only)
+- [ ] Raid check 1f: distant semi-auto and short bursts ring out; summary shows spare voices used and none short
 - [ ] End quiet echoes early (each holds a voice for the whole 2.5–5 s recording)
 - [ ] Full-auto: full echoes on the first round and the tail, only the loudest 1–2 through the burst
 - [ ] Zero-voice tier for shooters who miss the ceiling, with an F12 switch (moved from 6.3)

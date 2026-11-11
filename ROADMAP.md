@@ -30,6 +30,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **Open air pulls to outdoor, gliding.** Outdoors your shot is firmly outdoor, and the mix glides between shots instead of jumping at roof edges. Reviewed by a second model. `(0.7.4–0.7.6)`
 - **Thump depth sliders.** Separate depths for blasts through walls, in open air and while concussed. `(0.7.7–0.7.8)`
 - **An easier F12 page.** 11 clear sections, settings grouped by name. `(0.7.9)`
+- **Other guns' shots ring out.** A bot's or another player's shot rings out even when they fire again straight away. `(0.7.12)`
 - **Headsets protect your hearing.** With any headset on, no ear ringing and most of a blast's hearing cut taken away. Each headset will differ after the revamp. `(0.7.10)`
 
 ## Before v1.0, in order

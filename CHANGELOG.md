@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.12 (not released yet): other guns' shots ring out
+
+- When a bot or another player fires again while their last shot is still ringing, that ring now finishes instead of being cut off. It was most noticeable on automatic guns fired in single shots or short bursts in the distance.
+- The ring keeps where it came from and how muffled it was. It uses a spare voice from the game's own pool, and only while the pool has some to spare, so no gun goes silent.
+- New switch **Tails - ring out on a spare voice** (03 OTHER GUNS), on by default; off = cut as before.
+
 ## 0.7.11 (not released yet): ready for Fika
 
 - A Fika headless host, the machine that runs the bots with no one listening, no longer runs this mod, so it doesn't take frame time from the bots.

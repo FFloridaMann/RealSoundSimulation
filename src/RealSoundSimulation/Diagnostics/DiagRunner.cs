@@ -97,6 +97,8 @@ namespace RealSoundSimulation.Diagnostics
             catch (Exception e) { ReportOnce("audio counters", e); }
             try { RoomTail.Tick(); } // 0.7.4: not a diagnostic; lets the tail voice go after quiet seconds
             catch (Exception e) { ReportOnce("room tail (tick)", e); }
+            try { ShotOverlap.Tick(); } // 0.7.12: not a diagnostic; gives rung-out tail voices back (1f)
+            catch (Exception e) { ReportOnce("1f tail hand-off (tick)", e); }
             if (backoff) return;
             Perf.Begin();
             try { EnvProbe.Tick(now); }
