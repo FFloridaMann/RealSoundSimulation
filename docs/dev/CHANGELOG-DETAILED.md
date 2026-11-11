@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.19 — 10 Nov 2026 (Ff, Fg: above and below; body.csv)
+**Run in game:** not yet.
+- raid_20261110_224746_p43296, switch on: person-frames through a floor 14035, through a wall 2967, from an opening 97369; second way 211 played, 2105 too quiet. 0.7.17's rule (footsteps through a floor at airborne loss - 10 dB vs the route) let the stairwell win nearly always. User: "still struggling with footsteps heard through the floor and in general it being confusing if a player is above or below", "sometimes its better like I can hear they are below me", "part of it is its a headset".
+- Footsteps with a floor between: always the wall way at the true place, no second way; impact cutoff 1500..350 Hz over 15..50 dB of the straight-line loss; from below x0.6 (at least 200 Hz). Airborne from below through the floor x0.7.
+- `Body sounds - steeper above and below` (08, on): through-floor sources moved to at least 45 degrees elevation, same azimuth and distance (`Steep`); put back when not needed.
+- body.csv: a row per body sound played for someone in another room or on another floor: distance, height difference, floor, main and second way, wall and route loss, cutoffs, true and placed elevation.
+
 ## 0.7.18 — 10 Nov 2026 (1f: no reserve, cap 8)
 **Run in game:** not yet.
 - raid_20261110_221827_p48860: 1f handed off 1 tail and skipped 42 ("no spare voice"); 43 of 85 bot sounds cut (51%). The reserve (free stack > 6) was nearly never met.

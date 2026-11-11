@@ -211,6 +211,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [x] Through walls, doors and windows too, by material; both ways at once when the quieter is within 10 dB (0.7.17)
 - [ ] Raid: footsteps upstairs, downstairs and in the next room, a bot healing or looting, switch on and off; summary BODY SOUNDS
 - [ ] Raid: a bot behind a thin wooden wall, behind concrete with a doorway, behind a closed door; second way on and off
+- [x] Footsteps on another floor always through it; above vs below differ; steeper placement switch; body.csv (0.7.19)
+- [ ] Raid: someone upstairs and downstairs, steeper on and off; tag the confusing moments and read body.csv
 - [x] EFT 1.0's extra step layer (`PlayerStepLayerAudioController._source`, outdoors only) treated as footsteps; when it gives its source back (going indoors) ours is made neutral first (user: "add it")
 
 ## B · Bots feel blasts too (user, 10 Nov 2026)

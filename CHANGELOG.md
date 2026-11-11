@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.19 (not released yet): footsteps above and below
+
+- With **Footsteps and body sounds - simulated** on, footsteps on another floor always come through the floor or ceiling from where the person is, never from the stairwell. In 0.7.17 they often came from the stairwell, so the same person seemed above you one moment and across the room the next.
+- Above you: a ceiling thud, brighter on a light floor and deeper on concrete. Below you: quieter and duller. Voices and gear from below are duller too.
+- New switch **Body sounds - steeper above and below** (08, on): sounds through a floor are placed at least 45 degrees up or down, so a headset can tell up from down. Off = their real height.
+
 ## 0.7.18 (not released yet): other guns' shots really ring out now
 
 - 0.7.12's fix for bots' and other players' shots being cut off by their next shot hardly ever ran: it kept 6 of the game's spare gun voices back and the game rarely had more. It now always runs, with at most 8 shots ringing on their own at once.
