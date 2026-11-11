@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.13 — 10 Nov 2026 (5r: gunfire hearing)
+**Run in game:** not yet.
+- User: "can we add in the ear ringing without headset logic from my older mod? same logic basis will obvi prob be diff code". Source: the author's earlier audio mod, `GunfireHearing`.
+- `Fixes/GunfireHearing.cs`: `WeaponSoundPlayer.FireBullet` postfix instead of `FirearmController.InitiateShot`, so other players' shots in Fika count too. Same constants: noise per shot = calibre table x (1 + muzzle mods' loudness / 80, suppressed devices skipped) x ammo factor (barrel speed factor, ammo recoil), cap 150, drains 4/s x recovery after 0.5 s without a shot; ring = InverseLerp(20, 90, noise) x volume, 1.5 s fades, only without a headset; dulling = noise x 0.15 dB up to the setting on the main mixer; a blast's game ring is held instead of stacking.
+- Changed: indoor x1.4 became the measured room (`EnclosureProbe.Room` x 0.2..0.6 by `MeanHit` 8..2 m); other shooters within 15 m scale by distance (as before) and by their voice's `OcclusionVolumeFactor` (at least 0.1); the main mixer base is read when dulling starts (not assumed 0 dB) and nothing is written during the concussion cut, a game ring or another fade.
+- `WearsHeadset` also finds headphones inside the helmet; `ConcussionProof` (6.9q) uses it too.
+- Settings: `Ear ringing - from gunfire without a headset` (01, on); ring volume 0.35, how much shots count x1, recovery x1, dulls up to 12 dB, others within 15 m (05, Advanced). 176 settings. Summary: GUNFIRE HEARING.
+
 ## 0.7.12 — 10 Nov 2026 (1f: tails on a spare voice)
 **Run in game:** not yet.
 - Fika test raid (raid_20261110_205738_p44660) tag 1, "shots getting cut off (first few distant shots)": an AK at 36 m, two shots 0.23 s apart, the first's 2.05 s tail cut with 88% left; a G36 the same (72%, 82%). 29 of 86 bot sounds cut (34%), in line with earlier solo raids (23-64%), so not Fika.

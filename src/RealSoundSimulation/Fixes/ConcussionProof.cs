@@ -109,7 +109,7 @@ namespace RealSoundSimulation.Fixes
             try
             {
                 Player player = Singleton<GameWorld>.Instantiated ? Singleton<GameWorld>.Instance.MainPlayer : null;
-                return player != null && player.Equipment?.GetSlot(EquipmentSlot.Earpiece)?.ContainedItem is Headphones;
+                return GunfireHearing.WearsHeadset(player); // 0.7.13: a helmet with a built-in headset counts too
             }
             catch { return false; }
         }

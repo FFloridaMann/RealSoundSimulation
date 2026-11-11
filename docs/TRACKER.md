@@ -195,7 +195,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Headsets revamp: bring the headset processing into the game, with its own on/off switch at the top of F12 (user, 10 Nov 2026)
 - [ ] Tune it
 - [ ] Re-check the 4b mix through it
-- [ ] Ear ringing from gunfire with no ear pro, using Bring Back Concussion's ringing sounds (credit harmony): by ammo, suppressor and the gun's real loudness; its own on/off switch at the top of F12 (user, 10 Nov 2026)
+- [x] Ear ringing from gunfire with no ear pro (`5r`, 0.7.13): ported from the earlier audio mod's "Gunfire hearing": calibre, muzzle device, barrel and ammo, subsonic left out, the measured room instead of the indoor flag, others' shots through walls by occlusion; the game's own ring sound; switch at the top of F12
+- [ ] Raid check 5r: a long string of fire without a headset in a small room, then outdoors, then with a headset; summary GUNFIRE HEARING
 
 ## 6b · SEB on full-auto guns
 - [x] `0 Gun sounds` switch SPT / SEB (0.6.3)

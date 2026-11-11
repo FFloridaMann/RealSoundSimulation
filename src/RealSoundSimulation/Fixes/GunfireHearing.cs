@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using RealSoundSimulation.Acoustics;
+using RealSoundSimulation.Diagnostics;
+using Comfort.Common;
+using EFT;
+using EFT.InventoryLogic;
+using HarmonyLib;
+using UnityEngine;
+
+namespace RealSoundSimulation.Fixes
+{
+    // 0.7.13 "5r": your ears ring from gunfire when you wear no headset. User, 10 Nov 2026: "can we add in the ear ringing without headset
+    // logic from my older mod? same logic basis". Ported from the author's earlier audio mod ("Gunfire hearing"), new code:
+    //   noise    every shot near you adds to it: yours, and anyone else's within "5r nearby" m, less the further away. How much depends on
+    //            the calibre, the muzzle device (anything with a suppressor on it adds nothing), the barrel and the ammo. Subsonic shots
+    //            add nothing. It drains once the shooting has stopped for half a second.
+    //   room     instead of the game's indoor flag, the room the mod measures around you: a small closed room counts up to 60% more, a big
+    //            hall 20%, a doorway half that. Another shooter's shot through a wall counts by how much the game's occlusion lets through.
+    //   ring     without a headset, a ring fades in as the noise builds and out as it drains, using the game's own ringing sound. If a
+    //            blast's ring is already playing, firing holds that ring where it is instead of starting a second one.
+    //   dull     everything but the guns gets quieter while the noise is high (never while a concussion cut or another fade is working).
+    //   gear     a headset takes off half, helmets that cover the ears a little; a helmet with a built-in headset counts as a headset.
+    // Only your own ears, so it's the same with Fika.
+    internal class GunfireHearing : MonoBehaviour
+    {
+        private const float MaxNoise = 150f, NoiseFade = 4f, DropPerNoise = 0.15f, RingStart = 20f, RingFull = 90f;
+        private const float DropRise = 1f, DropFall = 2f, RingFadeTime = 1.5f, RingSilent = 0.001f, GearCheckInterval = 0.5f;
+        private const float FiringWindow = 0.5f, VolumeFinished = 0.01f, SameLevel = 0.01f, MidFadeDb = -20f, SpeedOfSound = 335f;
+        private const float MinAmmoFactor = 0.2f, MaxAmmoFactor = 2f, MinModFactor = 0.1f, LoudnessScale = 80f, UnknownCaliber = 2f;
+        private const float NearbyMax = 5f, NearbyBoost = 1.25f, LightHelmet = 0.9f, HeavyHelmet = 0.8f, HeadsetLetsThrough = 0.5f;
+        private const float BigRoomExtra = 0.2f, SmallRoomExtra = 0.6f, SmallRoomM = 2f, BigRoomM = 8f, MinThroughWall = 0.1f;
+        private const float RingHoldSeconds = 2.5f, MaxRingProgress = 0.95f;
+
+        private static readonly Dictionary<string, float> Calibers = new Dictionary<string, float>
+        {
+            ["9x18PM"] = 2.2f, ["57x28"] = 3f, ["46x30"] = 2.3f, ["9x21"] = 2.35f, ["762x25TT"] = 2.55f, ["1143x23ACP"] = 2.3f,
+            ["9x19PARA"] = 2.4f, ["9x33R"] = 4f, ["127x33"] = 5f, ["762x35"] = 2f, ["9x39"] = 1.9f, ["762x39"] = 2.6f,
+            ["545x39"] = 2.63f, ["556x45NATO"] = 2.65f, ["366TKM"] = 2.68f, ["762x51"] = 2.8f, ["762x54R"] = 2.82f, ["68x51"] = 3f,
+            ["127x55"] = 3.8f, ["86x70"] = 5f, ["127x108"] = 7f, ["127x99"] = 6.5f, ["23x75"] = 3.35f, ["12g"] = 3f, ["20g"] = 2.9f,
+            ["30x29"] = 2.4f, ["40x46"] = 2.5f, ["40x53"] = 2.5f
+        };
+
+        private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
+            AccessTools.FieldRefAccess<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge>("playersBridge");
+        private static readonly AccessTools.FieldRef<WeaponSoundPlayer, SuperBetterAudioQueue> QueueRef =
+            AccessTools.FieldRefAccess<WeaponSoundPlayer, SuperBetterAudioQueue>("_queue");
+        private static readonly AccessTools.FieldRef<BetterAudio, float> RingEnd = AccessTools.FieldRefAccess<BetterAudio, float>("float_2");
+        private static readonly AccessTools.FieldRef<BetterAudio, float> RingLength = AccessTools.FieldRefAccess<BetterAudio, float>("float_1");
+        private static readonly AccessTools.FieldRef<Player, AudioClip> RingClip = AccessTools.FieldRefAccess<Player, AudioClip>("_tinnitus");
+
+        private static AudioSource _ring;
+        private static float _ringLevel, _noise, _volumeDrop, _firingUntil = -1f, _writtenVolume, _nextGearCheck;
+        private static bool _wearsHeadset, _writing;
+        private static float _base;
+        private static Player _gearOf;
+
+        // Raid figures for the summary.
+        public static int OwnShots, OtherShots, Subsonic, RingStarts, Holds;
+        public static float MaxNoiseSeen, MaxDrop, RingSeconds;
+
+        public static void Apply(Harmony h)
+        {
+            h.Patch(AccessTools.Method(typeof(WeaponSoundPlayer), nameof(WeaponSoundPlayer.FireBullet)),
+                postfix: new HarmonyMethod(typeof(GunfireHearing), nameof(FirePostfix)));
+        }
+
+        public static void Reset()
+        {
+            _noise = _volumeDrop = _ringLevel = 0f; _firingUntil = -1f; _nextGearCheck = 0f; _gearOf = null; _writing = false;
+            if (_ring != null) _ring.Stop();
+            OwnShots = OtherShots = Subsonic = RingStarts = Holds = 0;
+            MaxNoiseSeen = MaxDrop = RingSeconds = 0f;
+        }
+
+        // ---------------- gear ----------------
+
+        // A headset in the ear slot, or one built into the helmet (the game's own ringing check misses those).
+        internal static bool WearsHeadset(Player player)
+        {
+            if (player == null) return false;
+            try
+            {
+                if (player.Equipment.GetSlot(EquipmentSlot.Earpiece).ContainedItem is Headphones) return true;
+                if (player.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem is CompoundItem helmet)
+                    return helmet.GetAllItemsFromCollection().OfType<Headphones>().Any();
+            }
+            catch { }
+            return false;
+        }
+
+        private static float HelmetFactor(Player player)
+        {
+            try
+            {
+                if (!(player.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem is CompoundItem helmet)) return 1f;
+                IEnumerable<EDeafStrength> strengths = helmet.GetItemComponentsInChildren<CompositeArmorComponent>().Select(a => a.Deaf);
+                if (helmet.Template is ArmoredEquipmentTemplate template) strengths = strengths.Append(template.DeafStrength);
+                switch (strengths.OrderByDescending(s => (int)s).FirstOrDefault())
+                {
+                    case EDeafStrength.Low: return LightHelmet;
+                    case EDeafStrength.High: return HeavyHelmet;
+                    default: return 1f;
+                }
+            }
+            catch { return 1f; }
+        }
+
+        private static float Protection(Player player) => (WearsHeadset(player) ? HeadsetLetsThrough : 1f) * HelmetFactor(player);
+
+        // ---------------- shots ----------------
+
+        private static void FirePostfix(WeaponSoundPlayer __instance, Ammo ammo, Vector3 shotPosition)
+        {
+            if (!Plugin.EarRingOn.Value) return;
+            try
+            {
+                BaseSoundPlayer.IObserverToPlayerBridge b = BridgeRef(__instance);
+                Player main = Singleton<GameWorld>.Instantiated && !(Singleton<GameWorld>.Instance is HideoutGameWorld) ? Singleton<GameWorld>.Instance.MainPlayer : null;
+                if (b == null || main == null || ammo == null) return;
+                IWeapon weapon = b.Weapon;
+                if (weapon == null || weapon.IsUnderbarrelWeapon) return;
+
+                bool own = b.PointOfView == EPointOfView.FirstPerson || ReferenceEquals(b.iPlayer, main);
+                float distance = own ? 0f : Vector3.Distance(shotPosition, main.Position);
+                if (distance > Plugin.EarRingNearbyM.Value) return;
+                if (weapon.Item is Weapon fired && IsSubsonic(fired, ammo)) { Subsonic++; return; }
+
+                float loudness = ShotLoudness(weapon, ammo) * Plugin.EarRingStrength.Value * RoomFactor();
+                if (!own)
+                {
+                    SuperBetterAudioQueue q = QueueRef(__instance);
+                    float through = q != null && q.AudioSources != null && q.AudioSources[0] != null ? q.AudioSources[0].OcclusionVolumeFactor : 1f;
+                    loudness = Mathf.Min(loudness * (1f - distance / 100f) * NearbyBoost, NearbyMax) * Mathf.Max(through, MinThroughWall);
+                    OtherShots++;
+                }
+                else OwnShots++;
+
+                _noise = Mathf.Min(_noise + loudness * Protection(main), MaxNoise);
+                if (_noise > MaxNoiseSeen) MaxNoiseSeen = _noise;
+                _firingUntil = Time.time + FiringWindow;
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("5r gunfire hearing (shot)", e); }
+        }
+
+        // The room the mod measures around you: a small closed room rings you more than a big hall, a doorway half.
+        private static float RoomFactor()
+        {
+            float room = EnclosureProbe.Room, meanHit = EnclosureProbe.MeanHit;
+            if (float.IsNaN(room)) return 1f;
+            float small = float.IsNaN(meanHit) ? 0.5f : Mathf.InverseLerp(BigRoomM, SmallRoomM, meanHit);
+            return 1f + Mathf.Clamp01(room) * Mathf.Lerp(BigRoomExtra, SmallRoomExtra, small);
+        }
+
+        // The speed this barrel gives this round, so a short barrel can make a round subsonic. Grenade launchers are slow but loud.
+        private static bool IsSubsonic(Weapon gun, Ammo ammo)
+        {
+            string caliber = gun.AmmoCaliber ?? "";
+            if (caliber.StartsWith("30x") || caliber.StartsWith("40x")) return false;
+            return ammo.InitialSpeed * gun.SpeedFactor <= SpeedOfSound;
+        }
+
+        // Calibre, barrel, ammo and everything on the muzzle. A device with a suppressor on it doesn't add its own noise.
+        private static float ShotLoudness(IWeapon weapon, Ammo ammo)
+        {
+            float ammoFactor = Mathf.Clamp((1f - (weapon.SpeedFactor - 1f) * 2f) * Mathf.Clamp(ammo.ammoRec / 100f + 1f, 0.8f, 2f), MinAmmoFactor, MaxAmmoFactor);
+            float modLoudness = 0f;
+            string caliberName = "";
+            if (weapon.Item is Weapon gun)
+            {
+                caliberName = gun.AmmoCaliber ?? "";
+                foreach (Mod mod in gun.Mods)
+                {
+                    if (mod.Slots.Any(slot => slot.ContainedItem is Silencer)) continue;
+                    modLoudness += mod.Template.Loudness;
+                }
+            }
+            if (!Calibers.TryGetValue(caliberName, out float caliber)) caliber = UnknownCaliber;
+            return Mathf.Max(1f + modLoudness / LoudnessScale, MinModFactor) * caliber * ammoFactor;
+        }
+
+        // ---------------- every frame ----------------
+
+        private void Update()
+        {
+            try { Tick(); }
+            catch (Exception e) { DiagRunner.ReportOnce("5r gunfire hearing (update)", e); }
+        }
+
+        private static void Tick()
+        {
+            Player player = Singleton<GameWorld>.Instantiated && !(Singleton<GameWorld>.Instance is HideoutGameWorld) ? Singleton<GameWorld>.Instance.MainPlayer : null;
+            bool alive = player != null && player.HealthController != null && player.HealthController.IsAlive;
+            if (!alive || !Plugin.EarRingOn.Value || !Singleton<BetterAudio>.Instantiated)
+            {
+                if (_noise > 0f || _volumeDrop > 0f || _ringLevel > 0f) { _noise = _volumeDrop = _ringLevel = 0f; Write(0f); }
+                if (_ring != null && _ring.isPlaying) _ring.Stop();
+                return;
+            }
+
+            if (Time.time >= _firingUntil) _noise = Mathf.Max(0f, _noise - NoiseFade / Plugin.EarRingRecovery.Value * Time.deltaTime);
+            float drop = Mathf.Min(_noise * DropPerNoise, Plugin.EarRingDullDb.Value);
+            _volumeDrop = Approach(_volumeDrop, drop, drop > _volumeDrop ? DropRise : DropFall);
+            if (_volumeDrop < VolumeFinished && drop <= 0f) _volumeDrop = 0f;
+            if (_volumeDrop > MaxDrop) MaxDrop = _volumeDrop;
+
+            UpdateRing(player);
+            Write(_volumeDrop);
+        }
+
+        // Only without a headset, and not over the game's own ring from a blast or a head hit.
+        private static void UpdateRing(Player player)
+        {
+            if (Time.time >= _nextGearCheck || !ReferenceEquals(player, _gearOf))
+            {
+                _nextGearCheck = Time.time + GearCheckInterval;
+                _wearsHeadset = WearsHeadset(player);
+                _gearOf = player;
+            }
+
+            float target = _wearsHeadset ? 0f : Mathf.InverseLerp(RingStart, RingFull, _noise) * Plugin.EarRingVolume.Value;
+            // A blast's ring and gunfire's ring are one ring: firing while a blast rings keeps that ring where it is.
+            if (GameRinging)
+            {
+                if (target > 0f && Time.time < _firingUntil) HoldGameRing();
+                target = 0f;
+            }
+            _ringLevel = Approach(_ringLevel, target, RingFadeTime);
+
+            AudioSource src = RingSource();
+            if (_ringLevel <= RingSilent)
+            {
+                if (src.isPlaying) src.Stop();
+                return;
+            }
+            RingSeconds += Time.deltaTime;
+            src.volume = _ringLevel;
+            if (!src.isPlaying && RingClip(player) != null)
+            {
+                BetterAudio ba = Singleton<BetterAudio>.Instance;
+                src.outputAudioMixerGroup = ba.MasterMixerGroup; // where the game's own ring plays; follows the overall volume
+                src.clip = RingClip(player);
+                src.Play();
+                RingStarts++;
+            }
+        }
+
+        private static AudioSource RingSource()
+        {
+            if (_ring != null) return _ring;
+            var go = new GameObject("RealSoundSimulation ear ring");
+            DontDestroyOnLoad(go);
+            _ring = go.AddComponent<AudioSource>();
+            _ring.playOnAwake = false;
+            _ring.spatialBlend = 0f;
+            _ring.loop = true;
+            _ring.priority = 0;
+            return _ring;
+        }
+
+        private static bool GameRinging
+        {
+            get
+            {
+                BetterAudio ba = Singleton<BetterAudio>.Instance;
+                return ba != null && RingEnd(ba) > Time.time;
+            }
+        }
+
+        // The game's ring follows a curve from start to end. Moving the end later while keeping the same point on the curve holds it
+        // at its current strength, and it fades normally once the shooting stops.
+        private static void HoldGameRing()
+        {
+            BetterAudio ba = Singleton<BetterAudio>.Instance;
+            float left = RingEnd(ba) - Time.time;
+            if (left >= RingHoldSeconds) return;
+            float length = Mathf.Max(RingLength(ba), 0.01f);
+            float progress = Mathf.Clamp(1f - left / length, 0f, MaxRingProgress);
+            RingEnd(ba) = Time.time + RingHoldSeconds;
+            RingLength(ba) = RingHoldSeconds / (1f - progress);
+            Holds++;
+        }
+
+        private static float Approach(float value, float target, float seconds) => Mathf.Lerp(value, target, 1f - Mathf.Exp(-Time.deltaTime / seconds));
+
+        // The main mixer leaves out the guns. Writes nothing while hearing is untouched, and leaves the game's ring, the concussion cut,
+        // a blast's dip and the game's own fades alone.
+        private static void Write(float dropDb)
+        {
+            BetterAudio ba = Singleton<BetterAudio>.Instance;
+            if (ba == null || ba.Master == null || ba.AudioMixerData == null) return;
+            if (dropDb <= 0f && !_writing) return;
+            if (GameRinging || ConcussionProof.CutActive) return;
+            string key = ba.AudioMixerData.MainMixerVolume;
+            if (!ba.Master.GetFloat(key, out float current)) return;
+            if (!_writing)
+            {
+                // Starting: whatever the main mix is at now (the game's own volume setting) is where it goes back to.
+                if (current < MidFadeDb) return; // a fade or cut is working on it: wait
+                _base = current; _writtenVolume = current; _writing = true;
+            }
+            else if (Mathf.Abs(current - _writtenVolume) > SameLevel) return; // someone else moved it since: leave it to them
+            float level = dropDb <= 0f ? _base : _base - dropDb;
+            ba.Master.SetFloat(key, level);
+            _writtenVolume = level;
+            if (dropDb <= 0f) _writing = false;
+        }
+
+        public static string Summary()
+        {
+            if (!Plugin.EarRingOn.Value) return "GUNFIRE HEARING (5r off)\n";
+            return $"GUNFIRE HEARING (5r ON, ring {Plugin.EarRingVolume.Value:0.00}, strength x{Plugin.EarRingStrength.Value:0.00}, recovery x{Plugin.EarRingRecovery.Value:0.00}, dulls up to {Plugin.EarRingDullDb.Value:0} dB, nearby {Plugin.EarRingNearbyM.Value:0} m): " +
+                   $"shots counted yours {OwnShots}, others {OtherShots}, subsonic left out {Subsonic}; most noise {MaxNoiseSeen:0} (ring from {RingStart:0}, full at {RingFull:0}); " +
+                   $"ring started {RingStarts} times, {RingSeconds:0} s in all; a blast's ring held {Holds} frames; most dulled {MaxDrop:0.0} dB; headset on at the end {_wearsHeadset}\n";
+        }
+    }
+}

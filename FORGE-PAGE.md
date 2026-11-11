@@ -44,6 +44,8 @@ When your hearing cuts, the world goes quiet at once, but the blast itself fades
 
 **Headsets protect your hearing.** With any headset on, your ears don't ring, and most of the hearing cut is taken away: the closest blast only dulls the world for a moment, and lighter blasts don't cut it at all. You still get concussed. How much a headset protects can be set (**Concussion - headset protection %**). For now every headset protects the same; the headsets revamp will make each one different.
 
+**Your ears ring from gunfire without a headset.** Every loud shot near you adds up: yours, and anyone's close by, less through walls. How much depends on the calibre, the muzzle device, the ammo and the room: a small closed room rings you far sooner than open ground, and subsonic shots don't count. A long string of fire slowly brings in a ring and dulls the world a little, and both fade once you stop. A headset takes off half and stops the ring. Its own switch at the top of F12 (**Ear ringing - from gunfire without a headset**).
+
 Both parts have their own switch at the top of F12 (**Concussion - by blast pressure** and **Concussion - soft hearing cut**), and how strong blasts count can be set too. The concussion effect itself, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, which is needed for this part.
 
 ## Performance
@@ -71,7 +73,6 @@ If it still sounds off or costs too much on your PC, [Sound Engine Backport](htt
 
 ## Coming next
 
-- **Ear ringing from gunfire.** Without ear pro, firing indoors will make your ears ring, by the ammo, whether you're suppressed, and the gun's real loudness. It uses Bring Back Concussion's ringing sounds. It will have its own switch at the top of F12.
 - **Headsets revamp.** Each headset will shape what you hear and protect you by how it's really built, instead of all headsets protecting the same. Its own switch at the top of F12.
 - **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling will travel through the map like gunfire does: from the doorway they come through, muffled by their route and by walls.
 - **Bots feel blasts too.** The same blast pressure that concusses or deafens you will do the same to bots, through SAIN where it's installed. Its own switch at the top of F12.
@@ -110,4 +111,4 @@ This mod has been in the works for a while. It grew out of smaller audio mods I 
 
 ## Enjoying it?
 
-If this mod makes your raids sound better, consider [buying me a coffee](LINK-HERE). It helps keep the updates coming: ear ringing, the headsets revamp and Fika support are next.
+If this mod makes your raids sound better, consider [buying me a coffee](LINK-HERE). It helps keep the updates coming: weather, the headsets revamp and footsteps are next.

@@ -2,6 +2,13 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.13 (not released yet): your ears ring from gunfire
+
+- Without a headset, every loud shot near you adds up: yours, and anyone's close by. A long string of fire slowly brings in a ring and dulls the world a little; both fade once you stop.
+- How much a shot counts: its calibre, the muzzle device (a suppressor adds nothing), the barrel and the ammo; subsonic shots don't count. A small closed room counts far more than open ground, and a shot behind a wall counts less.
+- A headset takes off half and stops the ring. A helmet with a built-in headset now counts as a headset, here and for blast hearing protection.
+- New switch **Ear ringing - from gunfire without a headset** (01 GENERAL); the ring volume, strength, recovery and dulling are under Advanced settings in 05.
+
 ## 0.7.12 (not released yet): other guns' shots ring out
 
 - When a bot or another player fires again while their last shot is still ringing, that ring now finishes instead of being cut off. It was most noticeable on automatic guns fired in single shots or short bursts in the distance.
