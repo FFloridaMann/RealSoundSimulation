@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.10 (not released yet): headsets protect your hearing
+
+- With any headset on, a blast no longer takes your hearing away: the closest blast dulls the world by about 20 dB for a moment instead of going silent, and lighter blasts don't cut it at all. Ear ringing already never played with a headset.
+- New slider **Concussion - headset protection %** (05 EXPLOSIONS: SHOCK AND CONCUSSION), 75% by default; 0 means headsets don't help.
+- The concussion itself, its blur and the thump you feel are unchanged. Every headset protects the same for now; the headsets revamp will make them differ.
+
 ## 0.7.9 (not released yet): an easier F12 page
 
 - 11 sections with headers that stand out (01 GENERAL to 11 DIAGNOSTICS); Explosions is split into sound, shock and concussion, and fragments and glass.

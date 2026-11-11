@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.10 — 10 Nov 2026 (6.9q headset protection)
+**Run in game:** not yet.
+- User: "for the time being, all headsets should remove ear ringing and most hearing loss from concussions. so they function well then later actually improved and optionally simulated."
+- Checked first: the game's `Player.TryStartContusion`, Bring Back Concussion's `TryStartTinnitus` (used for 6.9k ears-only ringing) and its own tinnitus patch all skip ringing when the earpiece slot holds `Headphones` (unless that mod's *Ignore Tinnitus Equipment Checks* is on, left as the player's choice). The hearing cut (`ExplosionSoundCutoff.Trigger`, and the 6.9h soft copy) had no headset check.
+- `ConcussionProof.CutCloseness`: with headphones in `EquipmentSlot.Earpiece`, the cut's closeness is multiplied by `1 - 6.9q/100` on every path: 6.9k `Deliver` (soft cut or that mod's cut), `TriggerPrefix` (now `ref closeness`, so that mod's own cut gets the lower value too; skipped when a headset takes it to 0.05 or below) and `WillCut` (so the felt-through routing and shock-wave dip agree). At 75%: closest blast -20 dB instead of -80, hold 0.53 s instead of 1.5 s; closeness 0.2 or less doesn't cut.
+- Concussion itself (`DoContusion` through that mod), ears-only ringing calls and the felt layers are unchanged.
+- New setting `Concussion - headset protection %` (05, default 75, 0-100). concussion.csv gains a `headset` column; CONCUSSION summary counts `softened by a headset`. 169 settings.
+
 ## 0.7.9 — 10 Nov 2026 (F12 reorganized)
 **Run in game:** not yet.
 - Sections: `01 | GENERAL` ... `11 | DIAGNOSTICS` with a dashed divider (ASCII, so F12's font shows it). Explosions split into 04 sound, 05 shock and concussion, 06 fragments and glass; the tracer's fine-tuning is 09 SOUND TRACER (Advanced only).

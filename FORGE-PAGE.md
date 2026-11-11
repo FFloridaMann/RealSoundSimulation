@@ -42,6 +42,8 @@ That pressure decides what happens:
 
 When your hearing cuts, the world goes quiet at once, but the blast itself fades out naturally instead of snapping off, and you still feel its thump.
 
+**Headsets protect your hearing.** With any headset on, your ears don't ring, and most of the hearing cut is taken away: the closest blast only dulls the world for a moment, and lighter blasts don't cut it at all. You still get concussed. How much a headset protects can be set (**Concussion - headset protection %**). For now every headset protects the same; the headsets revamp will make each one different.
+
 Both parts have their own switch at the top of F12 (**Concussion - by blast pressure** and **Concussion - soft hearing cut**), and how strong blasts count can be set too. The concussion effect itself, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, which is needed for this part.
 
 ## Performance
@@ -70,7 +72,7 @@ If it still sounds off or costs too much on your PC, [Sound Engine Backport](htt
 ## Coming next
 
 - **Ear ringing from gunfire.** Without ear pro, firing indoors will make your ears ring, by the ammo, whether you're suppressed, and the gun's real loudness. It uses Bring Back Concussion's ringing sounds. It will have its own switch at the top of F12.
-- **Headsets revamp.** Your ear protection will shape what you hear, including how concussion and ringing hit you. Its own switch at the top of F12.
+- **Headsets revamp.** Each headset will shape what you hear and protect you by how it's really built, instead of all headsets protecting the same. Its own switch at the top of F12.
 - **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling will travel through the map like gunfire does: from the doorway they come through, muffled by their route and by walls.
 - **Bots feel blasts too.** The same blast pressure that concusses or deafens you will do the same to bots, through SAIN where it's installed. Its own switch at the top of F12.
 - **The room you're in.** Today only the blast's room counts; a blast getting into a small room you're standing in should build up too.

@@ -199,7 +199,7 @@ One row per source (the player has two, for crossfades): `clip`, `channels`, `pl
 
 0.6.57: **blastlevel.csv**, one row per explosion, 0.15 s after it arrives: `t`, `distM`, `volumeAtStart`, `volumeNow` (the voice after the game's occlusion), `occlusionFactor`, `gunsDb`, `mainDb` (the mixer volumes then), `group`. Summary: CONCUSSION SOUND CUT replaces BLAST THROUGH CONCUSSION.
 
-0.6.58: **concussion.csv**, one row per soft cut: `t`, `closeness` (0 to 1), `endDb`, `cutS` (world sounds), `tailS` (Guns), `holdS`, `fadeS`, `tinnitus` (1 = the game's ringing was playing, so it drives Main and Guns).
+0.6.58: **concussion.csv**, one row per soft cut: `t`, `closeness` (0 to 1), `endDb`, `cutS` (world sounds), `tailS` (Guns), `holdS`, `fadeS`, `tinnitus` (1 = the game's ringing was playing, so it drives Main and Guns). 0.7.10: `headset` (1 = a headset softened this cut, 6.9q).
 
 0.6.60: **concdose.csv**, one row per explosion rated by pressure: `t`, `doseDb` (against open air at 5 m, −999 = no way through), `equivalentM`, `earsEquivalentM`, `earsCloseness`, `concussed`, `duration` (0 to 1), `ringOnly`. 0.7.1 (6.9n) adds `blastRoomDb` (the blast room's boost), `yourRoomDb` (your room's), `yourRoomM` (your room's mean wall distance) and `yourRoom` (added, same room, open or big, through wall, no listener, off).
 

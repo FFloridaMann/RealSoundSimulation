@@ -8,6 +8,7 @@ using RealSoundSimulation.Diagnostics;
 using Comfort.Common;
 using EFT;
 using EFT.HealthSystem;
+using EFT.InventoryLogic;
 using HarmonyLib;
 using System.Collections.Generic;
 using UnityEngine;
@@ -27,9 +28,13 @@ namespace RealSoundSimulation.Fixes
     // 0.6.60 "6.9k": how concussive a blast is comes from its pressure, not the straight-line distance. User, 9 Nov 2026: "shouldnt it be more concussive indoors", and research "a wall may protect but the blast through a door delivers concussive effects ... room indoors but very big? very small? lots of windows no windows".
     // ShockWave.Dose works out the pressure by the way it reached you and the blast's room. That's turned into the open-air distance with the same pressure, and that mod's own explosion patch is called with the blast moved to that distance, so its radius and closeness still decide.
     // Two levels: ears (the sound cut, and ringing) reach "6.9l" dB further than the full concussion. Length and strength scale with how long the pressure lasted and how close it was. That mod's patch is called a frame late, because the game queues the blast sound and the route is only known then.
+    //
+    // 0.7.10 "6.9q": headsets protect your hearing. User, 10 Nov 2026: "for the time being, all headsets should remove ear ringing and most hearing loss from concussions. so they function well then later actually improved and optionally simulated."
+    // Ringing already never plays with a headset (the game's, that mod's, and the ears-only ringing all check the earpiece slot). The hearing cut didn't check, so with any headset on
+    // its closeness is scaled by (1 - "6.9q"): at 75% the closest blast cuts to -20 dB with a shorter hold, and light blasts don't cut. Concussion itself, the felt thump and blur are unchanged.
     internal class ConcussionProof : MonoBehaviour
     {
-        public const string Header = "t,closeness,endDb,cutS,tailS,holdS,fadeS,tinnitus";
+        public const string Header = "t,closeness,endDb,cutS,tailS,holdS,fadeS,tinnitus,headset"; // 0.7.10: headset
         public const string DoseHeader = "t,doseDb,equivalentM,earsEquivalentM,earsCloseness,concussed,duration,ringOnly,blastRoomDb,yourRoomDb,yourRoomM,yourRoom"; // 0.7.1: the last four, 6.9n
         private const string OtherMod = "com.harmonyzt.BringBackConcussion", CutType = "BringBackConcussion.Patches.ExplosionSoundCutoff", ProximityType = "BringBackConcussion.Patches.ExplosionProximityPatch";
         private const float NoCutAtOrBelow = 0.05f, CutsBelow = 0.95f, DefaultFadeS = 6f, WriteStepDb = 0.01f, PendingMaxS = 0.25f, SamePosM = 1f, RingMinS = 1.5f, RingMaxS = 4f;
@@ -53,14 +58,15 @@ namespace RealSoundSimulation.Fixes
         private static readonly float[] Start = new float[5], Last = new float[5];
         private static float _t0, _end, _cut, _tail, _hold, _fade;
 
-        public static int Soft, LeftToMod, Felt;
+        public static int Soft, LeftToMod, Felt, Protected;
+        private static bool _headsetNow;
         public static bool CutActive => _active;
 
         public static void Apply(Harmony h) => _h = h;
 
         public static void Reset()
         {
-            Soft = LeftToMod = Felt = 0;
+            Soft = LeftToMod = Felt = Protected = 0;
             Concussed = RingOnly = EarsOnly = Dropped = Plain = 0;
             Waiting.Clear();
             _active = false;
@@ -97,12 +103,30 @@ namespace RealSoundSimulation.Fixes
 
         private static float Closeness(float equivalentM) => Mathf.Clamp01(1f - equivalentM / _radius.Value);
 
+        // "6.9q": is your player wearing a headset (anything in the earpiece slot that's a headset, as the game's own ringing check)?
+        private static bool HeadsetOn()
+        {
+            try
+            {
+                Player player = Singleton<GameWorld>.Instantiated ? Singleton<GameWorld>.Instance.MainPlayer : null;
+                return player != null && player.Equipment?.GetSlot(EquipmentSlot.Earpiece)?.ContainedItem is Headphones;
+            }
+            catch { return false; }
+        }
+
+        // The closeness the hearing cut uses: scaled down with a headset on.
+        private static float CutCloseness(float closeness)
+        {
+            _headsetNow = HeadsetOn();
+            return _headsetNow ? closeness * (1f - Mathf.Clamp01(Plugin.HeadsetProtectionPct.Value / 100f)) : closeness;
+        }
+
         // Will the sound be cut for this blast?
         public static bool WillCut(float distance, float doseDb)
         {
             if (!Plugin.SoftCutOn.Value || _trigger == null || _radius == null || (_cutEntry != null && !_cutEntry.Value)) return false;
-            if (ByPressure) return Closeness(ShockWave.EquivalentM(doseDb + Plugin.EarsReachDb.Value)) > NoCutAtOrBelow;
-            return distance <= _radius.Value * CutsBelow;
+            if (ByPressure) return CutCloseness(Closeness(ShockWave.EquivalentM(doseDb + Plugin.EarsReachDb.Value))) > NoCutAtOrBelow;
+            return distance <= _radius.Value * CutsBelow && CutCloseness(Mathf.Clamp01(1f - distance / _radius.Value)) > NoCutAtOrBelow;
         }
 
         // That mod's explosion patch, held until the blast's route is known.
@@ -163,16 +187,18 @@ namespace RealSoundSimulation.Fixes
                 Player player = Singleton<GameWorld>.Instantiated ? Singleton<GameWorld>.Instance.MainPlayer : null;
                 if (player == null) return;
 
-                if (ears > NoCutAtOrBelow && (_cutEntry == null || _cutEntry.Value))
+                float cutEars = CutCloseness(ears);
+                if (_headsetNow && ears > NoCutAtOrBelow) Protected++;
+                if (cutEars > NoCutAtOrBelow && (_cutEntry == null || _cutEntry.Value))
                 {
                     ShockWave.EndDipNow();
-                    bool soft = Plugin.SoftCutOn.Value && TryStart(ears, Mathf.Lerp(0.6f, 1.5f, duration));
+                    bool soft = Plugin.SoftCutOn.Value && TryStart(cutEars, Mathf.Lerp(0.6f, 1.5f, duration));
                     if (soft) { Soft++; }
                     else
                     {
                         LeftToMod++;
                         _reentry = true;
-                        try { _trigger.Invoke(null, new object[] { ears }); }
+                        try { _trigger.Invoke(null, new object[] { cutEars }); }
                         finally { _reentry = false; }
                     }
                 }
@@ -222,12 +248,16 @@ namespace RealSoundSimulation.Fixes
             EchoVoices.VolumeTrim = 1f;
         }
 
-        private static bool TriggerPrefix(float closeness)
+        private static bool TriggerPrefix(ref float closeness)
         {
             if (_reentry) return true;
             if (_byDose) return false; // ears were already dealt with
             ShockWave.EndDipNow(); // before anyone reads the volumes that get put back
-            if (!Plugin.SoftCutOn.Value || closeness <= NoCutAtOrBelow) return true;
+            float raw = closeness;
+            closeness = CutCloseness(closeness); // "6.9q", also for that mod's own cut
+            if (_headsetNow && raw > NoCutAtOrBelow) Protected++;
+            if (closeness <= NoCutAtOrBelow) return !_headsetNow || raw <= NoCutAtOrBelow; // a headset took the whole cut away
+            if (!Plugin.SoftCutOn.Value) return true;
             try
             {
                 if (TryStart(closeness, 1f)) { Soft++; return false; }
@@ -258,7 +288,7 @@ namespace RealSoundSimulation.Fixes
             _tail = Mathf.Max(_cut, Plugin.BlastTailFadeS.Value);
             _t0 = Time.time;
             _active = true;
-            if (DiagLog.IsOpen) DiagLog.Row("concussion.csv", string.Join(",", DiagLog.F(_t0 - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(closeness, "0.00"), DiagLog.F(_end, "0.0"), DiagLog.F(_cut, "0.00"), DiagLog.F(_tail, "0.00"), DiagLog.F(_hold, "0.00"), DiagLog.F(_fade, "0.0"), Tinnitus(ba) ? "1" : "0"));
+            if (DiagLog.IsOpen) DiagLog.Row("concussion.csv", string.Join(",", DiagLog.F(_t0 - DiagRunner.RaidStartTime, "0.00"), DiagLog.F(closeness, "0.00"), DiagLog.F(_end, "0.0"), DiagLog.F(_cut, "0.00"), DiagLog.F(_tail, "0.00"), DiagLog.F(_hold, "0.00"), DiagLog.F(_fade, "0.0"), Tinnitus(ba) ? "1" : "0", _headsetNow ? "1" : "0"));
             return true;
         }
 
@@ -318,6 +348,6 @@ namespace RealSoundSimulation.Fixes
             for (int i = 0; i < Keys.Length; i++) if (!string.IsNullOrEmpty(Keys[i])) m.SetFloat(Keys[i], Start[i]);
         }
 
-        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), walled off {Dropped}, by distance as a fallback {Plain}; your room (6.9n {(Plugin.YourRoomOn.Value ? $"ON, up to +{Plugin.YourRoomDb.Value:0.#} dB" : "off")}) added to {ShockWave.YourRoomAdded}, same room as the blast {ShockWave.YourRoomSame}  (concussion.csv, concdose.csv)\n";
+        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), softened by a headset {Protected} (6.9q {Plugin.HeadsetProtectionPct.Value:0}%), walled off {Dropped}, by distance as a fallback {Plain}; your room (6.9n {(Plugin.YourRoomOn.Value ? $"ON, up to +{Plugin.YourRoomDb.Value:0.#} dB" : "off")}) added to {ShockWave.YourRoomAdded}, same room as the blast {ShockWave.YourRoomSame}  (concussion.csv, concdose.csv)\n";
     }
 }

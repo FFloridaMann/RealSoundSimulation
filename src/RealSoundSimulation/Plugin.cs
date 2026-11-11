@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.9";
+        public const string Version = "0.7.10";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -132,6 +132,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
         internal static ConfigEntry<float> ConcussionPressureDb, EarsReachDb; // 0.6.60 "6.9m", "6.9l"
+        internal static ConfigEntry<float> HeadsetProtectionPct; // 0.7.10 "6.9q"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
         internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
         internal static ConfigEntry<float> ShotPitchPct, ShotVolumeDb; // 0.7.3
@@ -287,6 +288,7 @@ namespace RealSoundSimulation
             ShockPushDb = Bind(s05, "Shock wave - slow push dB", 0f, "The long low swell after the hit in a closed space. -24 = off. Was 6.9g.", R(-24f, 12f), adv);
             ShockDuckDb = Bind(s05, "Shock wave - dip in other sounds dB", 8f, "How far other sounds dip for a moment when a close blast arrives. 0 = no dip. Was 6.9c.", R(0f, 24f), adv);
             ConcussionPressureDb = Bind(s05, "Concussion - strength dB", 0f, "Makes blasts count as stronger or weaker for concussion. +6 is about like being two-thirds as far away. Was 6.9m.", R(-12f, 12f));
+            HeadsetProtectionPct = Bind(s05, "Concussion - headset protection %", 75f, "With any headset on, how much of the hearing cut from a blast is taken away. 75 = the closest blast lowers your hearing by about 20 dB instead of going silent, and light blasts don't cut at all. Ear ringing already never plays with a headset. 0 = headsets don't help. Was 6.9q.", R(0f, 100f));
             EarsReachDb = Bind(s05, "Concussion - ears reach dB", 6f, "How much further the hearing cut and ringing reach than full concussion. Was 6.9l.", R(0f, 18f), adv);
             YourRoomDb = Bind(s05, "Concussion - your room build-up dB", 3f, "The most your own room adds to a blast that comes in from elsewhere, in a very small closed room. Was 6.9o.", R(0f, 6f), adv);
             BlastTailFadeS = Bind(s05, "Concussion - blast tail fade s", 0.8f, "How long the blast's tail and echoes take to fade when concussion cuts your hearing. Was 6.9i.", R(0.1f, 3f), adv);
@@ -444,7 +446,7 @@ namespace RealSoundSimulation
             $"6.3h bot echoes {(BotEchoOn.Value ? $"ON ({BotEchoDb.Value:+0;-0;0} dB, {BotEchoCount.Value} per bot, ceiling {BotEchoCeiling.Value}, {BotEchoRangeM.Value:0} m, gate {BotEchoGateDb.Value:0} dB, {BotEchoLengthS.Value:0.0} s)" : "off")}, your gun keeps {OwnEchoShare.Value}, replace quietest {(EchoReplaceOn.Value ? "ON" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
-            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")}, 6.9k concussion by pressure {(ConcussionPressureOn.Value ? $"ON ({ConcussionPressureDb.Value:+0;-0;0} dB, ears +{EarsReachDb.Value:0} dB)" : "off")} | " +
+            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")}, 6.9k concussion by pressure {(ConcussionPressureOn.Value ? $"ON ({ConcussionPressureDb.Value:+0;-0;0} dB, ears +{EarsReachDb.Value:0} dB)" : "off")}, 6.9q headset protection {HeadsetProtectionPct.Value:0}% | " +
             $"6.7c fragment hits by route {(FragmentRouteOn.Value ? $"ON (dull x{FragmentDullStrength.Value:0.00}, {FragmentLossDb.Value:0} dB per opening)" : "off")}, 6.7f pass-bys {(FragmentPassOn.Value ? $"ON ({FragmentPassDb.Value:+0;-0;0} dB, {FragmentPassReachM.Value:0.0} m, {FragmentPassCount.Value} per grenade)" : "off")} | " +
             $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +

@@ -188,7 +188,9 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Retune (after M, before the headset)
 
 ## 5 · Headset (moved after step 6)
-- [ ] Tune the concussion's ears level by the ear-pro worn (`6.9h`-`6.9m`)
+- [x] For v1.0, any headset takes away ringing and most of the hearing cut, one slider (`6.9q`, 0.7.10, user 10 Nov 2026)
+- [ ] Raid check: a close grenade with and without a headset
+- [ ] Later, in the revamp: each headset's own protection, optionally simulated (replaces the flat `6.9q`)
 - [x] Headset sound processing + bench (offline)
 - [ ] Headsets revamp: bring the headset processing into the game, with its own on/off switch at the top of F12 (user, 10 Nov 2026)
 - [ ] Tune it
