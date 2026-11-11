@@ -133,6 +133,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Raid: a grenade in a hall while you're in a small side room with the door open, `6.9n` off and on; check concdose.csv `yourRoomDb`
 - [x] Soft concussion cut: world goes at once, blast tail fades, felt layers survive (`6.9h`-`6.9j`, 0.6.58; by ear)
 - [ ] Raid: a grenade inside 6.5 m, `6.9h` off and on; set `6.9i` and `6.9j` by ear; check concussion.csv
+- [x] Separate depth for the thump while concussed (`6.9p`, 0.7.7; user asked for its own Hz slider)
+- [ ] Raid: set `6.9p` by ear inside the concussion cut; thump.csv `cutoffHz` shows the value used
 - [ ] Ask harmony how he wants the credit and year written (`THIRD_PARTY_NOTICES.md`)
 - [x] Fragment pass-bys along the real flight path, with cracks up close (`6.7f`-`6.7i`, 0.6.56; by ear)
 - [ ] Raid: your own grenade and a bot's through a door, `6.7f` off and on; check passby.csv and the audio thread's late blocks

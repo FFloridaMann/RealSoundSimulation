@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.7 (not released yet): concussed thump depth
+
+- New slider "Felt thump cutoff Hz" (Explosions, Advanced): how deep the explosion thump is while concussion cuts your hearing, separate from the normal thump's. Default 80 Hz, the same as before. Not played yet.
+
 ## 0.7.6 (not released yet): steadier shots at roof edges
 
 - Your shot's indoor/outdoor mix now glides from one shot to the next whatever caused the change (a roof edge, turning to fire out of a window, a small wobble in the measurement), instead of only when the sky opened up. Shots a second or more apart still take the new mix almost at once, and the first shot after a few quiet seconds is always fresh.

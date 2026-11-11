@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.6";
+        public const string Version = "0.7.7";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -140,6 +140,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> YourRoomDb; // 0.7.1 "6.9o"
         internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
+        internal static ConfigEntry<float> FeltThumpCutoffHz; // 0.7.7 "6.9p"
         internal static ConfigEntry<bool> FragmentPassOn; // 0.6.56 "6.7f"
         internal static ConfigEntry<float> FragmentPassDb, FragmentPassReachM;
         internal static ConfigEntry<int> FragmentPassCount;
@@ -281,6 +282,7 @@ namespace RealSoundSimulation
             YourRoomDb = Bind(blasts, "Your room build-up dB", 3f, "The most your own room adds to a blast that comes in from elsewhere, in a very small closed room. Was 6.9o.", R(0f, 6f), adv);
             BlastTailFadeS = Bind(blasts, "Tail fade s", 0.8f, "How long the blast's tail and echoes take to fade when concussion cuts your hearing. Was 6.9i.", R(0.1f, 3f), adv);
             FeltThroughCutDb = Bind(blasts, "Felt through the cut dB", 0f, "Volume of the thump and pressure hit you still feel when concussion cuts your hearing. Was 6.9j.", R(-24f, 12f), adv);
+            FeltThumpCutoffHz = Bind(blasts, "Felt thump cutoff Hz", 80f, "How deep the explosion thump is while concussion cuts your hearing. Lower = deeper and duller. The normal thump uses Explosion thump cutoff Hz in Doors and walls. Was 6.9p.", R(20f, 400f), adv);
             FragmentPassDb = Bind(blasts, "Pass-by volume dB", 0f, "How loud a fragment passing 1 m away is. Was 6.7g.", R(-24f, 12f), adv);
             FragmentPassReachM = Bind(blasts, "Pass-by reach m", 5f, "How close a fragment has to pass to be heard. Was 6.7h.", R(1f, 15f), adv);
             FragmentPassCount = Bind(blasts, "Pass-bys per grenade", 4, "The most that play per grenade, so it doesn't turn to mush. Was 6.7i.", N(1, 12), adv);

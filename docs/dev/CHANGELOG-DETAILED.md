@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.7 — 10 Nov 2026 (6.9p: felt thump cutoff)
+**Run in game:** not yet.
+- **New `6.9p Felt thump cutoff Hz`** (80 Hz, 20 to 400, advanced, Explosions). User: "yes add a separate hz slider for it", for the thump heard while concussed. In `ThroughWall.Thump`, a thump routed past the cut (`felt`) uses it as its low-pass for both voices instead of `6.2c`; thump.csv `cutoffHz` logs the one used. Default equals `6.2c`'s, so nothing changes until it is moved.
+- Version 0.7.7. One more setting.
+
 ## 0.7.6 — 10 Nov 2026 (review of 0.7.3-0.7.5: glide on the played weight, room tail voices, loop pitch)
 **Run in game:** not yet.
 - `GunEnvironmentBlend`: the between-shots glide moved from the openness inside `OpenAirCap` to the played weight. New `Glide(Steep(weight))`, run once per own shot/tail in `FirePrefix`/`TailPrefix` (enclosure mode only) and stored in `_usedWeight`; `PickPostfix` reads it instead of calling `Steep`. Same 0.5 s time constant on the real time between calls, fresh after 3 s without a shot and at raid start. Why: 0.7.5 eased one input, and `Steep` (p = 0.5 at steepness 0.5, unbounded slope at an even split) multiplies every other wobble. raid_20261110_181920 tag 5 (636-642 s, cap inactive: zenith 0.89): `indoorWeight` 0.44-0.57, `weightUsed` 0.46/0.68/0.33/0.43/0.32/0.41/0.37/0.36/0.59. Same raid 618.9 s indoors: aim closure 0.50 between 0.67-0.72 (one or two of nine cone rays) gave 0.373 between 0.71s. `ownshots.csv`: `indoorWeight` is still the measured weight, `weightUsed` now includes the glide.

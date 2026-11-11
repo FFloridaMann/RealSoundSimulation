@@ -727,6 +727,8 @@ The most common surface above you (`AcousticProbe.RoofMat`) sets a volume factor
 
 Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's gain, and 0.6.57 delayed the cut, but the user wanted hearing to go when concussion hits.
 
+**Felt thump depth (0.7.7).** While the cut is on, 6.2's explosion thump uses `6.9p` (80 Hz, 20 to 400) for its low-pass instead of `6.2c`. User, 10 Nov 2026: "yes add a separate hz slider for it". The pressure hit's 42 to 80 Hz boom is generated and unchanged.
+
 **Limits.** Bots' gunfire fades over `6.9i` as well. The felt layers skip the Guns bus's effects, so `6.9j` is by ear. It finds that mod's code by name; if that changes, the summary says not found and its own cut runs. While the game's own ringing plays (no headset), it drives Main and Guns, as in that mod, so `6.9i` has no effect then.
 
 **Check.** A grenade inside 6.5 m, `6.9h` off and on; summary CONCUSSION SOUND CUT; concussion.csv.
