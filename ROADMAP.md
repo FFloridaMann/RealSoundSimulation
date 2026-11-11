@@ -57,6 +57,8 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 
 ## Any time
 
+- **Explosion sound pass.** A listen-through of how blasts sound overall, since they may be divisive. `(user, 10 Nov 2026)`
+
 - The ground between you and a distant shooter (grass versus concrete). `(G)`
 - Distant buildings blocking far-away fights.
 
