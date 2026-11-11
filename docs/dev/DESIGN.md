@@ -244,6 +244,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `6.9`, `6.9a`, `6.9b`, `6.9c` | shock wave: on, pressure hit level, reach along its way, dip in other sounds (0.6.53) | on, 0 dB, 60 m, 8 dB |
 | `6.9d`, `6.9e`, `6.9f`, `6.9g` | shock wave in buildings: corner loss, enclosed boost, repeat hits, slow push (0.6.54) | 6 dB, 6 dB, 3, 0 dB |
 | `6.9h`, `6.9i`, `6.9j` | soft concussion cut: on, blast tail fade, felt layers' level (0.6.58) | on, 0.8 s, 0 dB |
+| `6.2k` | the explosion thump's cutoff with no wall in the way (0.7.8) | 80 Hz |
 | `6.9p` | the explosion thump's cutoff while concussion cuts your hearing (0.7.7) | 80 Hz |
 | `6.9k`, `6.9l`, `6.9m` | concussion by blast pressure: on, ears reach, strength (0.6.60) | on, +6 dB, 0 dB |
 | `6.9n`, `6.9o` | your room builds up a blast from elsewhere: on, most it adds (0.7.1) | on, 3 dB |

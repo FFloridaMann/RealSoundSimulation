@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.7";
+        public const string Version = "0.7.8";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -141,6 +141,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> SoftCutOn, FragmentRouteOn; // 0.6.55 "6.9h", "6.7c"
         internal static ConfigEntry<float> BlastTailFadeS, FeltThroughCutDb, FragmentDullStrength, FragmentLossDb; // 0.6.58 "6.9i", "6.9j"
         internal static ConfigEntry<float> FeltThumpCutoffHz; // 0.7.7 "6.9p"
+        internal static ConfigEntry<float> ThumpOpenCutoffHz; // 0.7.8 "6.2k"
         internal static ConfigEntry<bool> FragmentPassOn; // 0.6.56 "6.7f"
         internal static ConfigEntry<float> FragmentPassDb, FragmentPassReachM;
         internal static ConfigEntry<int> FragmentPassCount;
@@ -261,6 +262,7 @@ namespace RealSoundSimulation
             BlastCornerOn = Bind(blasts, "Around corners outdoors", true, "Outdoors, a blast behind a building comes from around its corner, muffled and quieter. Was 6.8.", null, adv);
             BlastCornerLossDb = Bind(blasts, "Corner loss dB", 4f, "How much quieter a blast is coming around a corner; twice this with no way round. Was 6.8a.", R(0f, 18f), adv);
             ThumpOpenDb = Bind(blasts, "Open-air thump dB", -6f, "A blast with no wall in the way gets the thump too, this much quieter. Was 6.2i.", R(-24f, 6f), adv);
+            ThumpOpenCutoffHz = Bind(blasts, "Open-air thump cutoff Hz", 80f, "How deep the thump is for a blast with no wall in the way, outdoors or in your room. Lower = deeper. Walled blasts use Explosion thump cutoff Hz in Doors and walls; while concussed, Felt thump cutoff Hz wins. Was 6.2k.", R(20f, 400f), adv);
             ThumpExplosionLengthS = Bind(blasts, "Thump length s", 1.5f, "How long an explosion's thump plays. It fades over the second half. Was 6.2j.", R(0.2f, 5f), adv);
             ExplosionEchoCount = Bind(blasts, "Echoes per explosion", 6, "The loudest this many play. Was 6.3b.", N(1, 12), adv);
             ExplosionEchoLengthS = Bind(blasts, "Echo length s", 1.5f, "How long each echo lasts. Shorter = tighter, longer = bigger. Was 6.3c.", R(0.3f, 3f), adv);

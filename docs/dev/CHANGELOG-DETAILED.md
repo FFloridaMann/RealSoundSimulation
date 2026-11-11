@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.8 — 10 Nov 2026 (6.2k: open-air thump cutoff)
+**Run in game:** not yet.
+- **New `6.2k Open-air thump cutoff Hz`** (80 Hz, 20 to 400, advanced, Explosions). User asked whether the thump sliders affect outdoor and unwalled grenades (they did: `6.2c` set every explosion thump, `6.9p` every one played past the concussion cut) and wanted one for those "without changing the current mods behavior". `ThroughWall.ExplosionPostfix` passes `6.2k` when `m.Walls == 0`, else `6.2c`; `6.9p` still overrides while concussed. Default equals `6.2c`'s, so nothing changes until it is moved. The THROUGH-WALL THUMP summary line shows it.
+- Version 0.7.8. One more setting.
+
 ## 0.7.7 — 10 Nov 2026 (6.9p: felt thump cutoff)
 **Run in game:** not yet.
 - **New `6.9p Felt thump cutoff Hz`** (80 Hz, 20 to 400, advanced, Explosions). User: "yes add a separate hz slider for it", for the thump heard while concussed. In `ThroughWall.Thump`, a thump routed past the cut (`felt`) uses it as its low-pass for both voices instead of `6.2c`; thump.csv `cutoffHz` logs the one used. Default equals `6.2c`'s, so nothing changes until it is moved.

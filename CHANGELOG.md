@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.8 (not released yet): open-air thump depth
+
+- New slider "Open-air thump cutoff Hz" (Explosions, Advanced): how deep the thump is for a grenade with no wall in the way, outdoors or in your room. Walled grenades keep "Explosion thump cutoff Hz". Default 80 Hz, the same as before. Not played yet.
+
 ## 0.7.7 (not released yet): concussed thump depth
 
 - New slider "Felt thump cutoff Hz" (Explosions, Advanced): how deep the explosion thump is while concussion cuts your hearing, separate from the normal thump's. Default 80 Hz, the same as before. Not played yet.

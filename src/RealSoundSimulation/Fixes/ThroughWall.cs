@@ -139,7 +139,7 @@ namespace RealSoundSimulation.Fixes
                 MeasureWalls(lt.position, position, m);
                 AudioClip clip = bank.PickSingleClip(0);
                 float reach = Plugin.ThumpExplosionReach.Value;
-                if (Plugin.ThumpOn.Value) Thump("explosion", bank, clip, position, dist, m, Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), reach, Plugin.ThumpExplosionLengthS.Value, ""); // 0.6.43: "6.2j"
+                if (Plugin.ThumpOn.Value) Thump("explosion", bank, clip, position, dist, m, m.Walls == 0 ? Plugin.ThumpOpenCutoffHz.Value : Plugin.ThumpExplosionCutoffHz.Value, ExplosionDb + Plugin.ThumpExplosionDb.Value + (m.Walls == 0 ? Plugin.ThumpOpenDb.Value : 0f), reach, Plugin.ThumpExplosionLengthS.Value, ""); // 0.6.43: "6.2j"
                 float spent = 20f * Mathf.Log10(Mathf.Max(dist, RefM) / RefM) + m.LossDb;
                 float wallFade = Plugin.ThumpWallsStop.Value ? Mathf.Clamp01((reach - spent) / ReachFadeDb) : 1f;
                 ShockWave.Explosion(lt, position, dist, m.Walls, m.LossDb, wallFade, Mathf.Max(dist - ShockHeadStartM, 0f) / OwnEchoes.SpeedOfSound, clip); // 0.6.53: "6.9"
@@ -301,7 +301,7 @@ namespace RealSoundSimulation.Fixes
             foreach (var kv in Skips) parts.Add($"{kv.Key} {kv.Value}");
             int played = PlayedGun + PlayedExplosion;
             string stop = Plugin.ThumpWallsStop.Value ? $"walls stop ON, reach {Plugin.ThumpGunReach.Value:0} gun, {Plugin.ThumpExplosionReach.Value:0} explosion" : "walls stop off";
-            return $"THROUGH-WALL THUMP (6.2 {(Plugin.ThumpOn.Value ? "ON" : "off")}, {Plugin.ThumpCutoffHz.Value:0} Hz, explosions {Plugin.ThumpExplosionCutoffHz.Value:0} Hz, level {Plugin.ThumpDb.Value:+0;-0;0} dB, wall loss x{Plugin.ThumpWallLoss.Value:0.00}, {stop}): played {PlayedGun} gun, {PlayedExplosion} explosion" +
+            return $"THROUGH-WALL THUMP (6.2 {(Plugin.ThumpOn.Value ? "ON" : "off")}, {Plugin.ThumpCutoffHz.Value:0} Hz, explosions {Plugin.ThumpExplosionCutoffHz.Value:0} Hz (open air {Plugin.ThumpOpenCutoffHz.Value:0} Hz), level {Plugin.ThumpDb.Value:+0;-0;0} dB, wall loss x{Plugin.ThumpWallLoss.Value:0.00}, {stop}): played {PlayedGun} gun, {PlayedExplosion} explosion" +
                    (played > 0 ? $", mean wall loss before 6.2d {_lossSum / played:0} dB, most at once {AtOnceMax}" : "") + $", gun shots with no route {NoRoute}; stopped by walls {StoppedGun} gun, {StoppedExplosion} explosion; not played otherwise: {(parts.Count > 0 ? string.Join(", ", parts) : "-")}  (thump.csv)\n";
         }
     }
