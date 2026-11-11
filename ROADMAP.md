@@ -45,7 +45,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 
 6. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
 7. **Headsets revamp and ear ringing.** Each headset protects you and shapes what you hear by how it's really built, optionally simulated, replacing today's flat headset protection. Without ear pro, your ears ring from gunfire by the ammo, the suppressor and the gun's real loudness, using Bring Back Concussion's ringing sounds. Both get their own switch at the top of F12. `(5)`
-8. **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. `(F)`
+8. **Footsteps and everyday sounds, as a switch.** Footsteps, voices, healing, eating, drinking and gear handling can get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. They already sound good with the game's own direction, so this is an optional switch, not part of v1.0. `(F)`
 9. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play. `(B)`
 10. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
 
