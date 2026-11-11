@@ -20,10 +20,20 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **Explosions.** From the doorway, a thump you feel through walls, echoes, a shock wave that hits harder in small rooms, fragments whizzing past, and concussion by the pressure that reaches you. `(6.2–6.9)`
 - **Closed doors and breaking glass.** Doors muffle by material; glass breaking in another room comes from the right place. `(6.5, 6.7)`
 - **Other guns echo.** With a voice limit that always keeps your own gun's echoes first. One raid so far; needs bigger fights. `(6.3)`
+- **Shot-to-shot variation.** Every shot, yours and others', varies slightly in pitch and volume before the simulation, so no two shots or their echoes sound alike. `(0.7.3)`
+- **Bug reports.** One switch, one zip per raid in an obvious folder, with the player's mod list and BepInEx log. `(0.7.0–0.7.2)`
+
+## Built, not played yet
+
+- **Your room builds up blasts.** A blast that gets into a small closed room you're in hits harder and longer. `(0.7.1)`
+- **Measured room tail.** Your shot's reverb tail from the room the mod measures: its length, its brightness, and how indoor the shot is. `(0.7.4)`
+- **Open air pulls to outdoor, gliding.** Outdoors your shot is firmly outdoor, and the mix glides between shots instead of jumping at roof edges. Reviewed by a second model. `(0.7.4–0.7.6)`
+- **Thump depth sliders.** Separate depths for blasts through walls, in open air and while concussed. `(0.7.7–0.7.8)`
+- **An easier F12 page.** 11 clear sections, settings grouped by name. `(0.7.9)`
 
 ## Next, in order
 
-1. **Raid testing and tuning** of everything in the section above.
+1. **Raid testing and tuning** of everything in the two sections above, including the indoor/outdoor mix's scale for the sound tracer, which reads "partly a room" on open ground near buildings.
 2. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
 3. **Headsets and ear ringing.** A headsets revamp: your ear protection shapes what you hear, including how concussion hits you. Without ear pro, your ears ring from gunfire by the ammo, the suppressor and the gun's real loudness, using Bring Back Concussion's ringing sounds. Both get their own switch at the top of F12. `(5)`
 4. **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. `(F)`
@@ -32,7 +42,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 7. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
 8. **Every gun.** A pass over each gun's recordings and loudness. `(7)`
 9. **Final echo tuning and optimising.** Fair limits for big fights, and keeping the audio thread fast. `(E)`
-10. **Co-op.** Players hear each other's echoes. `(CO)`
+10. **Co-op and Fika.** Works in Fika, and players hear each other's echoes. `(CO)`
 
 ## Any time
 
@@ -41,7 +51,8 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 
 ## Near the end
 
-- **Settings clean-up.** Remove the test switches that are settled. The F12 page was already regrouped in 0.7.0. `(S)`
+- **Settings clean-up.** Remove the test switches that are settled. The F12 page was already regrouped in 0.7.9. `(S)`
+- **Publish.** Fill the Forge page's links, check the Forge's rules, make the repo public.
 
 ## Not part of this mod
 
