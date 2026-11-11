@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.11 (not released yet): ready for Fika
+
+- A Fika headless host, the machine that runs the bots with no one listening, no longer runs this mod, so it doesn't take frame time from the bots.
+- With Fika installed, each copy of the game writes its bug report logs to its own folder.
+- Nothing changes in how anything sounds. A read of Fika's code found it already works alongside this mod: other players' guns are treated like any other gun, and each grenade goes off once for each player. A two-player test is still to come.
+
 ## 0.7.10 (not released yet): headsets protect your hearing
 
 - With any headset on, a blast no longer takes your hearing away: the closest blast dulls the world by about 20 dB for a moment instead of going silent, and lighter blasts don't cut it at all. Ear ringing already never played with a headset.

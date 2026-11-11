@@ -35,7 +35,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 ## Before v1.0, in order
 
 1. **Raid testing** of everything in "Built, not played yet". Shots near buildings outdoors sound good enough to publish as they are.
-2. **Fika.** Works in Fika from the first release: other players' shots and blasts take the right route, nothing assumes you're the only player, and a Fika headless host doesn't do audio work it doesn't need. Tested in a raid with a second player. `(CO)`
+2. **Fika.** The code review found it already works alongside Fika, and 0.7.11 switches the mod off on a Fika headless host. Still to do: a test raid with a second player. Works in Fika from the first release: other players' shots and blasts take the right route, nothing assumes you're the only player, and a Fika headless host doesn't do audio work it doesn't need. Tested in a raid with a second player. `(CO)`
 3. **Echo tuning and optimising.** Fair limits for big fights, which Fika raids have more of, and keeping the audio thread fast. `(E)`
 4. **Settings clean-up.** Remove the test switches that are settled, before release, so nobody's settings are reset by an update later. `(S)`
 5. **Publish v1.0.** Fill the Forge page's links, check the Forge's rules, make the repo public.

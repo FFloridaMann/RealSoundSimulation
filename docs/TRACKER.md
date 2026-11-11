@@ -249,8 +249,12 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Code pass, 2: `ClosedDoors` re-scanning every 3–4 s (~60 ms) during the deploy countdown
 - [ ] Code pass, 3: load-in spikes in `AmbienceMix` (110–165 ms) and `DoorwayBlend` (37–55 ms)
 
-## CO · Co-op: players hear each other's echoes (after E)
-- [ ] Check how the mod treats another human's gun (a bot's, or wrongly your own?)
+## CO · Fika and co-op (before v1.0)
+- [x] Read-only review against Fika 2.4.6 (10 Nov 2026): Fika patches none of this mod's methods; another player's shot reaches `FireBullet` as third-person, so it's treated as another gun (a bot's), not your own; each grenade explodes once on each machine; raid detection works; Fika is CC BY-NC-SA, so it's only looked up by name
+- [x] Headless host: the mod stays off with no graphics, and turns itself off at raid start if Fika says it's the headless host (0.7.11)
+- [x] Bug report folders get the process ID when Fika is installed, so two copies on one PC don't share a folder (0.7.11)
+- [ ] Two-player test raid, both with bug report logs on: shots at 20 and 80 m, through a doorway and from another room; grenades from each player and a bot (one blast and one concussion result per grenade on each side); a close one with a headset; doors; die and spectate, then a second raid
+- [ ] Only if the test shows it: another player's full-auto gets a tail and echoes mid-burst when the network lags (Fika ends a burst after 0.1 s without a shot); hold their end-of-burst echoes about 150 ms
 - [ ] Echoes for the other player's gun, through the bot echo system
 - [ ] Player 2 bonus in the ranking only (start about +6 dB); their loudness doesn't change
 - [ ] Voice and culling work holds up with two players and bots (needs 6.3 and E first)

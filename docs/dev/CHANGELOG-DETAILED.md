@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.11 — 10 Nov 2026 (Fika: headless off, log folders)
+**Run in game:** not yet (solo start-up should be unchanged; Fika untested).
+- Read-only review of Fika 2.4.6 client / 2.4.2 server (separate session): no patch overlap (124 Fika targets, none on audio, weapon sounds, glass, doors, explosions or `DoContusion`); observed players fire through `ObservedFirearmController` -> `WeaponSoundPlayer.FireBullet` and report third-person, so `OwnEchoes`/`BotEchoes` sort them as other guns; Fika client grenades explode once on the host's packet; `GamePlayerOwner.MyPlayer` exists in `CoopGame`, so raid detection holds.
+- New `Fixes/Fika.cs`: Fika found by name (`Fika.Core.Main.Utils.FikaBackendUtils`), no reference to its DLL (CC BY-NC-SA, nothing copied).
+- `Plugin.Load`: with `Application.isBatchMode` or a Null graphics device, settings are bound but nothing is patched or added. `DiagRunner.RaidStart`: if `FikaBackendUtils.IsHeadless`, `Plugin.TurnOff` unpatches this Harmony ID (Bring Back Concussion patches too) and destroys this assembly's components.
+- `DiagLog.Open`: `_p<pid>` on the raid folder when Fika is present. The summary's bot line reads "others alive (bots, and other players in co-op)".
+- Not done, waits for the two-player test: remote full-auto mid-burst tails on network gaps.
+
 ## 0.7.10 — 10 Nov 2026 (6.9q headset protection)
 **Run in game:** not yet.
 - User: "for the time being, all headsets should remove ear ringing and most hearing loss from concussions. so they function well then later actually improved and optionally simulated."

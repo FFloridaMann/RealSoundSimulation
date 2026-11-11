@@ -62,7 +62,7 @@ namespace RealSoundSimulation.Diagnostics
         public static void Open()
         {
             Close();
-            RaidDir = Path.Combine(RootDir, "raid_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            RaidDir = Path.Combine(RootDir, "raid_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + (Fixes.Fika.Present ? "_p" + System.Diagnostics.Process.GetCurrentProcess().Id : "")); // 0.7.11: two Fika copies on one PC start raids in the same second
             Directory.CreateDirectory(RaidDir);
         }
 

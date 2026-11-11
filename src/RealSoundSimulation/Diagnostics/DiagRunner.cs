@@ -153,6 +153,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private void RaidStart()
         {
+            if (Fika.IsHeadless()) { Plugin.TurnOff("this game is a Fika headless host, so no one hears it"); return; } // 0.7.11
             _raidStart = Time.time;
             RaidStartTime = _raidStart;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
@@ -506,7 +507,7 @@ namespace RealSoundSimulation.Diagnostics
                 ? $"  playing sources (all, FindObjectsOfType every {Plugin.SourceScanInterval.Value:0} s): max {_maxPlaying}  vs realVoices {cfg.numRealVoices}  (BetterSource objects max {_maxBetterSources})"
                 : $"  playing sources (all): source scan off (Source scan interval s = 0); realVoices {cfg.numRealVoices}");
             sb.AppendLine($"  playing sources in sound containers (counted at every container sample, every {Plugin.ContainerLogInterval.Value:0.0} s): max {_maxContainerPlaying}; our echo voices max busy {Acoustics.OwnEchoes.MaxBusy} of {Acoustics.EchoVoices.PoolSize}");
-            sb.AppendLine($"  alive bots: max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
+            sb.AppendLine($"  others alive (bots, and other players in co-op): max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
             sb.AppendLine($"  diagnostics backed off for {_backoffFrames} frames after spawns (Diagnostics back off after a spawn s = {Plugin.SpawnBackoffS.Value:0.0})"); // 0.6.19
             sb.AppendLine();
             sb.Append(_audioProbe != null ? _audioProbe.Summary() : "AUDIO THREAD: probe off or not attached (Time the audio thread)\n"); // 0.6.20

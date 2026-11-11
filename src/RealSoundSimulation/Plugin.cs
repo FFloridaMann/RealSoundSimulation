@@ -16,10 +16,11 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.10";
+        public const string Version = "0.7.11";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
+        internal static Plugin Instance; // 0.7.11
 
         internal static ConfigEntry<GunSoundSet> GunSounds;
         internal static ConfigEntry<bool> SebOnFullAuto;
@@ -157,6 +158,7 @@ namespace RealSoundSimulation
         private void Awake()
         {
             Log = Logger;
+            Instance = this;
             try { Load(); }
             catch (Exception e)
             {
@@ -375,6 +377,9 @@ namespace RealSoundSimulation
             SourceScanInterval = Bind(s11, "Source scan interval s", 0f, "How often every playing sound in the scene is counted. Causes a visible hitch each time. 0 = off.", R(0f, 60f), adv);
             SpawnBackoffS = Bind(s11, "Back off after a spawn s", 2f, "For this long after bots spawn, diagnostics skip their per-frame work so they don't add to the spawn hitch. 0 = off.", R(0f, 10f), adv);
 
+            // 0.7.11: a game with no graphics (a headless host, such as Fika's, which runs the bots with no one listening) gets nothing from this mod, so it patches and adds nothing there.
+            if (Fika.NoGraphics(out string noGraphics)) { Log.LogInfo($"Real Sound Simulation stays off: no one hears this game ({noGraphics}, as on a Fika headless host)"); return; }
+
             Harmony = new Harmony(Guid);
             Safe("self-check", PatchSelfCheck.Run);
             Safe("allocation counter", Perf.InitAlloc); // 0.6.17
@@ -427,6 +432,17 @@ namespace RealSoundSimulation
             gameObject.AddComponent<ConcussionProof>(); // 0.6.57
             gameObject.AddComponent<OwnShotTurn>(); // 0.6.30
             Log.LogInfo("Real Sound Simulation loaded");
+        }
+
+        // 0.7.11: switches the whole mod off in a running game: every patch removed (including those on Bring Back Concussion), every component of this mod removed.
+        // Used when Fika says this game is its headless host, which it may only say after this mod loaded.
+        internal static void TurnOff(string why)
+        {
+            try { Harmony?.UnpatchSelf(); } catch (Exception e) { Log.LogWarning($"Turning off: unpatching failed: {e}"); }
+            if (Instance != null)
+                foreach (MonoBehaviour c in Instance.GetComponents<MonoBehaviour>())
+                    if (c != Instance && c.GetType().Assembly == typeof(Plugin).Assembly) Destroy(c);
+            Log.LogInfo($"Real Sound Simulation turned itself off: {why}");
         }
 
         private int _order = 1000;
