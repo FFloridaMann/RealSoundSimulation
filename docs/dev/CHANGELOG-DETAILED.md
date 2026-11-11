@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.14 — 10 Nov 2026 (5r tuning, 3i off under the room tail)
+**Run in game:** not yet.
+- raid_20261110_212706_p27496: the ring ran 4 times (61 s, noise up to 84) during the RPK bursts, none at tags 3-4. 49 shots (the PL-15) were left out as subsonic; six Tavor shots in 7 s added about 4 each and drained 4/s after 0.5 s, so never reached 20.
+- User: "present but not so punishing its just annoying a few shots should start some sort of ring and a lot alot of ringing"; tiers "subsonic ammo a little slower, subsonic and suppressor no ear ringing, supersonic with suppressor slower than subsonic no suppressor and supersonic no suppressor is the quickest".
+- 5r: tier x1 supersonic open, x0.75 subsonic open, x0.45 supersonic suppressed (`WeaponSoundPlayer.IsSilenced`), subsonic suppressed left out; the suppressor's own loudness no longer counts in the mod sum (the tier does it). Drain waits 2 s (was 0.5) and runs 3/s (was 4); ring from 10 (was 20) at 15% of its volume, full at 70 (was 90). A small-room rifle shot (~4.2) rings from the third shot; recovery from full about 20 s.
+- Tags 3-4, Tavor (mdr_main bank) in a closed room (v2 room 1, roof 1, aim wall 1.7 m): indoor weight 0.51-0.55, played 0.58-0.65, so 35-42% outdoor recording. Cause: the 3i small-space rule (user's value Current) scaled the weight by the room size (~0.6). With `Room tail - on`, size is now 1: the measured tail sets the room's length. 3i still applies with the room tail off.
+- Not changed yet: the loudest echo is the ceiling straight above (elevation 90, 10 ms, -8 dB); Unity's panner centres it. Check again after this.
+
 ## 0.7.13 — 10 Nov 2026 (5r: gunfire hearing)
 **Run in game:** not yet.
 - User: "can we add in the ear ringing without headset logic from my older mod? same logic basis will obvi prob be diff code". Source: the author's earlier audio mod, `GunfireHearing`.

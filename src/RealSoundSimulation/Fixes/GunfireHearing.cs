@@ -23,11 +23,19 @@ namespace RealSoundSimulation.Fixes
     //   dull     everything but the guns gets quieter while the noise is high (never while a concussion cut or another fade is working).
     //   gear     a headset takes off half, helmets that cover the ears a little; a helmet with a built-in headset counts as a headset.
     // Only your own ears, so it's the same with Fika.
+    //
+    // 0.7.14: tuned after the first raid (raid_20261110_212706): 49 pistol shots were left out as subsonic and six Tavor shots in 7 s
+    // never built up. User: "present but not so punishing its just annoying: a few shots should start some sort of ring and a lot a lot
+    // of ringing", and by ammo: supersonic unsuppressed rings quickest, subsonic unsuppressed a little slower, supersonic suppressed
+    // slower than that, subsonic suppressed not at all. So: those four tiers (the suppressor no longer also counts through its own
+    // loudness), the noise waits 2 s after a shot before draining and then drains 3 a second, and the ring starts at 10 (faint, so a
+    // few shots are heard) and is full at 70. A final pass may simulate the noise level with the probes.
     internal class GunfireHearing : MonoBehaviour
     {
-        private const float MaxNoise = 150f, NoiseFade = 4f, DropPerNoise = 0.15f, RingStart = 20f, RingFull = 90f;
+        private const float MaxNoise = 150f, NoiseFade = 3f, DropPerNoise = 0.15f, RingStart = 10f, RingFull = 70f, RingFloor = 0.15f;
+        private const float SubsonicOpen = 0.75f, SupersonicSuppressed = 0.45f; // 0.7.14: supersonic open = 1, subsonic suppressed = 0
         private const float DropRise = 1f, DropFall = 2f, RingFadeTime = 1.5f, RingSilent = 0.001f, GearCheckInterval = 0.5f;
-        private const float FiringWindow = 0.5f, VolumeFinished = 0.01f, SameLevel = 0.01f, MidFadeDb = -20f, SpeedOfSound = 335f;
+        private const float FiringWindow = 2f, VolumeFinished = 0.01f, SameLevel = 0.01f, MidFadeDb = -20f, SpeedOfSound = 335f;
         private const float MinAmmoFactor = 0.2f, MaxAmmoFactor = 2f, MinModFactor = 0.1f, LoudnessScale = 80f, UnknownCaliber = 2f;
         private const float NearbyMax = 5f, NearbyBoost = 1.25f, LightHelmet = 0.9f, HeavyHelmet = 0.8f, HeadsetLetsThrough = 0.5f;
         private const float BigRoomExtra = 0.2f, SmallRoomExtra = 0.6f, SmallRoomM = 2f, BigRoomM = 8f, MinThroughWall = 0.1f;
@@ -57,7 +65,7 @@ namespace RealSoundSimulation.Fixes
         private static Player _gearOf;
 
         // Raid figures for the summary.
-        public static int OwnShots, OtherShots, Subsonic, RingStarts, Holds;
+        public static int OwnShots, OtherShots, Subsonic, RingStarts, Holds, SuperOpen, SubOpen, SuperSup;
         public static float MaxNoiseSeen, MaxDrop, RingSeconds;
 
         public static void Apply(Harmony h)
@@ -70,7 +78,7 @@ namespace RealSoundSimulation.Fixes
         {
             _noise = _volumeDrop = _ringLevel = 0f; _firingUntil = -1f; _nextGearCheck = 0f; _gearOf = null; _writing = false;
             if (_ring != null) _ring.Stop();
-            OwnShots = OtherShots = Subsonic = RingStarts = Holds = 0;
+            OwnShots = OtherShots = Subsonic = RingStarts = Holds = SuperOpen = SubOpen = SuperSup = 0;
             MaxNoiseSeen = MaxDrop = RingSeconds = 0f;
         }
 
@@ -125,9 +133,15 @@ namespace RealSoundSimulation.Fixes
                 bool own = b.PointOfView == EPointOfView.FirstPerson || ReferenceEquals(b.iPlayer, main);
                 float distance = own ? 0f : Vector3.Distance(shotPosition, main.Position);
                 if (distance > Plugin.EarRingNearbyM.Value) return;
-                if (weapon.Item is Weapon fired && IsSubsonic(fired, ammo)) { Subsonic++; return; }
+                bool subsonic = weapon.Item is Weapon fired && IsSubsonic(fired, ammo);
+                bool suppressed = __instance.IsSilenced;
+                float tier;
+                if (suppressed && subsonic) { Subsonic++; return; } // 0.7.14: subsonic and suppressed: no ringing
+                if (suppressed) { tier = SupersonicSuppressed; SuperSup++; }
+                else if (subsonic) { tier = SubsonicOpen; SubOpen++; }
+                else { tier = 1f; SuperOpen++; }
 
-                float loudness = ShotLoudness(weapon, ammo) * Plugin.EarRingStrength.Value * RoomFactor();
+                float loudness = ShotLoudness(weapon, ammo) * tier * Plugin.EarRingStrength.Value * RoomFactor();
                 if (!own)
                 {
                     SuperBetterAudioQueue q = QueueRef(__instance);
@@ -172,7 +186,7 @@ namespace RealSoundSimulation.Fixes
                 caliberName = gun.AmmoCaliber ?? "";
                 foreach (Mod mod in gun.Mods)
                 {
-                    if (mod.Slots.Any(slot => slot.ContainedItem is Silencer)) continue;
+                    if (mod is Silencer || mod.Slots.Any(slot => slot.ContainedItem is Silencer)) continue; // 0.7.14: the suppressor counts by tier
                     modLoudness += mod.Template.Loudness;
                 }
             }
@@ -219,7 +233,8 @@ namespace RealSoundSimulation.Fixes
                 _gearOf = player;
             }
 
-            float target = _wearsHeadset ? 0f : Mathf.InverseLerp(RingStart, RingFull, _noise) * Plugin.EarRingVolume.Value;
+            // 0.7.14: faint as soon as it starts, so a few shots are heard, then up to full
+            float target = _wearsHeadset || _noise <= RingStart ? 0f : Mathf.Lerp(RingFloor, 1f, Mathf.InverseLerp(RingStart, RingFull, _noise)) * Plugin.EarRingVolume.Value;
             // A blast's ring and gunfire's ring are one ring: firing while a blast rings keeps that ring where it is.
             if (GameRinging)
             {
@@ -311,7 +326,7 @@ namespace RealSoundSimulation.Fixes
         {
             if (!Plugin.EarRingOn.Value) return "GUNFIRE HEARING (5r off)\n";
             return $"GUNFIRE HEARING (5r ON, ring {Plugin.EarRingVolume.Value:0.00}, strength x{Plugin.EarRingStrength.Value:0.00}, recovery x{Plugin.EarRingRecovery.Value:0.00}, dulls up to {Plugin.EarRingDullDb.Value:0} dB, nearby {Plugin.EarRingNearbyM.Value:0} m): " +
-                   $"shots counted yours {OwnShots}, others {OtherShots}, subsonic left out {Subsonic}; most noise {MaxNoiseSeen:0} (ring from {RingStart:0}, full at {RingFull:0}); " +
+                   $"shots counted yours {OwnShots}, others {OtherShots} (supersonic {SuperOpen}, subsonic {SubOpen}, supersonic suppressed {SuperSup}; subsonic suppressed left out {Subsonic}); most noise {MaxNoiseSeen:0} (ring from {RingStart:0}, full at {RingFull:0}); " +
                    $"ring started {RingStarts} times, {RingSeconds:0} s in all; a blast's ring held {Holds} frames; most dulled {MaxDrop:0.0} dB; headset on at the end {_wearsHeadset}\n";
         }
     }

@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.14 (not released yet): ear ringing by ammo, small rooms sound indoors
+
+- Ear ringing comes sooner and lasts: a faint ring after a few shots without ear pro, a strong one after a lot. Your ears recover a couple of seconds after you stop, over about 20 s.
+- By ammo: supersonic without a suppressor rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. (Before, subsonic shots never counted, so pistol fire didn't ring.)
+- Your shots in a small closed room play the room's sound fully. Before, small rooms mixed in some of the outdoor recording and could sound like they were outside; the measured room tail now decides how long a small room rings.
+
 ## 0.7.13 (not released yet): your ears ring from gunfire
 
 - Without a headset, every loud shot near you adds up: yours, and anyone's close by. A long string of fire slowly brings in a ring and dulls the world a little; both fade once you stop.

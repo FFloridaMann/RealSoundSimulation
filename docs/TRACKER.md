@@ -196,7 +196,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [ ] Tune it
 - [ ] Re-check the 4b mix through it
 - [x] Ear ringing from gunfire with no ear pro (`5r`, 0.7.13): ported from the earlier audio mod's "Gunfire hearing": calibre, muzzle device, barrel and ammo, subsonic left out, the measured room instead of the indoor flag, others' shots through walls by occlusion; the game's own ring sound; switch at the top of F12
-- [ ] Raid check 5r: a long string of fire without a headset in a small room, then outdoors, then with a headset; summary GUNFIRE HEARING
+- [ ] Raid check 5r (0.7.14 tiers): a few shots then a lot, without a headset, in a small room and outdoors; pistol with normal and subsonic ammo; suppressed; with a headset; summary GUNFIRE HEARING
+- [ ] Final pass: simulate the noise level at your ears with the probes, indoors and outdoors (user, 10 Nov 2026)
 
 ## 6b · SEB on full-auto guns
 - [x] `0 Gun sounds` switch SPT / SEB (0.6.3)

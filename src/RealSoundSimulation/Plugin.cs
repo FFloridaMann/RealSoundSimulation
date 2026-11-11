@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.13";
+        public const string Version = "0.7.14";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -192,7 +192,7 @@ namespace RealSoundSimulation
             // 01 | GENERAL
             ConcussionPressureOn = Bind(s01, "Concussion - by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             SoftCutOn = Bind(s01, "Concussion - soft hearing cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
-            EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", true, "Without a headset, a long string of loud shots near you slowly brings in a ring, and the world gets a bit quieter, by the calibre, the muzzle device, the ammo and how small the room is. Subsonic shots don't count. A headset takes off half and stops the ring. Was 5r.");
+            EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", true, "Without a headset, loud shots near you bring in a ring: a faint one after a few shots, a strong one after a lot, and the world gets a bit quieter. Supersonic ammo rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. Small rooms ring more. A headset takes off half and stops the ring. Was 5r.");
             YourRoomOn = Bind(s01, "Concussion - your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
             ShotVariationOn = Bind(s01, "Shot variation - on", true, "Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so no two shots, or their echoes, sound exactly alike. Its tail and echoes share the same shot's change. Off = every shot identical, as in the game.");
             ShotPitchPct = Bind(s01, "Shot variation - pitch %", 2f, "How far each shot's pitch can vary, either way. 2 = up to 2% higher or lower. 0 = no pitch change.", R(0f, 6f));
@@ -213,7 +213,7 @@ namespace RealSoundSimulation
             MuzzleWeight = Bind(s02, "Mix - muzzle weight", 0.7f, "The room is measured at your head and at the muzzle. This is how much the muzzle counts. Was 3g.", R(0f, 1f), adv);
             MuzzleLobe = Bind(s02, "Mix - muzzle lobe", 1f, "How much the muzzle measure favours the directions in front of it. 0 = all round, 2 = tighter. Was 3k.", R(0f, 2f), adv);
             ThinSurfaceCount = Bind(s02, "Mix - thin surfaces count as walls", 0.5f, "How much glass, thin planks, cardboard and fabric count as walls. 1 = like concrete, 0 = like open air. Was 3f.", R(0f, 1f), adv);
-            SmallSpace = Bind(s02, "Mix - small space rule", SmallSpaceRule.Soft, "Small furnished spaces get less of the indoor recording. Current = down to half, Soft = at least 85%, Off = never. Was 3i.", null, adv);
+            SmallSpace = Bind(s02, "Mix - small space rule", SmallSpaceRule.Soft, "Only with Room tail off: small furnished spaces get less of the indoor recording. Current = down to half, Soft = at least 85%, Off = never. With the room tail on, small rooms always play the indoor recording. Was 3i.", null, adv);
             BlendSteepness = Bind(s02, "Mix - blend steepness", 0.5f, "How quickly the mix leaves an even indoor/outdoor split. 0 = straight, 1 = steep. Was 3j.", R(0f, 1f), adv);
             OpenSkyLowersIndoor = Bind(s02, "Mix - open sky lowers the indoor mix", 1f, "How much open sky around you takes off the room part of your shot. Only with Mix - traced gunshots (test) on. Was 3n.", R(0f, 1f), adv);
             ShotRingFollowsTurn = Bind(s02, "Mix - ring follows your turning", 1f, "Where your shot mixes indoor and outdoor, turning after the shot moves them around your head, and whichever is behind you gets duller. 0 = off. Was 3o.", R(0f, 1f), adv);

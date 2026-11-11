@@ -164,6 +164,10 @@ namespace RealSoundSimulation.Fixes
             }
             float size = v2 ? Mix(AcousticProbe.Size, AcousticProbe.MuzzleSize, mw) : Mix(EnclosureProbe.SizeFactor, EnclosureProbe.MuzzleSize, mw);
             if (float.IsNaN(size)) size = 1f;
+            // 0.7.14: with the measured room tail on, the room's real length comes from it, so a small room plays the indoor recording.
+            // The size rule mixed in the outdoor recording instead (raid_20261110_212706 tags 3-4: a Tavor in a closed room with a wall
+            // 1.7 m ahead played 35-42% outdoor, "echo behind the player and sort of outside").
+            if (Plugin.RoomTailOn.Value) size = 1f;
             switch (Plugin.SmallSpace.Value)
             {
                 case SmallSpaceRule.Off: size = 1f; break;
