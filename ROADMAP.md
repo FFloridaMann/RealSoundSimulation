@@ -32,28 +32,31 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **An easier F12 page.** 11 clear sections, settings grouped by name. `(0.7.9)`
 - **Headsets protect your hearing.** With any headset on, no ear ringing and most of a blast's hearing cut taken away. Each headset will differ after the revamp. `(0.7.10)`
 
-## Next, in order
+## Before v1.0, in order
 
-1. **Raid testing and tuning** of everything in the two sections above, including the indoor/outdoor mix's scale for the sound tracer, which reads "partly a room" on open ground near buildings.
-2. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
-3. **Headsets and ear ringing.** A headsets revamp: your ear protection shapes what you hear, including how concussion hits you. Without ear pro, your ears ring from gunfire by the ammo, the suppressor and the gun's real loudness, using Bring Back Concussion's ringing sounds. Both get their own switch at the top of F12. `(5)`
-4. **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. `(F)`
-5. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. Its own switch, since it changes how fights play. `(B)`
-6. **EFT 1.0 recordings on full-auto guns.** One take per round while the trigger is held. `(6b)`
-7. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
-8. **Every gun.** A pass over each gun's recordings and loudness. `(7)`
-9. **Final echo tuning and optimising.** Fair limits for big fights, and keeping the audio thread fast. `(E)`
-10. **Co-op and Fika.** Works in Fika, and players hear each other's echoes. `(CO)`
+1. **Raid testing** of everything in "Built, not played yet". Shots near buildings outdoors sound good enough to publish as they are.
+2. **Fika.** Works in Fika from the first release: other players' shots and blasts take the right route, nothing assumes you're the only player, and a Fika headless host doesn't do audio work it doesn't need. Tested in a raid with a second player. `(CO)`
+3. **Echo tuning and optimising.** Fair limits for big fights, which Fika raids have more of, and keeping the audio thread fast. `(E)`
+4. **Settings clean-up.** Remove the test switches that are settled, before release, so nobody's settings are reset by an update later. `(S)`
+5. **Publish v1.0.** Fill the Forge page's links, check the Forge's rules, make the repo public.
+
+## Updates after v1.0, in order
+
+6. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
+7. **Headsets revamp and ear ringing.** Each headset protects you and shapes what you hear by how it's really built, optionally simulated, replacing today's flat headset protection. Without ear pro, your ears ring from gunfire by the ammo, the suppressor and the gun's real loudness, using Bring Back Concussion's ringing sounds. Both get their own switch at the top of F12. `(5)`
+8. **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. `(F)`
+9. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play. `(B)`
+10. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
+
+## Maybe, at the end
+
+- **EFT 1.0 recordings on full-auto guns.** One take per round while the trigger is held. A maybe, because it adds load. `(6b)`
+- **Every gun.** A pass over each gun's recordings and loudness. `(7)`
 
 ## Any time
 
 - The ground between you and a distant shooter (grass versus concrete). `(G)`
 - Distant buildings blocking far-away fights.
-
-## Near the end
-
-- **Settings clean-up.** Remove the test switches that are settled. The F12 page was already regrouped in 0.7.9. `(S)`
-- **Publish.** Fill the Forge page's links, check the Forge's rules, make the repo public.
 
 ## Not part of this mod
 
