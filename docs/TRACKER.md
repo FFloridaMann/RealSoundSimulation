@@ -209,7 +209,7 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [x] Above or below you: through the floor by material and thickness (6.2's measure), at the true position so the height stays; footsteps a dull thud, airborne sounds very muffled; airborne sounds take a stairwell route when there is one (0.7.15; user: "hard to tell if someone is above or below you")
 - [x] Own on/off switch at the top of F12, off by default (0.7.15)
 - [ ] Raid: footsteps upstairs, downstairs and in the next room, a bot healing or looting, switch on and off; summary BODY SOUNDS
-- [ ] Not yet: EFT 1.0's extra step layer (`PlayerStepLayerAudioController`) has its own sources and isn't treated
+- [x] EFT 1.0's extra step layer (`PlayerStepLayerAudioController._source`, outdoors only) treated as footsteps; when it gives its source back (going indoors) ours is made neutral first (user: "add it")
 
 ## B · Bots feel blasts too (user, 10 Nov 2026)
 - [ ] Find what SAIN and the game read for a bot's hearing and aim after an explosion

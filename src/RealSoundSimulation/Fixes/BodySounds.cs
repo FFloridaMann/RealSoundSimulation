@@ -13,7 +13,7 @@ namespace RealSoundSimulation.Fixes
     // 0.7.15 "F": other people's footsteps and body sounds reach you the way gunshots do. User, 10 Nov 2026: "it still is at times hard to
     // tell if someone is above or below you". The game plays these at the person's real position and leaves the height to the spatializer,
     // which headphones barely carry; what tells you someone is upstairs is the way the sound gets to you.
-    //   sounds   footsteps (NestedStepSoundSource), gear rustle, searching and looting, voices, and everything their hands play
+    //   sounds   footsteps (NestedStepSoundSource, and from 0.7.16 EFT 1.0's extra step layer outdoors), gear rustle, searching and looting, voices, and everything their hands play
     //            (meds, food and drink, reloads, handling: BaseSoundPlayer's clip source). Other people only, within "F range" m.
     //   floor    something above or below you (more than 1.8 m up or down, with a floor or ceiling on the straight line between): the sound
     //            stays where they really are, so the spatializer keeps the height, and goes through the floor by its material and thickness
@@ -35,6 +35,8 @@ namespace RealSoundSimulation.Fixes
         private static readonly AccessTools.FieldRef<Player, BetterSource> GearRef = AccessTools.FieldRefAccess<Player, BetterSource>("_gearSource");
         private static readonly AccessTools.FieldRef<Player, BetterSource> SearchRef = AccessTools.FieldRefAccess<Player, BetterSource>("_searchSource");
         private static readonly AccessTools.FieldRef<Player, BetterSource> SpeechRef = AccessTools.FieldRefAccess<Player, BetterSource>("_speechSource");
+        // 0.7.16: EFT 1.0's extra footstep layer (surface detail, only while the person is outdoors) plays on a source of its own
+        private static readonly AccessTools.FieldRef<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController> LayerRef = AccessTools.FieldRefAccess<Player, Audio.AudioWeatherSystem.IPlayerStepAudioController>("_specificStepAudioController");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BetterSource> ClipsRef = AccessTools.FieldRefAccess<BaseSoundPlayer, BetterSource>("_clipsSource");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, bool> ReleasedRef = AccessTools.FieldRefAccess<BaseSoundPlayer, bool>("_isClipSourceReleased");
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -55,6 +57,7 @@ namespace RealSoundSimulation.Fixes
             public uint HeldPair;
             public Mode StepMode, AirMode, LastStepMode, LastAirMode;
             public readonly List<BaseSoundPlayer> Hands = new List<BaseSoundPlayer>();
+            public BetterSource Layer; // the 1.0 step layer's source last seen
             public readonly Dictionary<BaseSoundPlayer, BetterSource> HandSrc = new Dictionary<BaseSoundPlayer, BetterSource>(); // the source each was last seen playing on
         }
 
@@ -132,6 +135,10 @@ namespace RealSoundSimulation.Fixes
                     Decide(l, b, dt);
                     TouchedNow.Clear();
                     Treat(StepRef(p), b, true, l);
+                    BetterSource layer = (LayerRef(p) as Audio.AmbientSubsystem.PlayerStepLayerAudioController)?._source;
+                    if (b.Layer != null && b.Layer != layer) Neutral(b.Layer); // it gave its source back (went indoors): leave that one as the game made it
+                    b.Layer = layer;
+                    Treat(layer, b, true, l);
                     Treat(GearRef(p), b, false, l);
                     Treat(SearchRef(p), b, false, l);
                     Treat(SpeechRef(p), b, false, l);
@@ -153,6 +160,7 @@ namespace RealSoundSimulation.Fixes
                     if (!Bodies.TryGetValue(id, out Body b)) continue;
                     if (b.P != null) { Neutral(StepRef(b.P)); Neutral(GearRef(b.P)); Neutral(SearchRef(b.P)); Neutral(SpeechRef(b.P)); }
                     foreach (BetterSource hs in b.HandSrc.Values) Neutral(hs);
+                    Neutral(b.Layer);
                     Bodies.Remove(id);
                 }
                 Gone.Clear();
