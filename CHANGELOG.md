@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.9 (not released yet): an easier F12 page
+
+- 11 sections with headers that stand out (01 GENERAL to 11 DIAGNOSTICS); Explosions is split into sound, shock and concussion, and fragments and glass.
+- Settings that belong together share a name and stay together, for example everything about the explosion thump (its volumes and all three depth sliders) is **Thump - ...** in 04 EXPLOSIONS: SOUND, and a group's Advanced settings sit right under its main ones.
+- Your values carry over; nothing is removed. Each description still ends with its old code.
+
 ## 0.7.8 (not released yet): open-air thump depth
 
 - New slider "Open-air thump cutoff Hz" (Explosions, Advanced): how deep the thump is for a grenade with no wall in the way, outdoors or in your room. Walled grenades keep "Explosion thump cutoff Hz". Default 80 Hz, the same as before. Not played yet.

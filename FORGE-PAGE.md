@@ -42,7 +42,7 @@ That pressure decides what happens:
 
 When your hearing cuts, the world goes quiet at once, but the blast itself fades out naturally instead of snapping off, and you still feel its thump.
 
-Both parts have their own switch at the top of F12 (**Concussion by blast pressure** and **Soft concussion cut**), and how strong blasts count can be set too. The concussion effect itself, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, which is needed for this part.
+Both parts have their own switch at the top of F12 (**Concussion - by blast pressure** and **Concussion - soft hearing cut**), and how strong blasts count can be set too. The concussion effect itself, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, which is needed for this part.
 
 ## Performance
 
@@ -56,9 +56,9 @@ Measured on my PC (Ryzen 7 9800X3D, 8 cores and 16 threads, RTX 5070 Ti) in a 20
 
 It hasn't been measured on lower-end CPUs yet. If you have fewer cores:
 
-- Set **Sound quality** (F12, General) to Medium or Low.
-- Lower **Echoes per shooter** (Other guns) and **Most voices for other gun echoes** (Performance).
-- Turn off **Far echoes** (Your gun, under Advanced settings).
+- Set **Sound quality** (F12, 01 GENERAL) to Medium or Low.
+- Lower **Echoes - per shooter** (03 OTHER GUNS) and **Most voices for other gun echoes** (10 PERFORMANCE).
+- Turn off **Echoes - far (buildings and hills)** (02 YOUR GUN, under Advanced settings).
 
 If it still sounds off or costs too much on your PC, [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox with [True Acoustics](LINK-HERE) by Kaan is a lighter way to get better audio, and they sound great. Use them instead of this mod, not alongside it.
 
@@ -86,8 +86,8 @@ If it still sounds off or costs too much on your PC, [Sound Engine Backport](htt
 
 ## Found a bug?
 
-1. In F12 → Real Sound Simulation → **General**, turn on **Bug report logs**.
-2. Play one raid. Wherever something sounds wrong, press **F10** on the spot. You can change the key right below the switch (**Bug report mark key**).
+1. In F12 → Real Sound Simulation → **01 GENERAL**, turn on **Bug report - logs**.
+2. Play one raid. Wherever something sounds wrong, press **F10** on the spot. You can change the key right below the switch (**Bug report - mark key**).
 3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`), then the **RealSoundSimulation Logs** folder.
 4. Send me the newest **Bug report** zip, and say roughly when and where it happened.
 

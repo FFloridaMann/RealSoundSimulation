@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.9 — 10 Nov 2026 (F12 reorganized)
+**Run in game:** not yet.
+- Sections: `01 | GENERAL` ... `11 | DIAGNOSTICS` with a dashed divider (ASCII, so F12's font shows it). Explosions split into 04 sound, 05 shock and concussion, 06 fragments and glass; the tracer's fine-tuning is 09 SOUND TRACER (Advanced only).
+- Keys grouped by prefix (`Mix -`, `Echoes -`, `Room tail -`, `Direction -`, `Muffling -`, `Thump -`, `Shock wave -`, `Concussion -`, `Pass-bys -`, `Fragment hits -`, `Breaking glass -`, `Outdoors -`, `Roof rain -`, `Through-wall thump -`, `Closed doors -`, `Doorways -`, `Routes -`), bound group by group so Advanced entries sit under their group's main ones. The explosion's walled thump depth and reach moved from Doors and walls to `Thump -` in 04. 168 settings, 47 shown by default.
+- Installed cfg migrated key by key (all 168 values kept); the previous file was backed up beside it.
+
 ## 0.7.8 — 10 Nov 2026 (6.2k: open-air thump cutoff)
 **Run in game:** not yet.
 - **New `6.2k Open-air thump cutoff Hz`** (80 Hz, 20 to 400, advanced, Explosions). User asked whether the thump sliders affect outdoor and unwalled grenades (they did: `6.2c` set every explosion thump, `6.9p` every one played past the concussion cut) and wanted one for those "without changing the current mods behavior". `ThroughWall.ExplosionPostfix` passes `6.2k` when `m.Walls == 0`, else `6.2c`; `6.9p` still overrides while concussed. Default equals `6.2c`'s, so nothing changes until it is moved. The THROUGH-WALL THUMP summary line shows it.
