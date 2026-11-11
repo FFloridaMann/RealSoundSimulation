@@ -214,6 +214,8 @@ Why each step sits where it does: [ROADMAP.md](dev/ROADMAP-DETAILED.md).
 - [x] Footsteps on another floor always through it; above vs below differ; steeper placement switch; body.csv (0.7.19)
 - [x] Route way from another floor keeps their height; close stairs carry footsteps as a second way (0.7.20)
 - [ ] Raid: someone upstairs and downstairs, steeper on and off; tag the confusing moments and read body.csv
+- [x] Thud from above, height layer switch, height test key (0.7.22)
+- [ ] Raid: F8 test with the height layer on and off; then someone upstairs and downstairs, tag when unsure
 - [x] EFT 1.0's extra step layer (`PlayerStepLayerAudioController._source`, outdoors only) treated as footsteps; when it gives its source back (going indoors) ours is made neutral first (user: "add it")
 
 ## B · Bots feel blasts too (user, 10 Nov 2026)

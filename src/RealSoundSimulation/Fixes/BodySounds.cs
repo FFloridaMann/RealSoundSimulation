@@ -49,6 +49,15 @@ namespace RealSoundSimulation.Fixes
     // level with you. Now a route way from another floor comes from the stairwell's compass direction but at their height (at least
     // 45 degrees with the steeper switch on). Footsteps on another floor keep the thud through the floor and, when the stairs to them are
     // close (route at most StepStairMaxDb), also come that way as a second voice, StepStairBelowDb + half the route loss quieter.
+    //
+    // 0.7.22 "Fi"/"Fj"/"Fk": telling above from below. Raid_20261111_004027: footsteps through a floor averaged a 320 Hz cutoff from below
+    // and 510 Hz from above, and a headset tells up from down only from the highs (pinna cues, roughly 4-10 kHz), so the steeper placement
+    // had nothing left to work with. User: "its still hard to ID hieght is this person above me or below me".
+    //   thud     "Fi": a step on the floor above shakes your ceiling: each one adds a short low thud (a synthesized 80->42 Hz knock). Steps
+    //            below go into the ground and add none. A thud means above, a soft scuff means below.
+    //   height   "Fj", off by default: a faint copy of each step through a floor, high-passed at 2 kHz so it keeps only the part the ears
+    //            place in height, at least 60 degrees up or down, on our own HRTF-spatialized voices. Not physical: a hearing aid for height.
+    //   test     "Fk": a key that plays three of your own footsteps on the floor above, then three below, the way this mod makes them.
     [DefaultExecutionOrder(32001)]
     internal class BodySounds : MonoBehaviour
     {
@@ -59,6 +68,9 @@ namespace RealSoundSimulation.Fixes
         private const int MaxHits = 16, MaxSecond = 6;
         private const float ImpactTopHz = 1500f, ImpactLowHz = 350f, ImpactLossLowDb = 15f, ImpactLossHighDb = 50f, BelowStep = 0.6f, BelowStepMinHz = 200f,
             BelowAir = 0.7f, SteepDeg = 45f, StepStairMaxDb = 12f, StepStairBelowDb = 6f;
+        private const float ThudMaxM = 25f, ThudCutHz = 300f, HeightDeg = 60f, HeightDistM = 2.5f, HeightHpHz = 2000f,
+            TestUpM = 3.5f, TestAwayM = 3f, TestStepS = 0.5f, TestGapS = 1.2f, TestLevel = 0.35f, TestFloorDb = 30f;
+        private const int MaxThud = 6, HeightVoices = 16;
         public const string Header = "t,id,sound,distM,dyM,floor,main,second,wallDb,routeDb,cutHz,secondCutHz,secondDeltaDb,elevDeg,steepDeg";
 
         private static readonly AccessTools.FieldRef<Player, BetterSource> StepRef = AccessTools.FieldRefAccess<Player, BetterSource>("NestedStepSoundSource");
@@ -115,6 +127,15 @@ namespace RealSoundSimulation.Fixes
         private static BetterSource _dupSrc; private static int _dupFrame = -1;
         private static Vector3 _listener;
 
+        // 0.7.22: the thud, the height layer's own HRTF voices, and the clips the test plays
+        private class HVoice { public AudioSource Src; public AudioLowPassFilter Lp; public AudioHighPassFilter Hp; public double Until; }
+        private static readonly HVoice[] HPool = new HVoice[HeightVoices];
+        private static readonly double[] ThudEnds = new double[MaxThud];
+        private static AudioClip _thud, _myStepClip, _anyStepClip;
+        private static AnimationCurve _flat;
+        private static BetterSource _myStep;
+        public static int ThudPlayed, ThudFull, ThudNoVoice, HeightPlayed, HeightNoVoice, TestsRun;
+
         public static int Handled, HandsSeen, SecondPlayed, SecondTooQuiet, SecondFull, SecondFar, SecondNoVoice;
         public static long FloorFrames, RouteFrames, WallFrames, SourcesMoved;
         public static float LowestStepHz = OffHz, LowestAirHz = OffHz;
@@ -135,6 +156,8 @@ namespace RealSoundSimulation.Fixes
             for (int i = 0; i < MaxSecond; i++) SecondEnds[i] = 0;
             Handled = HandsSeen = SecondPlayed = SecondTooQuiet = SecondFull = SecondFar = SecondNoVoice = 0;
             FloorFrames = RouteFrames = WallFrames = SourcesMoved = 0; LowestStepHz = LowestAirHz = OffHz;
+            for (int i = 0; i < MaxThud; i++) ThudEnds[i] = 0;
+            ThudPlayed = ThudFull = ThudNoVoice = HeightPlayed = HeightNoVoice = TestsRun = 0;
         }
 
         // Someone's hands played a sound (meds, food, a reload): remember the sound player so its source is treated while it plays.
@@ -157,15 +180,18 @@ namespace RealSoundSimulation.Fixes
 
         private static void PlayPostfix(BetterSource __instance, AudioClip clip1, AudioClip clip2, float balance, float volume, bool oneShot)
         {
-            if (!Plugin.BodySoundsOn.Value || Owners.Count == 0) return;
+            if (!Plugin.BodySoundsOn.Value) return;
             try
             {
+                if (_myStep != null && ReferenceEquals(__instance, _myStep) && (clip1 != null || clip2 != null)) _myStepClip = clip1 ?? clip2; // for the height test
+                if (Owners.Count == 0) return;
                 if (!Owners.TryGetValue(__instance, out Owner o) || o.B == null) return;
                 Log(o.B, o.Step, o.Step ? o.B.Step : o.B.Air);
-                if (!Plugin.BodySecondOn.Value) return;
-                if (!oneShot && clip1 != null) return; // a looping sound: the main voice carries it
                 AudioClip clip = clip1 != null && (clip2 == null || balance >= 0.5f) ? clip1 : clip2;
                 float part = clip == clip1 ? (clip2 != null ? balance : 1f) : (clip1 != null ? 1f - balance : 1f);
+                if (o.Step && clip != null && (oneShot || clip1 == null)) { _anyStepClip = clip; FloorCues(o.B, __instance, clip, volume * part); }
+                if (!Plugin.BodySecondOn.Value) return;
+                if (!oneShot && clip1 != null) return; // a looping sound: the main voice carries it
                 Second(o.B, o.Step, __instance, clip, volume * part);
                 _dupSrc = __instance; _dupFrame = Time.frameCount;
             }
@@ -197,6 +223,7 @@ namespace RealSoundSimulation.Fixes
                 GameWorld gw = Singleton<GameWorld>.Instance;
                 if (lt == null || gw is HideoutGameWorld || gw.AllAlivePlayersList == null) return;
                 Player me = gw.MainPlayer;
+                _myStep = me != null ? StepRef(me) : null;
                 Vector3 l = lt.position;
                 _listener = l;
                 float now = Time.time, dt = Mathf.Max(Time.unscaledDeltaTime, 0f), range = Plugin.BodySoundsRangeM.Value;
@@ -322,14 +349,19 @@ namespace RealSoundSimulation.Fixes
         // 0.7.19: a footstep on another floor: always through the floor, an impact thud, duller from below.
         private static void StepThroughFloor(ref Paths p, float wallDb, bool routeOk, float routeDb, float routeHz, bool below, float k)
         {
-            float t = Mathf.InverseLerp(ImpactLossLowDb, ImpactLossHighDb, Mathf.Max(wallDb, 0f));
-            float hz = Mathf.Lerp(ImpactTopHz, ImpactLowHz, t);
-            if (below) hz = Mathf.Max(hz * BelowStep, BelowStepMinHz);
+            float hz = ImpactHz(wallDb, below);
             p.Main = Way.Wall; p.MainCut = hz; p.Second = Way.None; p.SecondDeltaDb = 0f; p.WallDb = wallDb; p.RouteDb = routeOk ? routeDb : float.NaN;
             // 0.7.20: close stairs to them carry the steps too, quieter, from the stairwell at their height
             if (routeOk && routeDb <= StepStairMaxDb) { p.Second = Way.Route; p.SecondCut = routeHz; p.SecondDeltaDb = StepStairBelowDb + 0.5f * routeDb; }
             if (p.Second != Way.None && p.SecondDeltaDb > Plugin.BodySecondWithinDb.Value) p.Second = Way.None;
             Smooth(ref p, k);
+        }
+
+        private static float ImpactHz(float wallDb, bool below)
+        {
+            float t = Mathf.InverseLerp(ImpactLossLowDb, ImpactLossHighDb, Mathf.Max(wallDb, 0f));
+            float hz = Mathf.Lerp(ImpactTopHz, ImpactLowHz, t);
+            return below ? Mathf.Max(hz * BelowStep, BelowStepMinHz) : hz;
         }
 
         private static void Choose(ref Paths p, bool wallOk, bool routeOk, float wallDb, float routeDb, float routeHz, bool step, float k, float wallScale)
@@ -384,15 +416,17 @@ namespace RealSoundSimulation.Fixes
         }
 
         // "Fg": at least SteepDeg up or down from you, same compass direction and distance.
-        private static Vector3 Steep(Vector3 l, Vector3 pos)
+        private static Vector3 Steep(Vector3 l, Vector3 pos) => Steep(l, pos, SteepDeg);
+
+        private static Vector3 Steep(Vector3 l, Vector3 pos, float deg)
         {
             Vector3 v = pos - l;
             float dist = v.magnitude;
             Vector3 h = new Vector3(v.x, 0f, v.z);
             float hm = h.magnitude;
             if (dist < 0.01f || Mathf.Abs(v.y) < 0.01f) return pos;
-            if (Mathf.Atan2(Mathf.Abs(v.y), hm) * Mathf.Rad2Deg >= SteepDeg) return pos;
-            float r = SteepDeg * Mathf.Deg2Rad;
+            if (Mathf.Atan2(Mathf.Abs(v.y), hm) * Mathf.Rad2Deg >= deg) return pos;
+            float r = deg * Mathf.Deg2Rad;
             Vector3 flat = hm > 0.01f ? h / hm : Vector3.forward;
             Vector3 dir = flat * Mathf.Cos(r) + Vector3.up * (Mathf.Sign(v.y) * Mathf.Sin(r));
             return l + dir * dist;
@@ -435,6 +469,139 @@ namespace RealSoundSimulation.Fixes
                 float.IsNaN(p.WallDb) ? "" : DiagLog.F(p.WallDb, "0.0"), float.IsNaN(p.RouteDb) ? "" : DiagLog.F(p.RouteDb, "0.0"),
                 DiagLog.F(p.AppliedCut, "0"), p.Second == Way.None ? "" : DiagLog.F(p.SecondCut, "0"), p.Second == Way.None ? "" : DiagLog.F(p.SecondDeltaDb, "0.0"),
                 DiagLog.F(elev, "0"), DiagLog.F(steep, "0")));
+        }
+
+        // ---------------- above or below: the thud, the height layer, the test (0.7.22) ----------------
+
+        // A footstep through a floor just started on the game's source: add the thud (from above) and the height layer.
+        private static void FloorCues(Body b, BetterSource src, AudioClip clip, float volume)
+        {
+            if (!b.Floor || b.Step.Main != Way.Wall) return;
+            bool thud = b.Dy > 0f && Plugin.BodyThudOn.Value && b.Straight <= ThudMaxM, height = Plugin.BodyHeightOn.Value;
+            if (!thud && !height) return;
+            AudioSource a = src.source1;
+            float level = Mathf.Clamp01(volume * src.BaseVolume * src.OcclusionVolumeFactor * Rolloff(a, b.Straight));
+            if (level < 0.0005f) return;
+            double now = AudioSettings.dspTime;
+            if (thud) Thud(src, Steep(_listener, b.P.Position), level, now);
+            if (height) Height(clip, HeightPos(_listener, b.P.Position), level * Db(Plugin.BodyHeightDb.Value), a != null && a.pitch > 0f ? a.pitch : 1f,
+                               a != null ? a.outputAudioMixerGroup : null, now, false);
+        }
+
+        private static bool Thud(object owner, Vector3 pos, float level, double start)
+        {
+            if (_thud == null)
+            {
+                var noise = new System.Random(4242);
+                float phase = 0f;
+                _thud = ShockWave.MakeClip("rss_body_thud", 0.22f, t =>
+                {
+                    phase += 2f * Mathf.PI * (42f + 38f * Mathf.Exp(-t / 0.03f)) / 48000f;
+                    float n = (float)(noise.NextDouble() * 2.0 - 1.0);
+                    return Mathf.Clamp01(t / 0.003f) * Mathf.Exp(-t / 0.06f) * (Mathf.Sin(phase) + 0.25f * n * Mathf.Exp(-t / 0.012f));
+                });
+            }
+            double now = AudioSettings.dspTime;
+            int slot = -1;
+            for (int i = 0; i < MaxThud; i++) if (ThudEnds[i] <= now) { slot = i; break; }
+            if (slot < 0) { ThudFull++; return false; }
+            float v = Mathf.Clamp01(level * Db(Plugin.BodyThudDb.Value));
+            EchoVoices.Play(owner, _thud, pos, start, _thud.length, false, v, 1f, ThudCutHz, 0f, minCutoff: 20f, cls: EchoClass.Bot, tier: 1);
+            if (EchoVoices.LastDropped) { ThudNoVoice++; return false; }
+            ThudEnds[slot] = start + _thud.length;
+            ThudPlayed++;
+            return true;
+        }
+
+        // Where the height layer plays: at least HeightDeg up or down, close by (its level is set from the step's, not by distance).
+        private static Vector3 HeightPos(Vector3 l, Vector3 pos)
+        {
+            Vector3 d = Steep(l, pos, HeightDeg) - l;
+            return d.sqrMagnitude > 1e-4f ? l + d.normalized * HeightDistM : pos;
+        }
+
+        // Plays on our own HRTF voices (the echo voices are panned without height). hp = keep only the highs.
+        private static bool Height(AudioClip clip, Vector3 pos, float vol, float pitch, UnityEngine.Audio.AudioMixerGroup group, double start, bool full, float lpHz = OffHz)
+        {
+            if (clip == null || vol < 0.0003f) return false;
+            HVoice v = FreeVoice(AudioSettings.dspTime);
+            if (v == null) { HeightNoVoice++; return false; }
+            v.Src.Stop();
+            v.Src.transform.position = pos;
+            v.Src.outputAudioMixerGroup = group;
+            v.Src.clip = clip;
+            v.Src.pitch = pitch;
+            v.Src.volume = Mathf.Clamp01(vol);
+            v.Hp.enabled = !full; v.Hp.cutoffFrequency = HeightHpHz;
+            v.Lp.enabled = lpHz < OffHz * 0.95f; v.Lp.cutoffFrequency = lpHz;
+            v.Src.PlayScheduled(start);
+            v.Until = start + clip.length / pitch + 0.05;
+            if (!full) HeightPlayed++;
+            return true;
+        }
+
+        private static HVoice FreeVoice(double now)
+        {
+            if (HPool[0] == null)
+            {
+                _flat = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 1f));
+                for (int i = 0; i < HeightVoices; i++)
+                {
+                    var go = new GameObject("RealSoundSimulation height " + i);
+                    DontDestroyOnLoad(go);
+                    var s = go.AddComponent<AudioSource>();
+                    s.playOnAwake = false; s.spatialBlend = 1f; s.spatialize = true; s.dopplerLevel = 0f; s.spread = 0f;
+                    s.reverbZoneMix = 0f; s.bypassReverbZones = true; s.priority = 200;
+                    s.rolloffMode = AudioRolloffMode.Custom; s.maxDistance = 100000f;
+                    s.SetCustomCurve(AudioSourceCurveType.CustomRolloff, _flat);
+                    var lp = go.AddComponent<AudioLowPassFilter>(); lp.lowpassResonanceQ = 1f; lp.enabled = false;
+                    var hp = go.AddComponent<AudioHighPassFilter>(); hp.highpassResonanceQ = 1f; hp.enabled = false;
+                    HPool[i] = new HVoice { Src = s, Lp = lp, Hp = hp };
+                }
+            }
+            foreach (HVoice v in HPool) if (v.Until <= now) return v;
+            return null;
+        }
+
+        private static float Db(float db) => Mathf.Pow(10f, db / 20f);
+
+        private void Update()
+        {
+            if (Plugin.BodyHeightTestKey.Value.IsDown()) Plugin.Safe("height test", HeightTest);
+        }
+
+        // "Fk": three of your footsteps on the floor above (ahead and to the right), then three below, as this mod makes them:
+        // through a typical concrete floor, placed steeper if that's on, with the thud and the height layer by their switches.
+        private static void HeightTest()
+        {
+            if (!MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated || !Singleton<GameWorld>.Instantiated || Singleton<GameWorld>.Instance is HideoutGameWorld) return;
+            Transform lt = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform;
+            if (lt == null) return;
+            AudioClip clip = _myStepClip ?? _anyStepClip;
+            if (clip == null) { Plugin.Log.LogInfo("Fk height test: take a step first (it plays your own footstep)"); return; }
+            Vector3 l = lt.position;
+            Vector3 fwd = Vector3.ProjectOnPlane(lt.forward, Vector3.up);
+            if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
+            fwd.Normalize();
+            Vector3 away = (fwd + Vector3.Cross(Vector3.up, fwd)).normalized * TestAwayM;
+            UnityEngine.Audio.AudioMixerGroup group = _myStep != null && _myStep.source1 != null ? _myStep.source1.outputAudioMixerGroup : null;
+            double t0 = AudioSettings.dspTime + 0.1;
+            int played = 0;
+            for (int f = 0; f < 2; f++)
+            {
+                bool below = f == 1;
+                Vector3 truePos = l + away + Vector3.up * (below ? -TestUpM : TestUpM);
+                Vector3 at = Plugin.BodySteepOn.Value ? Steep(l, truePos) : truePos;
+                for (int i = 0; i < 3; i++)
+                {
+                    double start = t0 + (below ? 3 * TestStepS + TestGapS : 0) + i * TestStepS;
+                    if (Height(clip, at, TestLevel, 1f, group, start, true, ImpactHz(TestFloorDb, below))) played++;
+                    if (!below && Plugin.BodyThudOn.Value) Thud(clip, at, TestLevel, start);
+                    if (Plugin.BodyHeightOn.Value) Height(clip, HeightPos(l, truePos), TestLevel * Db(Plugin.BodyHeightDb.Value), 1f, group, start, false);
+                }
+            }
+            TestsRun++;
+            Plugin.Log.LogInfo($"Fk height test: {played} steps above then below (thud {(Plugin.BodyThudOn.Value ? "on" : "off")}, height layer {(Plugin.BodyHeightOn.Value ? "on" : "off")}, steeper {(Plugin.BodySteepOn.Value ? "on" : "off")})");
         }
 
         // ---------------- the second way ----------------
@@ -505,7 +672,9 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.BodySoundsOn.Value && Handled == 0) return "BODY SOUNDS (F off)\n";
             return $"BODY SOUNDS (F {(Plugin.BodySoundsOn.Value ? "ON" : "off")}, range {Plugin.BodySoundsRangeM.Value:0} m, walls and floors x{Plugin.BodySoundsFloorStrength.Value:0.00}; second way {(Plugin.BodySecondOn.Value ? $"ON within {Plugin.BodySecondWithinDb.Value:0} dB, {Plugin.BodySecondRangeM.Value:0} m" : "off")}): " +
                    $"people handled {Handled}, hands sound players seen {HandsSeen}; person-frames through a floor {FloorFrames}, through a wall {WallFrames}, from an opening {RouteFrames}; sources moved {SourcesMoved}; " +
-                   $"lowest footstep cutoff {LowestStepHz:0} Hz, lowest airborne {LowestAirHz:0} Hz; second way played {SecondPlayed}, too quiet or none {SecondTooQuiet}, too far {SecondFar}, {MaxSecond} already playing {SecondFull}, no echo voice free {SecondNoVoice}\n";
+                   $"lowest footstep cutoff {LowestStepHz:0} Hz, lowest airborne {LowestAirHz:0} Hz; second way played {SecondPlayed}, too quiet or none {SecondTooQuiet}, too far {SecondFar}, {MaxSecond} already playing {SecondFull}, no echo voice free {SecondNoVoice}; " +
+                   $"thud from above (Fi {(Plugin.BodyThudOn.Value ? $"ON {Plugin.BodyThudDb.Value:+0;-0;0} dB" : "off")}) played {ThudPlayed}, {MaxThud} already playing {ThudFull}, no echo voice free {ThudNoVoice}; " +
+                   $"height layer (Fj {(Plugin.BodyHeightOn.Value ? $"ON {Plugin.BodyHeightDb.Value:+0;-0;0} dB" : "off")}) played {HeightPlayed}, no voice free {HeightNoVoice}; height tests (Fk) {TestsRun}\n";
         }
     }
 }

@@ -16,7 +16,7 @@ namespace RealSoundSimulation
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.21";
+        public const string Version = "0.7.22";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -140,6 +140,9 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> BodySoundsRangeM, BodySoundsFloorStrength; // 0.7.15 "Fa", "Fb"
         internal static ConfigEntry<bool> BodySecondOn; // 0.7.17 "Fc"
         internal static ConfigEntry<bool> BodySteepOn; // 0.7.19 "Fg"
+        internal static ConfigEntry<bool> BodyThudOn, BodyHeightOn; // 0.7.22 "Fi", "Fj"
+        internal static ConfigEntry<float> BodyThudDb, BodyHeightDb; // 0.7.22
+        internal static ConfigEntry<KeyboardShortcut> BodyHeightTestKey; // 0.7.22 "Fk"
         internal static ConfigEntry<float> BodySecondWithinDb, BodySecondRangeM; // 0.7.17 "Fd", "Fe"
         internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingRecovery, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
@@ -249,6 +252,11 @@ namespace RealSoundSimulation
             BodySoundsRangeM = Bind(s08, "Body sounds - range m", 40f, "Footsteps and body sounds are simulated for people within this distance. Was Fa.", R(10f, 80f), adv);
             BodySoundsFloorStrength = Bind(s08, "Body sounds - wall and floor muffling", 1f, "How much a wall, door, window, floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
             BodySteepOn = Bind(s08, "Body sounds - steeper above and below", true, "A footstep or voice through the floor or ceiling is placed at least 45 degrees above or below you, keeping its direction and distance, so a headset can tell up from down. An exaggeration: off = their real height. Needs Footsteps and body sounds - simulated. Was Fg.");
+            BodyThudOn = Bind(s08, "Body sounds - thud from above", true, "A footstep on the floor above shakes your ceiling, so each one adds a short low thud. Footsteps below you go into the ground and add none: a thud means above, a soft scuff means below. Needs Footsteps and body sounds - simulated. Was Fi.");
+            BodyThudDb = Bind(s08, "Body sounds - thud level dB", 6f, "How loud the thud is next to the footstep it comes with. Was Fi.", R(-12f, 12f), adv);
+            BodyHeightOn = Bind(s08, "Body sounds - height layer", false, "Adds a faint copy of each footstep through a floor or ceiling that keeps its high end, placed steeply above or below you. A headset tells up from down only from high sounds, which a floor takes away. Not realistic: a hearing aid for height. Needs Footsteps and body sounds - simulated. Was Fj.");
+            BodyHeightDb = Bind(s08, "Body sounds - height layer level dB", -15f, "How loud the height layer is next to the footstep. Was Fj.", R(-30f, 0f), adv);
+            BodyHeightTestKey = Bind(s08, "Body sounds - height test key", new KeyboardShortcut(KeyCode.F8), "In raid: plays three of your footsteps on the floor above you, then three below, the way this mod makes them (thud and height layer by their switches). Take a step first. Was Fk.");
             BodySecondOn = Bind(s08, "Body sounds - both ways at once", true, "A body sound that reaches you both through a wall and round through a doorway plays both ways, when the quieter way is loud enough to hear. Off = only the louder way. Needs Footsteps and body sounds - simulated. Was Fc.");
             BodySecondWithinDb = Bind(s08, "Body sounds - second way within dB", 10f, "The quieter way plays only if it is at most this much quieter than the louder one. Was Fd.", R(0f, 30f), adv);
             BodySecondRangeM = Bind(s08, "Body sounds - second way range m", 25f, "The quieter way plays only for people this close. Was Fe.", R(5f, 60f), adv);

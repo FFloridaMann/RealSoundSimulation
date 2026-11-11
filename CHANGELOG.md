@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.22 (not released yet): above or below
+
+- With **Footsteps and body sounds - simulated** on, footsteps on the floor above you now come with a short low **thud**, as a ceiling does. Footsteps below you don't: a thud means above, a soft scuff means below. Switch **Body sounds - thud from above** (08, on).
+- New switch **Body sounds - height layer** (08, off): a faint copy of each footstep through a floor that keeps its high end, placed steeply above or below you, so a headset can place it. Not realistic; try it on and off.
+- New **Body sounds - height test key** (08, F8): in raid, plays three of your own footsteps above you, then three below, so you can learn the difference. Take a step first.
+
 ## 0.7.21 (not released yet): your echoes switch only switches your echoes
 
 - Turning off **Your gun > Echoes - on** also silenced the through-wall thump, explosion echoes, the shock wave, fragment pass-bys and the second way of body sounds, because they share the same voices. Now it stops only your own gun's echoes.

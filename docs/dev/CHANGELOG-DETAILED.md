@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.22 — 11 Nov 2026 (Fi, Fj, Fk: above or below)
+**Run in game:** not yet.
+- raid_20261111_004027_p14164 (body.csv): footsteps through a floor averaged a 323 Hz cutoff from below (786) and 509 Hz from above (71); people above were on average only 11 degrees up. A headset's height cues are in the highs (roughly 4-10 kHz), so the 45 degree placement (Fg) had nothing to carry it. User: "its still hard to ID hieght is this person above me or below me".
+- Fi thud (on, +6 dB, `Body sounds - thud level dB`): each footstep from the floor above within 25 m also plays a synthesized 0.22 s knock (80->42 Hz with a little noise, low-passed at 300 Hz) on an echo voice at the steeper place, at the step's level (volume x base x occlusion x roll-off). At most 6 at once. Below: none.
+- Fj height layer (off, -15 dB): a copy of each footstep through a floor, high-passed at 2 kHz, at least 60 degrees up or down and 2.5 m away, on 16 voices of our own with the spatializer on (the echo voices are panned without height).
+- Fk test key (F8): three of your last footsteps 3 m ahead-right and 3.5 m up, then three 3.5 m down, through a 30 dB floor (1007 / 604 Hz), with the thud and height layer by their switches.
+- BODY SOUNDS summary: thuds played, height layer played, tests run.
+
 ## 0.7.21 — 11 Nov 2026 (6: the switch stops only its own voices)
 **Run in game:** not yet.
 - Found by a code review in the Fika session. `EchoVoices.Update` began with `if (!EchoOn) { if (Busy > 0) StopAll(); return; }`: with fix 6 off, every voice in the shared pool was stopped every frame and fades never ran. That pool also plays the through-wall layer, explosion echoes (6.3), room echoes from the doorway, the shock wave, fragment pass-bys, the outdoor tail out of openings and body sounds' second way.
