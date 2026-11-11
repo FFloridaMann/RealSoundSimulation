@@ -24,7 +24,9 @@ namespace RealSoundSimulation.Fixes
     // (Fika test raid, tag 1: an AK's 2 s tail cut after 0.23 s; 23-64% of bot sounds in earlier raids). Now, for anyone else's gun,
     // the ringing voice is taken out of the gun's pair and left to finish where it is, and a spare voice from the game's own gun pool
     // takes its place. The tail keeps everything the game gave it: its position, occlusion, mixer group and our route muffling.
-    // Spare voices are only taken while the game's pool has more than a few left, so no gun ever goes without; otherwise it's cut as before.
+    // 0.7.18: no reserve. 0.7.12 left at least 6 spare voices for new guns and so ran once in a raid (raid_20261110_221827: 1 handed off,
+    // 42 skipped, 51% of bot sounds still cut). The game's pool never runs dry: BorrowSource makes a new voice when it's empty, as it
+    // does in any big fight. Instead at most MaxRingingOut tails ring on their own at once; past that a tail is cut as before.
     internal static class ShotOverlap
     {
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -42,13 +44,14 @@ namespace RealSoundSimulation.Fixes
 
         private const double ReleaseMargin = 1.0;
         private const double MinLeftS = 0.15, FreeAfterS = 0.1;
-        private const int SpareReserve = 6;
+        private const int MaxRingingOut = 8;
 
         private struct Ringing { public BetterSource Src; public double Until; }
         private static readonly Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer> OwnerOf = new Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer>();
         private static readonly Dictionary<BetterSource, double> EndOf = new Dictionary<BetterSource, double>();
         private static readonly List<Ringing> RingingOut = new List<Ringing>();
-        public static int HandedOff, NoSpare, MaxRinging;
+        public static int HandedOff, NoSpare, MaxRinging, PoolEmpty, PoolMin = int.MaxValue;
+        public static long PoolSum;
 
         private static readonly HashSet<WeaponSoundPlayer> Holders = new HashSet<WeaponSoundPlayer>();
         private static bool _stealing;
@@ -70,7 +73,7 @@ namespace RealSoundSimulation.Fixes
             Holders.Clear(); Taken = TakenNone = 0; _stealing = false;
             foreach (Ringing r in RingingOut) Free(r.Src);
             RingingOut.Clear(); OwnerOf.Clear(); EndOf.Clear();
-            HandedOff = NoSpare = MaxRinging = 0;
+            HandedOff = NoSpare = MaxRinging = PoolEmpty = 0; PoolMin = int.MaxValue; PoolSum = 0;
         }
 
         // Called every frame in raid: a tail that has rung out gives its voice back to the game.
@@ -108,7 +111,9 @@ namespace RealSoundSimulation.Fixes
             if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return null;
             BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
             var pool = ba.SourceGroups != null ? ba.SourceGroups[(int)BetterAudio.AudioSourceGroupType.Gunshots] as BetterAudio.NonspatialAudioMixer<Audio.ReverbSubsystem.ReverbSuperSource> : null;
-            if (pool == null || pool.stack_0.Count <= SpareReserve) { NoSpare++; return null; }
+            if (pool == null || RingingOut.Count >= MaxRingingOut) { NoSpare++; return null; }
+            int spare0 = pool.stack_0.Count; // for the summary: how many spare voices the game had at this moment
+            PoolSum += spare0; if (spare0 < PoolMin) PoolMin = spare0; if (spare0 == 0) PoolEmpty++;
             var spare = pool.BorrowSource() as SuperSource;
             if (spare == null) return null;
             spare.transform.position = ringing.transform.position;

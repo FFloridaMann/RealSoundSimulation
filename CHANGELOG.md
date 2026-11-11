@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.18 (not released yet): other guns' shots really ring out now
+
+- 0.7.12's fix for bots' and other players' shots being cut off by their next shot hardly ever ran: it kept 6 of the game's spare gun voices back and the game rarely had more. It now always runs, with at most 8 shots ringing on their own at once.
+
 ## 0.7.17 (not released yet): body sounds through walls, and both ways at once
 
 - With **Footsteps and body sounds - simulated** on, other people's footsteps, voices, gear, looting, meds and food now also come through walls, doors and windows, not only floors: thin wood, plasterboard and glass let them through from where the person really is, dull; thick concrete sends them round through the doorway.

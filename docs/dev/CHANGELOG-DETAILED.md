@@ -2,6 +2,12 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.18 — 10 Nov 2026 (1f: no reserve, cap 8)
+**Run in game:** not yet.
+- raid_20261110_221827_p48860: 1f handed off 1 tail and skipped 42 ("no spare voice"); 43 of 85 bot sounds cut (51%). The reserve (free stack > 6) was nearly never met.
+- `NonspatialAudioMixer.BorrowSource` never returns nothing: with an empty stack it instantiates a new source (logging a warning only past the preset's limit), as the game does itself in big fights. So the reserve guarded against nothing. Now a tail is handed off unless 8 are already ringing on their own (`MaxRingingOut`).
+- BOT GUNSHOTS summary: the game's free gun voices at each hand-off (average, fewest, times it was empty and made a new one).
+
 ## 0.7.17 — 10 Nov 2026 (F: walls, both ways at once, 1.0 step layer)
 **Run in game:** not yet.
 - User: "does it come through walls (like thin wood glass doors etc)", then "why not both the wall and path?", and "add it" (the EFT 1.0 step layer).
