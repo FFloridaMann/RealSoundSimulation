@@ -2,6 +2,12 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.15 (not released yet): footsteps and body sounds, as a switch
+
+- New switch **Footsteps and body sounds - simulated** (01 GENERAL), off by default.
+- With it on, other people's footsteps, gear, looting, voices, meds, food and reloads reach you the way their gunshots do. Someone above or below you is heard through the floor from where they really are: footsteps as a dull thud, talking and zippers very muffled. If there's a stairwell or open way round, their voice and gear sounds come from it. Someone in the next room on your floor is heard from the doorway.
+- Your own sounds don't change. Range and floor muffling are under Advanced settings in 08.
+
 ## 0.7.14 (not released yet): ear ringing by ammo, small rooms sound indoors
 
 - Ear ringing comes sooner and lasts: a faint ring after a few shots without ear pro, a strong one after a lot. Your ears recover a couple of seconds after you stop, over about 20 s.

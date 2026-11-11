@@ -209,6 +209,15 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(m.ThickM, "0.00"), DiagLog.F(m.LossDb, "0.0"), DiagLog.F(spent, "0.0"), DiagLog.F(reach, "0"), DiagLog.F(vol, "0.000"), DiagLog.F(cutoff, "0"), DiagLog.F(delay * 1000f, "0"), route, clip != null ? clip.name.Replace(',', ';') : ""));
         }
 
+        // 0.7.15: for body sounds (F): the loss through everything on the straight line, by material and thickness.
+        private static readonly Measure ForOthers = new Measure();
+        internal static float LossDb(Vector3 listener, Vector3 source, out int walls)
+        {
+            MeasureWalls(listener, source, ForOthers);
+            walls = ForOthers.Walls;
+            return ForOthers.LossDb;
+        }
+
         private static void MeasureWalls(Vector3 listener, Vector3 source, Measure m)
         {
             m.Walls = 0; m.LossDb = 0f; m.ThickM = 0f; m.Text = "";

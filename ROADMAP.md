@@ -32,6 +32,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **An easier F12 page.** 11 clear sections, settings grouped by name. `(0.7.9)`
 - **Other guns' shots ring out.** A bot's or another player's shot rings out even when they fire again straight away. `(0.7.12)`
 - **Ears ring from gunfire without a headset.** Shots near you add up by calibre, muzzle device, ammo and room size; a ring fades in and the world dulls a little. Ported from the author's earlier audio mod. `(0.7.13)`
+- **Footsteps and body sounds, as a switch.** Other people's footsteps, gear, looting, voices, meds and food come through the floor when they're above or below you, and from the doorway or stairwell otherwise. Off by default. `(0.7.15)`
 - **Headsets protect your hearing.** With any headset on, no ear ringing and most of a blast's hearing cut taken away. Each headset will differ after the revamp. `(0.7.10)`
 
 ## Before v1.0, in order
@@ -46,7 +47,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 
 6. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
 7. **Headsets revamp.** Each headset protects you and shapes what you hear by how it's really built, optionally simulated, replacing today's flat headset protection. Its own switch at the top of F12. `(5)`
-8. **Footsteps and everyday sounds, as a switch.** Footsteps, voices, healing, eating, drinking and gear handling can get the same treatment as gunfire: from the doorway they come through, muffled by their route and by walls. They already sound good with the game's own direction, so this is an optional switch, not part of v1.0. `(F)`
+8. **Footsteps and everyday sounds: tuning.** Built as a switch in 0.7.15 (see above); tuned by ear after raids. `(F)`
 9. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play. `(B)`
 10. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
 

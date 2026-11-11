@@ -2,6 +2,15 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.15 — 10 Nov 2026 (F: footsteps and body sounds)
+**Run in game:** not yet.
+- User: "can we build the footstep and body sounds, and med food etc? it stills is at times hard to tell of someone is above or below you or right".
+- `Fixes/BodySounds.cs` (LateUpdate, order 32001, after 6.1): every other living player within `Body sounds - range m` (40). Sources: `Player.NestedStepSoundSource`, `_gearSource`, `_searchSource`, `_speechSource`, and each `BaseSoundPlayer._clipsSource` while it plays (registered from a `PlayClipInternal` postfix: meds, food, reloads, handling).
+- Every 0.1 s: one ray you -> them (head height) on the game's occlusion mask; a floor = a hit with |normal.y| >= 0.7 and more than 1.8 m up or down; its loss from `ThroughWall.LossDb` (6.2's per-material measure) every 0.5 s; the route from `PortalRoutes.Read` with 6.1's hysteresis.
+- Footsteps: through a floor -> true position, low-pass 900..250 Hz by loss 15..50 dB x `Body sounds - floor muffling`; else a route -> 6.1's position (towards the opening at the route's length, blended by the game's propagation effect) and 6.1b's cutoff. Airborne sounds: a route first, else through the floor at 500..150 Hz. Same room or open: untouched. Cutoffs smoothed over 150 ms in log space.
+- Our own `AudioLowPassFilter` per source (6.1's `Filter`), on top of the game's occlusion. Moved sources get their local position back when neutral; a hands source that goes back to the pool is made neutral first.
+- Summary BODY SOUNDS. Not treated: the EFT 1.0 step layer's own sources.
+
 ## 0.7.14 — 10 Nov 2026 (5r tuning, 3i off under the room tail)
 **Run in game:** not yet.
 - raid_20261110_212706_p27496: the ring ran 4 times (61 s, noise up to 84) during the RPK bursts, none at tags 3-4. 49 shots (the PL-15) were left out as subsonic; six Tavor shots in 7 s added about 4 each and drained 4/s after 0.5 s, so never reached 20.

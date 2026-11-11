@@ -305,6 +305,9 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        // 0.7.15: for body sounds (F): our own low-pass on any game source.
+        internal static void Filter(AudioSource a, float cutoff, bool on) => SetFilter(a, cutoff, on);
+
         // 0.7.12: a voice going back to the game (a tail that rang out on its own, 1f) loses our route filter.
         internal static void FilterOff(BetterSource v)
         {
