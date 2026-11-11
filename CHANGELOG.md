@@ -2,6 +2,11 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.20 (not released yet): the way round keeps its height
+
+- Someone upstairs or downstairs heard round through the stairwell (their voice, gear, meds) now sounds from the stairwell's direction but at their height, instead of level with you.
+- Their footsteps keep the thud through the floor and, when the stairs to them are close, also come quieter from the stairwell, at their height.
+
 ## 0.7.19 (not released yet): footsteps above and below
 
 - With **Footsteps and body sounds - simulated** on, footsteps on another floor always come through the floor or ceiling from where the person is, never from the stairwell. In 0.7.17 they often came from the stairwell, so the same person seemed above you one moment and across the room the next.

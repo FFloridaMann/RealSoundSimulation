@@ -43,6 +43,12 @@ namespace RealSoundSimulation.Fixes
     //            distance, so the spatializer has an angle it can render as up or down (headphones carry height poorly; someone upstairs 10 m
     //            to the side is only ~15 degrees up). An exaggeration, on its own switch.
     //   log      body.csv: each body sound from another floor or room, with the way it took and why.
+    //
+    // 0.7.20 "Fh": the way round keeps its height. User: "they can maybe come from the path but on the same level? below or above?". The
+    // route way used to come from the opening nearest you (the foot of the stairs on your floor), so someone upstairs heard that way was
+    // level with you. Now a route way from another floor comes from the stairwell's compass direction but at their height (at least
+    // 45 degrees with the steeper switch on). Footsteps on another floor keep the thud through the floor and, when the stairs to them are
+    // close (route at most StepStairMaxDb), also come that way as a second voice, StepStairBelowDb + half the route loss quieter.
     [DefaultExecutionOrder(32001)]
     internal class BodySounds : MonoBehaviour
     {
@@ -52,7 +58,7 @@ namespace RealSoundSimulation.Fixes
             RouteDbPerOpening = 4f, RouteDbPer90 = 3f, SpeedOfSound = 343f, SecondMinCutHz = 100f;
         private const int MaxHits = 16, MaxSecond = 6;
         private const float ImpactTopHz = 1500f, ImpactLowHz = 350f, ImpactLossLowDb = 15f, ImpactLossHighDb = 50f, BelowStep = 0.6f, BelowStepMinHz = 200f,
-            BelowAir = 0.7f, SteepDeg = 45f;
+            BelowAir = 0.7f, SteepDeg = 45f, StepStairMaxDb = 12f, StepStairBelowDb = 6f;
         public const string Header = "t,id,sound,distM,dyM,floor,main,second,wallDb,routeDb,cutHz,secondCutHz,secondDeltaDb,elevDeg,steepDeg";
 
         private static readonly AccessTools.FieldRef<Player, BetterSource> StepRef = AccessTools.FieldRefAccess<Player, BetterSource>("NestedStepSoundSource");
@@ -289,7 +295,7 @@ namespace RealSoundSimulation.Fixes
                 routeDb = 20f * Mathf.Log10(Mathf.Max(b.Path, b.Straight) / b.Straight) + RouteDbPerOpening * Mathf.Max(b.Portals, 1) + RouteDbPer90 * turn / 90f;
                 routeHz = PortalPositioning.DullHzFor(toS, toNear, true, b.Portals, Plugin.RouteDullStrength.Value);
             }
-            if (b.Floor) StepThroughFloor(ref b.Step, wallDb, routeDb, b.Dy < 0f, k);
+            if (b.Floor) StepThroughFloor(ref b.Step, wallDb, routeOk, routeDb, routeHz, b.Dy < 0f, k);
             else Choose(ref b.Step, wallOk, routeOk, wallDb, routeDb, routeHz, true, k, 1f);
             Choose(ref b.Air, wallOk, routeOk, wallDb, routeDb, routeHz, false, k, b.Floor && b.Dy < 0f ? BelowAir : 1f);
             if (b.Floor && (b.Step.Main == Way.Wall || b.Air.Main == Way.Wall)) FloorFrames++;
@@ -314,12 +320,15 @@ namespace RealSoundSimulation.Fixes
 
         // The main voice follows the way that loses less; the other is the second way if it's close enough to be heard.
         // 0.7.19: a footstep on another floor: always through the floor, an impact thud, duller from below.
-        private static void StepThroughFloor(ref Paths p, float wallDb, float routeDb, bool below, float k)
+        private static void StepThroughFloor(ref Paths p, float wallDb, bool routeOk, float routeDb, float routeHz, bool below, float k)
         {
             float t = Mathf.InverseLerp(ImpactLossLowDb, ImpactLossHighDb, Mathf.Max(wallDb, 0f));
             float hz = Mathf.Lerp(ImpactTopHz, ImpactLowHz, t);
             if (below) hz = Mathf.Max(hz * BelowStep, BelowStepMinHz);
-            p.Main = Way.Wall; p.MainCut = hz; p.Second = Way.None; p.SecondDeltaDb = 0f; p.WallDb = wallDb; p.RouteDb = routeDb;
+            p.Main = Way.Wall; p.MainCut = hz; p.Second = Way.None; p.SecondDeltaDb = 0f; p.WallDb = wallDb; p.RouteDb = routeOk ? routeDb : float.NaN;
+            // 0.7.20: close stairs to them carry the steps too, quieter, from the stairwell at their height
+            if (routeOk && routeDb <= StepStairMaxDb) { p.Second = Way.Route; p.SecondCut = routeHz; p.SecondDeltaDb = StepStairBelowDb + 0.5f * routeDb; }
+            if (p.Second != Way.None && p.SecondDeltaDb > Plugin.BodySecondWithinDb.Value) p.Second = Way.None;
             Smooth(ref p, k);
         }
 
@@ -358,7 +367,7 @@ namespace RealSoundSimulation.Fixes
             Paths p = step ? b.Step : b.Air;
             if (p.Main == Way.None) { Neutral(src); return; }
 
-            if (p.Main == Way.Route && Plugin.PortalPositioningOn.Value) MoveTo(src, l + b.RoutePos);
+            if (p.Main == Way.Route && Plugin.PortalPositioningOn.Value) MoveTo(src, RoutePosFor(l, b));
             else if (p.Main == Way.Wall && b.Floor && Plugin.BodySteepOn.Value) MoveTo(src, Steep(l, step ? b.P.Position : b.Head));
             else Unmove(src);
 
@@ -389,6 +398,24 @@ namespace RealSoundSimulation.Fixes
             return l + dir * dist;
         }
 
+        // 0.7.20 "Fh": the route way's place. Same floor: towards the opening at the route's length (as 6.1). Another floor: the same compass
+        // direction and distance, raised or lowered to their height (at least SteepDeg with the steeper switch on).
+        private static Vector3 RoutePosFor(Vector3 l, Body b)
+        {
+            Vector3 rel = b.RoutePos;
+            if (!b.Floor) return l + rel;
+            float dist = rel.magnitude;
+            Vector3 h = new Vector3(rel.x, 0f, rel.z);
+            float hm = h.magnitude;
+            if (dist < 0.01f) return l + rel;
+            Vector3 toThem = b.Head - l;
+            float elev = Mathf.Atan2(Mathf.Abs(b.Dy), new Vector2(toThem.x, toThem.z).magnitude) * Mathf.Rad2Deg;
+            if (Plugin.BodySteepOn.Value) elev = Mathf.Max(elev, SteepDeg);
+            float r = elev * Mathf.Deg2Rad;
+            Vector3 flat = hm > 0.01f ? h / hm : Vector3.forward;
+            return l + (flat * Mathf.Cos(r) + Vector3.up * (Mathf.Sign(b.Dy) * Mathf.Sin(r))) * dist;
+        }
+
         private static float Elev(Vector3 l, Vector3 pos)
         {
             Vector3 v = pos - l;
@@ -401,7 +428,8 @@ namespace RealSoundSimulation.Fixes
             if (!DiagLog.IsOpen || p.Main == Way.None) return;
             Vector3 truePos = step ? b.P.Position : b.Head;
             float elev = Elev(_listener, truePos);
-            float steep = p.Main == Way.Wall && b.Floor && Plugin.BodySteepOn.Value ? Elev(_listener, Steep(_listener, truePos)) : elev;
+            float steep = p.Main == Way.Wall && b.Floor && Plugin.BodySteepOn.Value ? Elev(_listener, Steep(_listener, truePos))
+                : p.Main == Way.Route ? Elev(_listener, RoutePosFor(_listener, b)) : elev;
             DiagLog.Row("body.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.00"), b.Id.ToString(), step ? "step" : "air",
                 DiagLog.F(b.Straight, "0.0"), DiagLog.F(b.Dy, "0.0"), b.Floor ? "1" : "0", p.Main.ToString(), p.Second.ToString(),
                 float.IsNaN(p.WallDb) ? "" : DiagLog.F(p.WallDb, "0.0"), float.IsNaN(p.RouteDb) ? "" : DiagLog.F(p.RouteDb, "0.0"),
@@ -429,7 +457,7 @@ namespace RealSoundSimulation.Fixes
             if (level < 0.001f) { SecondTooQuiet++; return; }
             float pitch = a != null && a.pitch > 0f ? a.pitch : 1f;
             Vector3 pos; float delay;
-            if (p.Second == Way.Route) { pos = _listener + b.RoutePos; delay = Mathf.Max(0f, (Mathf.Max(b.Path, b.Straight) - b.Straight) / SpeedOfSound); }
+            if (p.Second == Way.Route) { pos = RoutePosFor(_listener, b); delay = Mathf.Max(0f, (Mathf.Max(b.Path, b.Straight) - b.Straight) / SpeedOfSound); }
             else { pos = b.Head; delay = 0f; }
             double len = clip.length / pitch;
             EchoVoices.Play(src, clip, pos, now + delay, len, false, level, pitch, p.SecondCut, delay, 0f, 0.0, SecondMinCutHz, false, 0f, EchoClass.Bot, 1);

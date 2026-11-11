@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.20 — 10 Nov 2026 (Fh: route way keeps its height)
+**Run in game:** not yet.
+- User: "they can maybe come from the path but on the same level? below or above?". The route way was placed towards the opening nearest you (the foot of the stairs on your floor), so it was level with you.
+- `BodySounds.RoutePosFor`: with a floor between, the route way keeps its compass direction and length but takes their elevation (at least 45 degrees with `Body sounds - steeper above and below`). Used for the main voice and the second way.
+- Footsteps on another floor: second way through the stairs when the route loses at most 12 dB, 6 dB + half the route loss quieter than the thud (and within `Body sounds - second way within dB`).
+- body.csv's placed elevation covers the route way too.
+
 ## 0.7.19 — 10 Nov 2026 (Ff, Fg: above and below; body.csv)
 **Run in game:** not yet.
 - raid_20261110_224746_p43296, switch on: person-frames through a floor 14035, through a wall 2967, from an opening 97369; second way 211 played, 2105 too quiet. 0.7.17's rule (footsteps through a floor at airborne loss - 10 dB vs the route) let the stairwell win nearly always. User: "still struggling with footsteps heard through the floor and in general it being confusing if a player is above or below", "sometimes its better like I can hear they are below me", "part of it is its a headset".
