@@ -818,6 +818,17 @@ namespace RealSoundSimulation.Acoustics
             }
         }
 
+        private static bool _ownStopped;
+        private static void StopClass(EchoClass cls, double now)
+        {
+            foreach (Voice v in Pool)
+            {
+                if (v.Cls != cls || v.BusyUntil <= now || v.Src == null) continue;
+                v.Src.Stop();
+                v.BusyUntil = 0; v.OpenLoop = false; v.Owner = null; v.Fading = false; v.Releasing = false;
+            }
+        }
+
         public static void StopAll()
         {
             if (!_built) return;
@@ -831,8 +842,12 @@ namespace RealSoundSimulation.Acoustics
         private void Update()
         {
             if (!_built) return;
-            if (!Plugin.EchoOn.Value) { if (Busy > 0) StopAll(); return; }
             double now = AudioSettings.dspTime;
+            // 0.7.21: this pool also carries the through-wall thump, explosion and bot echoes, the shock wave, fragment pass-bys and body
+            // sounds' second way. Your gun's Echoes - on switch used to stop every voice every frame (and skip the fades), so turning it off
+            // silently killed all of those. Now it stops only your gun's echoes, once.
+            if (!Plugin.EchoOn.Value) { if (!_ownStopped) { StopClass(EchoClass.Own, now); _ownStopped = true; } }
+            else _ownStopped = false;
             OwnEchoes.TickPending(now);
             foreach (Voice v in Pool)
             {

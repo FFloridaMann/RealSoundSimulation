@@ -2,6 +2,11 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.7.21 — 11 Nov 2026 (6: the switch stops only its own voices)
+**Run in game:** not yet.
+- Found by a code review in the Fika session. `EchoVoices.Update` began with `if (!EchoOn) { if (Busy > 0) StopAll(); return; }`: with fix 6 off, every voice in the shared pool was stopped every frame and fades never ran. That pool also plays the through-wall layer, explosion echoes (6.3), room echoes from the doorway, the shock wave, fragment pass-bys, the outdoor tail out of openings and body sounds' second way.
+- Now turning fix 6 off stops voices of class Own once; everything else keeps playing and fading. Bot echoes still need fix 6 on, as their setting says.
+
 ## 0.7.20 — 10 Nov 2026 (Fh: route way keeps its height)
 **Run in game:** not yet.
 - User: "they can maybe come from the path but on the same level? below or above?". The route way was placed towards the opening nearest you (the foot of the stairs on your floor), so it was level with you.

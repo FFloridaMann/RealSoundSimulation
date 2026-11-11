@@ -2,6 +2,10 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.7.21 (not released yet): your echoes switch only switches your echoes
+
+- Turning off **Your gun > Echoes - on** also silenced the through-wall thump, explosion echoes, the shock wave, fragment pass-bys and the second way of body sounds, because they share the same voices. Now it stops only your own gun's echoes.
+
 ## 0.7.20 (not released yet): the way round keeps its height
 
 - Someone upstairs or downstairs heard round through the stairwell (their voice, gear, meds) now sounds from the stairwell's direction but at their height, instead of level with you.
