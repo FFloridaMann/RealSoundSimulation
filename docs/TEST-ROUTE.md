@@ -12,7 +12,7 @@ Anything that sounds worse gets fixed or rolled back before the next change.
 
 ## Setup
 
-- **Map:** Customs, daytime. Pick rain in the raid settings if you can; if not, skip item 6.
+- **Map:** Ground Zero, daytime (the author's choice: streets, office buildings, an underground car park, a short raid). Pick rain in the raid settings if you can; if not, skip item 6.
 - **Gear:** one suppressed rifle (the same one every time) with its suppressor, one grenade or more, and a headset in your backpack.
 - **Settings:** your normal ones. Turn on **Bug report - logs**.
 - **Marks:** press **F10** at each numbered item, in order. Mark 1 = item 1 and so on, so the logs line up with the checklist. If you skip an item, press F10 anyway.
@@ -23,12 +23,12 @@ Start without the headset on.
 
 | # | Where | What to do | Listen for |
 |---|---|---|---|
-| 1 | Outdoors, open ground | 3 shots with the suppressor, take it off, 3 more | Outdoor shot, open air, no room ring |
-| 2 | A building doorway (the dorms or a warehouse) | 1 shot just outside, step in, 1 shot just inside | The shot changing smoothly from outdoor to indoor at the door, no jump |
-| 3 | A small room | 3 shots, then turn around and fire 1 more | A short, tight ring; echoes off near walls |
-| 4 | A big hall or warehouse | 3 shots | A longer ring, later echoes |
+| 1 | A street, away from the buildings | 3 shots with the suppressor, take it off, 3 more | Outdoor shot with the street's echoes, no room ring |
+| 2 | An office building's front door | 1 shot just outside, step in, 1 shot just inside | The shot changing smoothly from outdoor to indoor at the door, no jump |
+| 3 | A small office room | 3 shots, then turn around and fire 1 more | A short, tight ring; echoes off near walls |
+| 4 | The underground car park | 3 shots | A long concrete ring, later echoes |
 | 5 | A stairwell | 2 shots | A hard, ringing stairwell |
-| 6 | Rain: deep inside, by a window, then under a tin roof | Stand 10 s at each | Rain coming *from* the window; tin roof louder; not doubled |
+| 6 | Rain: deep inside a building, by a window, then under a shop awning or metal roof | Stand 10 s at each | Rain coming *from* the window; a metal roof louder; not doubled |
 | 7 | When a fight starts in another room or building | Stay put and listen | Shots from the doorway they come through, echoes, not cut off |
 | 8 | A bot or fight behind a wall or closed door | Listen | Muffled by the wall's material; a thump you feel |
 | 9 | Grenade ~5 m away round a corner (yours or a bot's), **no headset** | — | Crack, then muffled but still heard, ringing, then heartbeat and breathing settling within ~15 s |
