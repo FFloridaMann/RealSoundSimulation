@@ -10,6 +10,8 @@ Each area ends in one **final test**: a raid that covers the whole area, instead
 ## Before v1.0, in order
 - [x] Bring Back Concussion: harmony gave permission (11 Nov 2026)
 - [ ] Final tests, one area at a time (each area below). Fix only what sounds wrong; no new features
+- [x] Fixed test route and checklist ([TEST-ROUTE.md](TEST-ROUTE.md)) and `tools/compare_raids.py` to compare a raid with the reference (11 Nov 2026)
+- [ ] Run the route once on the current build: that raid becomes the reference
 - [ ] Release build: no diagnostics work while logs are off, load-in spikes gone (see Release build)
 - [ ] Settings clean-up: remove settled test switches, defaults = the tested setup (see S)
 - [ ] Fika: commit the co-op echoes (0.7.16 work), one raid as a Fika host
