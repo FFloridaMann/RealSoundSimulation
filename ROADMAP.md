@@ -23,7 +23,7 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **Shot-to-shot variation.** Every shot, yours and others', varies slightly in pitch and volume before the simulation, so no two shots or their echoes sound alike. `(0.7.3)`
 - **Bug reports.** One switch, one zip per raid in an obvious folder, with the player's mod list and BepInEx log. `(0.7.0–0.7.2)`
 
-## Built, not played yet
+## Built, final test before v1.0
 
 - **Your room builds up blasts.** A blast that gets into a small closed room you're in hits harder and longer. `(0.7.1)`
 - **Measured room tail.** Your shot's reverb tail from the room the mod measures: its length, its brightness, and how indoor the shot is. `(0.7.4)`
@@ -32,24 +32,29 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **An easier F12 page.** 11 clear sections, settings grouped by name. `(0.7.9)`
 - **Other guns' shots ring out.** A bot's or another player's shot rings out even when they fire again straight away. `(0.7.12)`
 - **Ears ring from gunfire without a headset.** Shots near you add up by calibre, muzzle device, ammo and room size; a ring fades in and the world dulls a little. Ported from the author's earlier audio mod. `(0.7.13)`
-- **Footsteps and body sounds, as a switch.** Other people's footsteps, gear, looting, voices, meds and food come through the floor when they're above or below you, and from the doorway or stairwell otherwise. Off by default. `(0.7.15)`
+- **Footsteps and body sounds, as a switch.** Other people's footsteps, gear, looting, voices, meds and food come through the floor, walls and doors, and from the doorway or stairwell. Above or below you sound different: a knock from above, a boom from below, muffling by floors and a height layer, with an F8 test. Off by default. `(0.7.15-0.7.22)`
 - **Headsets protect your hearing.** With any headset on, no ear ringing and most of a blast's hearing cut taken away. Each headset will differ after the revamp. `(0.7.10)`
+- **A crack before the cut.** A close blast is heard sharp for a split second before your hearing goes, and the pressure hit starts with a crack. `(0.7.22)`
 
 ## Before v1.0, in order
 
-1. **Raid testing** of everything in "Built, not played yet". Shots near buildings outdoors sound good enough to publish as they are.
-2. **Fika.** The code review found it already works alongside Fika, and 0.7.11 switches the mod off on a Fika headless host. Still to do: a test raid with a second player. Works in Fika from the first release: other players' shots and blasts take the right route, nothing assumes you're the only player, and a Fika headless host doesn't do audio work it doesn't need. Tested in a raid with a second player. `(CO)`
-3. **Echo tuning and optimising.** Fair limits for big fights, which Fika raids have more of, and keeping the audio thread fast. `(E)`
-4. **Settings clean-up.** Remove the test switches that are settled, before release, so nobody's settings are reset by an update later. `(S)`
-5. **Publish v1.0.** Fill the Forge page's links, check the Forge's rules, make the repo public.
+Feature work is frozen until v1.0: only fixes for what sounds wrong. Each area gets one final test raid instead of a test per change (the list is in the tracker).
+
+1. **Final tests, area by area.** Your own gun; outside sound and rain; other guns; through walls and doors; explosions; hearing; footsteps (decide: on by default, or off and finished after 1.0).
+2. **Release build.** Logging off by default with one diagnostics switch, and the load-in spikes gone.
+3. **Settings clean-up.** Remove the test switches that are settled, so nobody's settings are reset by an update later; defaults are the tested setup. `(S)`
+4. **Fika.** Commit the co-op echoes and play one raid as a Fika host. A two-player raid when a second player is available. `(CO)`
+5. **Publish v1.0.** Forge fixes (plugin folder and ID, licence, install steps, credits), Forge page, repo public. Bring Back Concussion's author has given permission.
 
 ## Updates after v1.0, in order
 
-6. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
-7. **Headsets revamp.** Each headset protects you and shapes what you hear by how it's really built, optionally simulated, replacing today's flat headset protection. Its own switch at the top of F12. `(5)`
-8. **Footsteps and everyday sounds: tuning.** Built as a switch in 0.7.15 (see above); tuned by ear after raids. `(F)`
-9. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play. `(B)`
-10. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
+6. **Adrenaline after close calls.** A heartbeat that races after a close blast or heavy fire and settles back, built by the mod itself (no recordings), plus your character's own hard breathing from the game. Gas mask breathing from your character's own breaths through a mask filter. First update after 1.0. `(A)`
+7. **Weather.** How rain, wet surfaces and wind change what you hear. `(W)`
+8. **Headsets revamp.** Each headset protects you and shapes what you hear by how it's really built, optionally simulated, replacing today's flat headset protection. Its own switch at the top of F12. `(5)`
+9. **Footsteps and everyday sounds: tuning.** Built as a switch in 0.7.15 (see above); tuned by ear after raids. `(F)`
+10. **Bots feel blasts too.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play. `(B)`
+11. **Supersonic crack.** The crack of a passing bullet by its calibre and speed. `(C)`
+12. **Their room rings too.** A shot from someone in another room brings that room's ring with it: a long ring from a big hall next door, a short one from a small room. Today only your own room is measured. For close shooters only, to keep the cost down. `(RT)`
 
 ## Maybe, at the end
 

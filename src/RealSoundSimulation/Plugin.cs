@@ -130,6 +130,12 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> BlastOutdoorShare, BlastCloseReachM, GlassDullStrength, GlassLossDb2;
         internal static ConfigEntry<float> BlastOutsidePull; // 0.6.53 "6.6c"
         internal static ConfigEntry<bool> ShockOn; // 0.6.53 "6.9"
+        internal static ConfigEntry<bool> CrackOn, ShockCrackOn; // 0.7.22 "6.9r", "6.9s"
+        internal static ConfigEntry<bool> HeardThroughOn; // 0.7.22 "6.9t"
+        internal static ConfigEntry<float> BlastHeardDb, WorldHeardDb, MuffleHz; // 0.7.22 "6.9t"
+        internal static ConfigEntry<float> CrackMs, ShockCrackDb; // 0.7.22
+        internal static ConfigEntry<bool> AdrenalineOn, HeartOn, HardBreathOn; // 0.7.22 "A"
+        internal static ConfigEntry<float> HeartVolume, AdrenalineSeconds; // 0.7.22 "A"
         internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb, ShockCornerDb, ShockEnclosedDb, ShockPushDb; // 0.6.54 "6.9d", "6.9e", "6.9g"
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
@@ -143,6 +149,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> BodyThudOn, BodyHeightOn; // 0.7.22 "Fi", "Fj"
         internal static ConfigEntry<float> BodyThudDb, BodyHeightDb; // 0.7.22
         internal static ConfigEntry<KeyboardShortcut> BodyHeightTestKey; // 0.7.22 "Fk"
+        internal static ConfigEntry<bool> BodyFloorMuffleOn, BodyFloorToneOn, BodyBoomOn; // 0.7.22 "Fm", "Fo", "Fn"
+        internal static ConfigEntry<float> BodyFloorBright; // 0.7.22 "Fm"
         internal static ConfigEntry<float> BodySecondWithinDb, BodySecondRangeM; // 0.7.17 "Fd", "Fe"
         internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingRecovery, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
@@ -251,13 +259,17 @@ namespace RealSoundSimulation
             TailHandoffOn = Bind(s03, "Tails - ring out on a spare voice", true, "When another gun fires again while its last shot is still ringing, that ring finishes on a spare voice instead of being cut off. Needs Shots ring out under the next. Off = cut as before. Was 1f.");
             BodySoundsRangeM = Bind(s08, "Body sounds - range m", 40f, "Footsteps and body sounds are simulated for people within this distance. Was Fa.", R(10f, 80f), adv);
             BodySoundsFloorStrength = Bind(s08, "Body sounds - wall and floor muffling", 1f, "How much a wall, door, window, floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
-            BodySteepOn = Bind(s08, "Body sounds - steeper above and below", true, "A footstep or voice through the floor or ceiling is placed at least 45 degrees above or below you, keeping its direction and distance, so a headset can tell up from down. An exaggeration: off = their real height. Needs Footsteps and body sounds - simulated. Was Fg.");
-            BodyThudOn = Bind(s08, "Body sounds - thud from above", true, "A footstep on the floor above shakes your ceiling, so each one adds a short low thud. Footsteps below you go into the ground and add none: a thud means above, a soft scuff means below. Needs Footsteps and body sounds - simulated. Was Fi.");
-            BodyThudDb = Bind(s08, "Body sounds - thud level dB", 6f, "How loud the thud is next to the footstep it comes with. Was Fi.", R(-12f, 12f), adv);
-            BodyHeightOn = Bind(s08, "Body sounds - height layer", false, "Adds a faint copy of each footstep through a floor or ceiling that keeps its high end, placed steeply above or below you. A headset tells up from down only from high sounds, which a floor takes away. Not realistic: a hearing aid for height. Needs Footsteps and body sounds - simulated. Was Fj.");
-            BodyHeightDb = Bind(s08, "Body sounds - height layer level dB", -15f, "How loud the height layer is next to the footstep. Was Fj.", R(-30f, 0f), adv);
-            BodyHeightTestKey = Bind(s08, "Body sounds - height test key", new KeyboardShortcut(KeyCode.F8), "In raid: plays three of your footsteps on the floor above you, then three below, the way this mod makes them (thud and height layer by their switches). Take a step first. Was Fk.");
-            BodySecondOn = Bind(s08, "Body sounds - both ways at once", true, "A body sound that reaches you both through a wall and round through a doorway plays both ways, when the quieter way is loud enough to hear. Off = only the louder way. Needs Footsteps and body sounds - simulated. Was Fc.");
+            BodySteepOn = Bind(s08, "Body sounds - steeper above and below", false, "Only for the F8 test now: since 0.7.22 every body sound stays where the person is. Needs Footsteps and body sounds - simulated. Was Fg.");
+            BodyThudOn = Bind(s08, "Body sounds - knock from above", true, "Each footstep on a floor above you adds a short, sharp knock, as a ceiling does. Within 35 m. Needs Footsteps and body sounds - simulated. Was Fi.");
+            BodyBoomOn = Bind(s08, "Body sounds - boom from below", true, "Each footstep on a floor below you adds a soft, slower, deeper boom. A knock means above, a boom means below. Within 35 m. Needs Footsteps and body sounds - simulated. Was Fn.");
+            BodyThudDb = Bind(s08, "Body sounds - knock and boom level dB", -6f, "How loud the knock is against the footstep before the floor muffles it (the boom is 6 dB quieter; each extra floor 6 dB less). Was Fi.", R(-24f, 6f), adv);
+            BodyFloorMuffleOn = Bind(s08, "Body sounds - muffling by floors", true, "Through a floor, sounds are muffled by how many floors are between you and whether they're above or below: footsteps from above clearer, from below duller, two floors more than one. Off = by the measured wall loss (0.7.19), which reads nearly the same for everyone far off. Needs Footsteps and body sounds - simulated. Was Fm.");
+            BodyFloorBright = Bind(s08, "Body sounds - through-floor brightness", 0.7f, "Scales the muffling by floors: 0.7 = footsteps one floor above about 840 Hz, below about 315 Hz; lower = more muffled and more realistic, 1 = clearer. Was Fm.", R(0.25f, 2f), adv);
+            BodyFloorToneOn = Bind(s08, "Body sounds - floor tone", true, "Sound through a floor gets the slab's ring: a knocky tone from above, a hollow boom from below. Sound through a wall on your own floor stays plain. Needs Footsteps and body sounds - simulated. Was Fo.");
+            BodyHeightOn = Bind(s08, "Body sounds - height layer", true, "Adds a short, faint 3-9 kHz copy of each footstep, voice, gear and meds or food sound from another floor, placed nearly straight above or below you in their real direction. A headset tells up from down only from high sounds, which a floor takes away. Not realistic: a hearing aid for height. Needs Footsteps and body sounds - simulated. Was Fj.");
+            BodyHeightDb = Bind(s08, "Body sounds - height layer level dB", -12f, "How loud the height layer is against the sound before the floor muffles it (4 dB less per extra floor). Was Fj.", R(-30f, 0f), adv);
+            BodyHeightTestKey = Bind(s08, "Body sounds - height test key", new KeyboardShortcut(KeyCode.F8), "In raid: plays three of your footsteps one floor above you 20 m to your right, then three one floor below, as in a raid with the switches as set; then the same plain, without the floor cues, to compare. Take a step first. Was Fk.");
+            BodySecondOn = Bind(s08, "Body sounds - both ways at once", false, "A body sound that reaches you both through a wall and round through a doorway plays both ways, when the quieter way is loud enough to hear. Off = only the louder way. Needs Footsteps and body sounds - simulated. Was Fc.");
             BodySecondWithinDb = Bind(s08, "Body sounds - second way within dB", 10f, "The quieter way plays only if it is at most this much quieter than the louder one. Was Fd.", R(0f, 30f), adv);
             BodySecondRangeM = Bind(s08, "Body sounds - second way range m", 25f, "The quieter way plays only for people this close. Was Fe.", R(5f, 60f), adv);
             RouteDullOn = Bind(s03, "Muffling - by route", true, "A shot from another room loses its highs by the way it got to you: a wall on the straight line, each turn and each extra opening. Was 6.1b.");
@@ -312,6 +324,19 @@ namespace RealSoundSimulation
             EarRingDullDb = Bind(s05, "Ear ringing - hearing dulls up to dB", 12f, "The most a long string of fire lowers everything except the guns. 0 = no dulling, ring only. Was 5v.", R(0f, 30f), adv);
             EarRingNearbyM = Bind(s05, "Ear ringing - other shots count within m", 15f, "Other people's shots count within this distance, less the further away and through walls. Was 5w.", R(0f, 50f), adv);
             ShockOn = Bind(s05, "Shock wave - on", true, "The part of a blast you feel: a pressure hit, a thump that grows up close, and the world dipping for a moment. Was 6.9.");
+            HeardThroughOn = Bind(s05, "Concussion - blast heard through the cut", true, "When a blast cuts your hearing, the blast, its echoes and the world stay heard, muffled and quieter, as hearing really goes: the highs first, the rumble stays, with the ringing on top. Off = everything goes nearly silent. Was 6.9t.");
+            BlastHeardDb = Bind(s05, "Concussion - blast heard at dB", -15f, "How far down the blast and everything else go at most while your hearing is cut. Was 6.9t.", R(-40f, 0f), adv);
+            WorldHeardDb = Bind(s05, "Concussion - world heard at dB", -25f, "How far down the world (voices, footsteps, ambience) goes at most; a little further than the blast. Was 6.9t.", R(-50f, 0f), adv);
+            MuffleHz = Bind(s05, "Concussion - muffled to Hz", 2500f, "How muffled everything gets at the worst of a close blast's cut; lighter cuts muffle less. Was 6.9t.", R(500f, 8000f), adv);
+            CrackOn = Bind(s05, "Concussion - crack before the cut", true, "A blast close enough to cut your hearing is heard sharp for a split second first; the cut starts after it, as your ears' own reflex does. With a headset the crack is shorter and 6 dB quieter. Off = the cut starts at once. Was 6.9r.");
+            CrackMs = Bind(s05, "Concussion - crack length ms", 100f, "How long the blast is heard before the hearing cut starts. Was 6.9r.", R(0f, 250f), adv);
+            AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
+            HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
+            HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.6f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
+            HardBreathOn = Bind(s05, "Adrenaline - hard breathing", true, "After a big blast your character is out of breath in their own voice, then breathes normally again as the heartbeat settles, ending with it. Needs Adrenaline - after close blasts. Was A.");
+            AdrenalineSeconds = Bind(s05, "Adrenaline - settles over s", 17f, "How long the heartbeat takes to settle after the strongest blast, on a smooth curve (it holds 3 s first, so about 20 s in all). Was A.", R(5f, 60f), adv);
+            ShockCrackOn = Bind(s05, "Shock wave - sharp start", true, "The pressure hit starts with a short, bright crack that an opening or corner barely muffles (a wall still takes it), so a close blast bites before it booms. Was 6.9s.");
+            ShockCrackDb = Bind(s05, "Shock wave - sharp start level dB", -6f, "How loud the crack is against the pressure hit. Was 6.9s.", R(-24f, 6f), adv);
             ShockLevelDb = Bind(s05, "Shock wave - pressure hit volume dB", 0f, "Full strength from 5 m in, weaker further out by real blast pressure. Was 6.9a.", R(-24f, 12f));
             ShockReachM = Bind(s05, "Shock wave - reach m", 60f, "How far along its way you still feel a blast. Was 6.9b.", R(10f, 100f), adv);
             ShockCornerDb = Bind(s05, "Shock wave - loss per corner dB", 6f, "How much weaker the hit is for each 90-degree turn on its way to you, and half this for each extra opening. Was 6.9d.", R(0f, 18f), adv);
@@ -463,6 +488,7 @@ namespace RealSoundSimulation
             gameObject.AddComponent<FragmentPassBy>(); // 0.6.56
             gameObject.AddComponent<ConcussionProof>(); // 0.6.57
             gameObject.AddComponent<GunfireHearing>(); // 0.7.13
+            gameObject.AddComponent<Adrenaline>(); // 0.7.22 "A"
             gameObject.AddComponent<BodySounds>(); // 0.7.15; runs after PortalPositioning
             gameObject.AddComponent<OwnShotTurn>(); // 0.6.30
             Log.LogInfo("Real Sound Simulation loaded");

@@ -307,6 +307,8 @@ namespace RealSoundSimulation.Fixes
 
         // 0.7.15: for body sounds (F): our own low-pass on any game source.
         internal static void Filter(AudioSource a, float cutoff, bool on) => SetFilter(a, cutoff, on);
+        // 0.7.22 "Fo": with a resonance (the floor tone); every other use sets it back to 1
+        internal static void Filter(AudioSource a, float cutoff, bool on, float q) => SetFilter(a, cutoff, on, q);
 
         // 0.7.12: a voice going back to the game (a tail that rang out on its own, 1f) loses our route filter.
         internal static void FilterOff(BetterSource v)
@@ -316,7 +318,7 @@ namespace RealSoundSimulation.Fixes
             SetFilter(ss.source2, DullOffHz, false);
         }
 
-        private static void SetFilter(AudioSource a, float cutoff, bool on)
+        private static void SetFilter(AudioSource a, float cutoff, bool on, float q = 1f)
         {
             if (a == null) return;
             GameObject go = a.gameObject;
@@ -329,7 +331,7 @@ namespace RealSoundSimulation.Fixes
             }
             if (lp == null) return;
             if (lp.enabled != on) lp.enabled = on;
-            if (on) lp.cutoffFrequency = cutoff;
+            if (on) { lp.cutoffFrequency = cutoff; if (lp.lowpassResonanceQ != q) lp.lowpassResonanceQ = q; }
         }
 
         public static string Summary() => PositionSummary() + DullSummary();

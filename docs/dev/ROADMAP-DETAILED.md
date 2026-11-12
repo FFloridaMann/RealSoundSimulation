@@ -171,6 +171,19 @@ Not in this roadmap: **GC and spawn stutters**. That's a separate project, likel
   Either way it's one voice per passing round, the same as now.
 - **When:** after 2.9 (where and when the crack plays comes first); before step 7, since it's part of how every gun sounds.
 
+### A · Adrenaline after close calls (user, 11 Nov 2026; first after 1.0)
+User, after a grenade at 3.8 m: "maybe its because we are missing the heartbeat sounds and rushed breathing Adrenaline audio during the blast from my last audio mod". That old private mod's clips were a port from the Realism mod, so not publishable. User: "could we just recreate our own?", "can we pull them from the game?".
+- Game scan (UnityPy, 1438 bundles under content/audio, items/equipment, weapons/usable_items, 11 Nov 2026): no heartbeat clip anywhere; gas masks have no breathing clip. Every character voice has breath clips: ok, sprint, hurt, death or near death (usec3 also coughing), e.g. usec3/breath.bundle, usec4/generic/onbreath.bundle, bear/mikhail.bundle, scav/scav1.bundle; plus the tinnitus clip (prefabs/movement/sounds.bundle).
+- Heartbeat: synthesized lub-dub (two short low thumps), rate from stress (fast after a close blast, settling over ~20-40 s), felt rather than heard (Master group, past the concussion cut like the felt layers).
+- Breathing: your character's own sprint/hurt breaths from the game, played or triggered through the game's breath phrase after a close call; nothing shipped.
+- Gas mask: the same own breaths through a mask filter (muffled, a resonance, a synthesized valve click), so they match your voice.
+
+### RT · Their room rings too (user, 11 Nov 2026)
+User: "add their room rings too to the roadmap". Today the room tail (0.7.4) measures only the room you're in (probe v2: mean free path, absorption, Rt60), so a bot firing in a big hall next door brings no hall ring; its echoes (6.3h) come off walls you both reach, timed by their real paths.
+- Measure the shooter's room with a small sweep (like the muzzle room, 37 rays) the first time they fire from a spot, cached by position and reused for a few seconds; nearest few shooters only.
+- Voices: none extra if the ring is an AudioReverbFilter on the shot's own tail voice (the 1f spare voice when it rings out), sized from their Rt60 and brightness, heard through the route like the shot. Cost then moves to the audio thread (one reverb per ringing shot), so cap it (e.g. 3 shooters) and drop it first when the echo pool is busy. Fallback: one voice per shot on the room-tail pool (at most 6, shared with yours).
+- Their room's ring should be muffled by the way it reaches you (wall or opening), and outdoors shooters get none.
+
 ### 7 · Gun audio overhaul, every gun (last, long)
 - **What** (user, 6 Nov): go through every weapon's sound banks: body, tail, silenced, near/mid/far tiers, indoor/outdoor sets. Make each one sound right and consistent:
   - loudness across guns and calibres;

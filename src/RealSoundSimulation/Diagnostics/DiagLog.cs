@@ -31,6 +31,8 @@ namespace RealSoundSimulation.Diagnostics
             ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["botshots.csv"] = BotShots.Header,
             ["body.csv"] = Fixes.BodySounds.Header, // 0.7.19
+            ["blastmix.csv"] = Fixes.ConcussionProof.MixHeader, // 0.7.22
+            ["headsetmix.csv"] = Fixes.ConcussionProof.HeadsetHeader, // 0.7.22
             ["botechoes.csv"] = Fixes.BotEchoes.Header,
             ["voices.csv"] = Fixes.BotEchoes.VoicesHeader,
             ["routes.csv"] = RouteLog.Header,

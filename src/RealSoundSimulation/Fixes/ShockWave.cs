@@ -46,7 +46,9 @@ namespace RealSoundSimulation.Fixes
         private static double _armAt, _t0;
         private static float _armDepth, _depth, _fromEnv, _lastExtra;
 
-        public static int Played, ThumpDoubled, Ducks, Followed, Repeats, Pushes;
+        public static int Played, ThumpDoubled, Ducks, Followed, Repeats, Pushes, Cracked;
+        private static AudioClip _crack; // 0.7.22 "6.9s"
+        private const float CrackOpenUp = 4f, CrackMinHz = 6000f;
         private static double _volSum;
 
         public static void Reset()
@@ -56,7 +58,7 @@ namespace RealSoundSimulation.Fixes
             _way = default;
             _lastExtra = 0f;
             Skips.Clear(); Ways.Clear();
-            Played = ThumpDoubled = Ducks = Followed = Repeats = Pushes = YourRoomAdded = YourRoomSame = 0;
+            Played = ThumpDoubled = Ducks = Followed = Repeats = Pushes = YourRoomAdded = YourRoomSame = Cracked = 0;
             _volSum = 0;
         }
 
@@ -103,7 +105,15 @@ namespace RealSoundSimulation.Fixes
 
         private static void BuildClips()
         {
-            if (_hit != null && _slap != null && _push != null) return;
+            if (_hit != null && _slap != null && _push != null && _crack != null) return;
+            var rng = new System.Random(911);
+            // "6.9s": the front's bite, a 3 ms N-wave with a 7 ms burst of noise
+            _crack = MakeClip("rss_shock_crack", 0.05f, t =>
+            {
+                float n = (float)(rng.NextDouble() * 2.0 - 1.0);
+                float wave = t < 0.003f ? Mathf.Clamp01(t / 0.0002f) * (1f - 2f * t / 0.003f) : 0f;
+                return wave + 0.5f * n * Mathf.Exp(-t / 0.007f);
+            });
             float phase = 0f;
             _hit = MakeClip("rss_shock_hit", LengthS, t =>
             {
@@ -132,6 +142,7 @@ namespace RealSoundSimulation.Fixes
 
         public static void Explosion(Transform listener, Vector3 pos, float dist, int walls, float lossDb, float wallFade, float delay, AudioClip sound)
         {
+            ConcussionProof.BlastEvent(); // 0.7.22 "6.9r"
             Way w = _way;
             _way = default;
             float extra = _lastExtra;
@@ -160,9 +171,11 @@ namespace RealSoundSimulation.Fixes
         {
             Measure(h.Pos);
             Dose(h.Dist, h.Walls, h.LossDb, h.WallFade, w, h.Listener, out float dose, out float duration);
+            Adrenaline.Blast(dose); // 0.7.22 "A"
             if (_youState == "added") YourRoomAdded++; else if (_youState == "same room") YourRoomSame++;
-            ConcussionProof.Deliver(h.Pos, dose, duration);
             bool felt = ConcussionProof.WillCut(h.Dist, dose);
+            if (felt) ConcussionProof.Crack(h.Played); // 0.7.22 "6.9r": heard before the cut
+            ConcussionProof.Deliver(h.Pos, dose, duration);
             if (felt) { ConcussionProof.FeltOn(); ConcussionProof.Felt++; }
             try { FireCore(h, w, dose); }
             finally { if (felt) ConcussionProof.FeltOff(); }
@@ -311,6 +324,17 @@ namespace RealSoundSimulation.Fixes
             float delay = usesWay && w.Kind == WayKind.Route ? Mathf.Max(path - HeadStartM, 0f) / OwnEchoes.SpeedOfSound : h.Delay;
             double now = AudioSettings.dspTime, start = Math.Max(h.Played + delay, now);
             EchoVoices.Play(_hit, _hit, l + lean, start, _hit.length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true);
+            // 0.7.22 "6.9s": the front's crack, little muffled by an opening or corner (a wall still takes it); not raised by the felt trim
+            if (Plugin.ShockCrackOn.Value && usesWay)
+            {
+                float trim = EchoVoices.OutputOverride != null ? Mathf.Max(EchoVoices.VolumeTrim, 1e-3f) : 1f;
+                float cv = Mathf.Clamp01(vol * Mathf.Pow(10f, Plugin.ShockCrackDb.Value / 20f) / trim);
+                if (cv >= MinVolume)
+                {
+                    EchoVoices.Play(_crack, _crack, l + lean, start, _crack.length, false, cv, 1f, open ? OpenHz : Mathf.Max(cutoff * CrackOpenUp, CrackMinHz), delay, minCutoff: 20f, ignoreCap: true);
+                    Cracked++;
+                }
+            }
             Played++; _volSum += vol;
             Ways.TryGetValue(way, out int ways); Ways[way] = ways + 1;
 
@@ -455,7 +479,7 @@ namespace RealSoundSimulation.Fixes
         public static string Summary()
         {
             string state = Plugin.ShockOn.Value ? $"ON, level {Plugin.ShockLevelDb.Value:+0;-0;0} dB, reach {Plugin.ShockReachM.Value:0} m, corner {Plugin.ShockCornerDb.Value:0} dB, enclosed +{Plugin.ShockEnclosedDb.Value:0} dB, {Plugin.ShockRepeats.Value} repeats, push {Plugin.ShockPushDb.Value:+0;-0;0} dB, dip {Plugin.ShockDuckDb.Value:0} dB" : "off";
-            return $"SHOCK WAVE (6.9 {state}): hits {Played}" + (Played > 0 ? $", mean volume {_volSum / Played:0.00}" : "") + $" (by way: {Counts(Ways)}); repeat hits {Repeats}; slow pushes {Pushes}; thump second voice {ThumpDoubled}; dips {Ducks}, controls also moved by something else {Followed}; not played: {Counts(Skips)}  (shock.csv)\n";
+            return $"SHOCK WAVE (6.9 {state}): hits {Played}" + (Played > 0 ? $", mean volume {_volSum / Played:0.00}" : "") + $" (by way: {Counts(Ways)}); repeat hits {Repeats}; slow pushes {Pushes}; thump second voice {ThumpDoubled}; sharp starts (6.9s {(Plugin.ShockCrackOn.Value ? $"ON {Plugin.ShockCrackDb.Value:+0;-0;0} dB" : "off")}) {Cracked}; dips {Ducks}, controls also moved by something else {Followed}; not played: {Counts(Skips)}  (shock.csv)\n";
         }
     }
 }

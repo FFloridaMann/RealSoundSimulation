@@ -4,9 +4,20 @@ What changed, as you'd notice it in game. The full technical log is [docs/dev/CH
 
 ## 0.7.22 (not released yet): above or below
 
-- With **Footsteps and body sounds - simulated** on, footsteps on the floor above you now come with a short low **thud**, as a ceiling does. Footsteps below you don't: a thud means above, a soft scuff means below. Switch **Body sounds - thud from above** (08, on).
-- New switch **Body sounds - height layer** (08, off): a faint copy of each footstep through a floor that keeps its high end, placed steeply above or below you, so a headset can place it. Not realistic; try it on and off.
-- New **Body sounds - height test key** (08, F8): in raid, plays three of your own footsteps above you, then three below, so you can learn the difference. Take a step first.
+With **Footsteps and body sounds - simulated** on, sounds from another floor now say which way they are, not just that they're muffled:
+
+- **Knock from above, boom from below** (08, both on): each footstep from a floor above adds a short, sharp knock; from below, a soft, slower, deeper boom.
+- **Muffling by floors** (08, on): footsteps from above come through clearer than from below, and two floors more muffled than one. Before, nearly everyone far off was muffled the same.
+- **Floor tone** (08, on): sound through a floor gets the slab's ring, knocky from above, a hollow boom from below. Through a wall on your own floor it stays plain.
+- **Height layer** (08, now on): a short, faint high copy of each sound from another floor, nearly straight above or below you in their real direction, so a headset can place it. Not realistic; turn it off to compare.
+- **Steeper above and below** is now off: sounds keep their real direction, and the way round by the stairs comes from the opening.
+- **Height test key** (08, F8): in raid, take a step and press it: three footsteps one floor above, three one floor below, 20 m to your right as in a raid; then the same plain to compare.
+- Voices, gear and meds/food get the muffling, floor tone and height layer too; the knock and boom are footsteps only.
+- **Footsteps and body sounds: one person, one place.** Each person's footsteps, gear, voice and meds now always come from where they really are, as in the plain game. Walls, floors and stairs only change how muffled they sound. Before, a person's steps could come through the floor while their gear came from the stairwell, so one person seemed to be in two places. **Body sounds - both ways at once** is now off.
+- **Adrenaline after close blasts** (05, on): a blast close enough to shake you sets your heart racing, then it settles smoothly within about 20 s, and after a big one your character is out of breath in their own voice. The heartbeat is made by the mod (no recordings) and isn't cut by concussion.
+- **Concussion: the blast stays heard** (05, on): when a blast cuts your hearing, the blast, its echoes and the world now stay heard, muffled and about 15-25 dB down, instead of going nearly silent after the first split second. Also fixed: with a headset on, the hearing cut made dry gun sounds louder instead of quieter.
+- **Explosions: a crack before the cut** (05, on): a blast close enough to cut your hearing is now heard sharp for a split second (0.1 s, shorter and quieter with a headset) before the cut starts. Before, something cut gun sounds about 50 dB at once and only the dull "duuum" was left.
+- **Shock wave: sharp start** (05, on): the pressure hit starts with a short, bright crack, barely muffled round a doorway or corner, then the boom.
 
 ## 0.7.21 (not released yet): your echoes switch only switches your echoes
 
