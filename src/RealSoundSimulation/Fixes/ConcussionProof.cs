@@ -320,6 +320,7 @@ namespace RealSoundSimulation.Fixes
                 {
                     ShockWave.EndDipNow();
                     bool soft = Plugin.SoftCutOn.Value && TryStart(cutEars, Mathf.Lerp(0.6f, 1.5f, duration));
+                    Adrenaline.Concussion(); // the hearing cut: the heart races
                     if (soft) { Soft++; }
                     else
                     {
@@ -340,6 +341,7 @@ namespace RealSoundSimulation.Fixes
                     try { _proximity.Invoke(null, new object[] { p.Item, moved }); }
                     finally { _passing = _byDose = false; }
                     Concussed++;
+                    Adrenaline.Concussion();
                 }
                 else if (ears > NoCutAtOrBelow)
                 {
@@ -348,6 +350,7 @@ namespace RealSoundSimulation.Fixes
                     {
                         _ring.Invoke(null, new object[] { player, Mathf.Lerp(RingMinS, RingMaxS, ears) });
                         ringOnly = true; RingOnly++;
+                        Adrenaline.Concussion();
                     }
                 }
                 DoseRow(doseDb, equiv, earsEquiv, ears, concussed, duration, ringOnly);
@@ -387,10 +390,11 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.SoftCutOn.Value) return true;
             try
             {
-                if (TryStart(closeness, 1f)) { Soft++; return false; }
+                if (TryStart(closeness, 1f)) { Soft++; Adrenaline.Concussion(); return false; }
             }
             catch (Exception e) { DiagRunner.ReportOnce("6.9h soft concussion cut", e); }
             LeftToMod++;
+            Adrenaline.Concussion();
             return true;
         }
 

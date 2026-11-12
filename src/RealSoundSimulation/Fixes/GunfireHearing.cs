@@ -213,7 +213,9 @@ namespace RealSoundSimulation.Fixes
                 return;
             }
 
-            if (Time.time >= _firingUntil) _noise = Mathf.Max(0f, _noise - NoiseFade / Plugin.EarRingRecovery.Value * Time.deltaTime);
+            // 11 Nov 2026 (user): "reduce the ear ringing when shooting duration and give the user and I a slider". Was NoiseFade (3) a
+            // second, up to ~47 s from the loudest; now the loudest ring drains over "Ear ringing - longest ring s".
+            if (Time.time >= _firingUntil) _noise = Mathf.Max(0f, _noise - (MaxNoise - RingStart) / Mathf.Max(Plugin.EarRingLongestS.Value, 1f) * Time.deltaTime);
             float drop = Mathf.Min(_noise * DropPerNoise, Plugin.EarRingDullDb.Value);
             _volumeDrop = Approach(_volumeDrop, drop, drop > _volumeDrop ? DropRise : DropFall);
             if (_volumeDrop < VolumeFinished && drop <= 0f) _volumeDrop = 0f;
@@ -325,7 +327,7 @@ namespace RealSoundSimulation.Fixes
         public static string Summary()
         {
             if (!Plugin.EarRingOn.Value) return "GUNFIRE HEARING (5r off)\n";
-            return $"GUNFIRE HEARING (5r ON, ring {Plugin.EarRingVolume.Value:0.00}, strength x{Plugin.EarRingStrength.Value:0.00}, recovery x{Plugin.EarRingRecovery.Value:0.00}, dulls up to {Plugin.EarRingDullDb.Value:0} dB, nearby {Plugin.EarRingNearbyM.Value:0} m): " +
+            return $"GUNFIRE HEARING (5r ON, ring {Plugin.EarRingVolume.Value:0.00}, strength x{Plugin.EarRingStrength.Value:0.00}, longest ring {Plugin.EarRingLongestS.Value:0} s, dulls up to {Plugin.EarRingDullDb.Value:0} dB, nearby {Plugin.EarRingNearbyM.Value:0} m): " +
                    $"shots counted yours {OwnShots}, others {OtherShots} (supersonic {SuperOpen}, subsonic {SubOpen}, supersonic suppressed {SuperSup}; subsonic suppressed left out {Subsonic}); most noise {MaxNoiseSeen:0} (ring from {RingStart:0}, full at {RingFull:0}); " +
                    $"ring started {RingStarts} times, {RingSeconds:0} s in all; a blast's ring held {Holds} frames; most dulled {MaxDrop:0.0} dB; headset on at the end {_wearsHeadset}\n";
         }

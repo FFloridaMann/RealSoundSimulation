@@ -135,7 +135,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> BlastHeardDb, WorldHeardDb, MuffleHz; // 0.7.22 "6.9t"
         internal static ConfigEntry<float> CrackMs, ShockCrackDb; // 0.7.22
         internal static ConfigEntry<bool> AdrenalineOn, HeartOn, HardBreathOn; // 0.7.22 "A"
-        internal static ConfigEntry<float> HeartVolume, AdrenalineSeconds; // 0.7.22 "A"
+        internal static ConfigEntry<float> HeartVolume, AdrenalineSeconds, BreathVolume; // 0.7.22 "A"
+        internal static ConfigEntry<float> EarRingLongestS; // 11 Nov 2026, replaces EarRingRecovery
         internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb, ShockCornerDb, ShockEnclosedDb, ShockPushDb; // 0.6.54 "6.9d", "6.9e", "6.9g"
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
@@ -152,7 +153,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> BodyFloorMuffleOn, BodyFloorToneOn, BodyBoomOn; // 0.7.22 "Fm", "Fo", "Fn"
         internal static ConfigEntry<float> BodyFloorBright; // 0.7.22 "Fm"
         internal static ConfigEntry<float> BodySecondWithinDb, BodySecondRangeM; // 0.7.17 "Fd", "Fe"
-        internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingRecovery, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
+        internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
         internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
         internal static ConfigEntry<float> ShotPitchPct, ShotVolumeDb; // 0.7.3
@@ -320,7 +321,7 @@ namespace RealSoundSimulation
             // 05 | EXPLOSIONS: SHOCK AND CONCUSSION
             EarRingVolume = Bind(s05, "Ear ringing - ring volume", 0.35f, "How loud the gunfire ring gets at its loudest. Was 5s.", R(0f, 1f), adv);
             EarRingStrength = Bind(s05, "Ear ringing - how much shots count", 1f, "Multiplies how much every shot adds. 2 = rings twice as soon. Was 5t.", R(0f, 3f), adv);
-            EarRingRecovery = Bind(s05, "Ear ringing - recovery time", 1f, "Multiplies how long your ears take to recover once the shooting stops. Was 5u.", R(0.1f, 3f), adv);
+            EarRingLongestS = Bind(s05, "Ear ringing - longest ring s", 15f, "How long the ring from the heaviest shooting takes to fade once you stop firing; a lighter ring fades sooner. Was 5u (recovery time).", R(3f, 60f));
             EarRingDullDb = Bind(s05, "Ear ringing - hearing dulls up to dB", 12f, "The most a long string of fire lowers everything except the guns. 0 = no dulling, ring only. Was 5v.", R(0f, 30f), adv);
             EarRingNearbyM = Bind(s05, "Ear ringing - other shots count within m", 15f, "Other people's shots count within this distance, less the further away and through walls. Was 5w.", R(0f, 50f), adv);
             ShockOn = Bind(s05, "Shock wave - on", true, "The part of a blast you feel: a pressure hit, a thump that grows up close, and the world dipping for a moment. Was 6.9.");
@@ -333,6 +334,7 @@ namespace RealSoundSimulation
             AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
             HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
             HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.4f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
+            BreathVolume = Bind(s05, "Adrenaline - breathing volume", 1.5f, "How loud your character's breathing after a blast is, against the game's own breathing level (1 = the same). Was A.", R(0f, 3f));
             HardBreathOn = Bind(s05, "Adrenaline - hard breathing", true, "After a big blast your character is out of breath in their own voice, then breathes normally again as the heartbeat settles, ending with it. Needs Adrenaline - after close blasts. Was A.");
             AdrenalineSeconds = Bind(s05, "Adrenaline - settles over s", 12f, "How long the heartbeat takes to settle after the strongest blast, on a smooth curve (it holds 3 s first, so about 20 s in all). Was A.", R(5f, 60f), adv);
             ShockCrackOn = Bind(s05, "Shock wave - sharp start", true, "The pressure hit starts with a short, bright crack that an opening or corner barely muffles (a wall still takes it), so a close blast bites before it booms. Was 6.9s.");

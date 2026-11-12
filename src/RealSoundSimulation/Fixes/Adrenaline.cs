@@ -23,12 +23,20 @@ namespace RealSoundSimulation.Fixes
     // Then (user): "the breathing needs to go to the end like the heartbeat and slow down to normal with the heartbeat". Breathing now
     // runs as long as the heartbeat: out of breath (Healthy | Aware) while the heart is fast, then your character's normal breathing
     // (Healthy | Unaware) once stress falls below CalmAt (about 105 bpm), ending with the heartbeat. Clips change at their own ends.
+    // 11 Nov 2026 (user): "fix heartbeat trigger to only grenades that play the concussion effects. heavy breathing for grenades can
+    // stay at its current rate and distance ... just increase breathing volume (give a slider)". The heartbeat now waits for
+    // ConcussionProof to report a concussion, a hearing cut or a ring for the blast; the breathing still follows the blast's dose. The
+    // breath is played on our own source in the player's speech group (so the cut and the headset still act on it), from the voice's
+    // own OnBreath bank, at the clip's volume times "Adrenaline - breathing volume".
     internal class Adrenaline : MonoBehaviour
     {
         private const float DoseLowDb = -15f, DoseHighDb = 6f, HoldS = 3f, StartAt = 0.08f, StopAt = 0.02f, FadeInSpan = 0.25f, BpmLow = 75f, BpmHigh = 150f,
             CalmAt = 0.4f, BreathCheckS = 0.5f, LeadS = 0.1f, StackShare = 0.15f, LevelJitter = 0.08f, TimeJitter = 0.02f;
         private const int Variants = 4;
-        private static float _stress, _peakNow, _since = 999f, _nextBreath;
+        private static float _stress, _peakNow, _since = 999f, _nextBreath, _breathUntil;
+        private static bool _heart; // a blast in this episode concussed you, cut your hearing or rang your ears
+        private static AudioSource _breath;
+        public static int Concussions;
         private static double _nextBeat;
         private static readonly AudioClip[] _beats = new AudioClip[Variants];
         private static readonly System.Random Rng = new System.Random(7);
@@ -40,8 +48,9 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset()
         {
-            _stress = _peakNow = 0f; _since = 999f; _nextBeat = 0; _nextBreath = 0f;
-            Blasts = Beats = Breaths = 0; Peak = HeartSeconds = 0f;
+            _stress = _peakNow = 0f; _since = 999f; _nextBeat = 0; _nextBreath = _breathUntil = 0f; _heart = false;
+            Blasts = Beats = Breaths = Concussions = 0; Peak = HeartSeconds = 0f;
+            if (_breath != null) _breath.Stop();
             if (_src != null) foreach (AudioSource s in _src) if (s != null) s.Stop();
         }
 
@@ -57,6 +66,14 @@ namespace RealSoundSimulation.Fixes
             if (_stress > Peak) Peak = _stress;
         }
 
+        // ConcussionProof: this blast concussed you, cut your hearing or rang your ears, so the heart races.
+        public static void Concussion()
+        {
+            if (!Plugin.AdrenalineOn.Value || _stress <= 0f) return;
+            if (!_heart) Concussions++;
+            _heart = true;
+        }
+
         private void Update()
         {
             try
@@ -69,8 +86,8 @@ namespace RealSoundSimulation.Fixes
                 _since += dt;
                 float x = (_since - HoldS) / Mathf.Max(Plugin.AdrenalineSeconds.Value, 1f);
                 _stress = _peakNow * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(x)));
-                if (_stress <= StopAt || x >= 1f) { _stress = 0f; return; }
-                if (Plugin.HeartOn.Value) { Heart(); HeartSeconds += dt; }
+                if (_stress <= StopAt || x >= 1f) { _stress = 0f; _heart = false; return; }
+                if (Plugin.HeartOn.Value && _heart) { Heart(); HeartSeconds += dt; }
                 if (Plugin.HardBreathOn.Value && Time.time >= _nextBreath) Breathe(me);
             }
             catch (Exception e) { Diagnostics.DiagRunner.ReportOnce("A adrenaline", e); _stress = 0f; }
@@ -99,10 +116,38 @@ namespace RealSoundSimulation.Fixes
         {
             _nextBreath = Time.time + BreathCheckS;
             BaseSpeaker sp = me.Speaker;
-            if (sp == null || sp.Busy) return; // the clip playing runs to its end, so the change from fast to calm falls between clips
+            if (sp == null || sp.Busy || Time.time < _breathUntil) return; // a breath runs to its end, so fast to calm changes between clips
             // fast: the exhausted set; calm: the normal set (both as the game itself picks them in Player.UpdateBreathStatus)
-            sp.Play(EPhraseTrigger.OnBreath, ETagStatus.Healthy | (_stress >= CalmAt ? ETagStatus.Aware : ETagStatus.Unaware), true);
+            ETagStatus tags = ETagStatus.Healthy | (_stress >= CalmAt ? ETagStatus.Aware : ETagStatus.Unaware);
+            TaggedClip tc = sp.PhrasesBanks.TryGetValue(EPhraseTrigger.OnBreath, out TagBank bank) && bank != null ? bank.Match((int)tags) : null;
+            AudioSource voice = SpeechSource(me);
+            if (tc == null || tc.Clip == null || voice == null)
+            {
+                sp.Play(EPhraseTrigger.OnBreath, tags, true); // fall back to the game's own, at its own volume
+                Breaths++;
+                return;
+            }
+            if (_breath == null)
+            {
+                var go = new GameObject("RealSoundSimulation breath");
+                DontDestroyOnLoad(go);
+                _breath = go.AddComponent<AudioSource>();
+                _breath.playOnAwake = false; _breath.loop = false; _breath.spatialBlend = 0f; _breath.priority = 0;
+            }
+            _breath.outputAudioMixerGroup = voice.outputAudioMixerGroup; // the voice's own group: the cut and the headset act on it as before
+            _breath.clip = tc.Clip;
+            _breath.volume = Mathf.Clamp01((tc.Volume > 0f ? tc.Volume : 1f) * Plugin.BreathVolume.Value);
+            _breath.Play();
+            _breathUntil = Time.time + Mathf.Max(tc.Length, tc.Clip.length) + 0.1f;
             Breaths++;
+        }
+
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, BetterSource> SpeechRef = HarmonyLib.AccessTools.FieldRefAccess<Player, BetterSource>("_speechSource");
+
+        private static AudioSource SpeechSource(Player me)
+        {
+            try { BetterSource b = SpeechRef(me); return b != null ? b.source1 : null; }
+            catch { return null; }
         }
 
         private static void Build()
@@ -174,6 +219,6 @@ namespace RealSoundSimulation.Fixes
 
         public static string Summary() =>
             $"ADRENALINE (A {(Plugin.AdrenalineOn.Value ? "ON" : "off")}, heartbeat {(Plugin.HeartOn.Value ? $"ON x{Plugin.HeartVolume.Value:0.00}" : "off")}, hard breathing {(Plugin.HardBreathOn.Value ? "ON" : "off")}, settles over {Plugin.AdrenalineSeconds.Value:0} s): " +
-            $"close blasts {Blasts}, peak stress {Peak:0.00}, heartbeats {Beats} ({HeartSeconds:0} s), breaths {Breaths}\n";
+            $"close blasts {Blasts}, of them concussing (heartbeat) {Concussions}, peak stress {Peak:0.00}, heartbeats {Beats} ({HeartSeconds:0} s), breaths {Breaths} at x{Plugin.BreathVolume.Value:0.00}\n";
     }
 }
