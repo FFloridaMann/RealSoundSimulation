@@ -65,7 +65,8 @@ Built: works alongside Fika (review, 10 Nov 2026); off on a headless host (0.7.1
 - [ ] Two builds from one codebase (user, 11 Nov 2026), after the final tests: a **developer build** for the author alone (every setting, A/B switches, test keys, diagnostics; never published) and a **public build** with one short F12 page by what you hear (General, Your gun, Other guns, Explosions, Hearing, Footsteps and body sounds, Rain and ambience): an on/off per feature and one or two plain sliders each; every other value fixed at the tested setting
 - [ ] List every setting, what it does and what reads it
 - [ ] Remove decided A/B switches and their old code (`6g`, `9o`, `9p`, `9s`, `1d`, `1e`, `3n`, `3o` and the like)
-- [ ] Defaults = the tested setup; plain-language descriptions
+- [x] Defaults = the tested setup (11 Nov 2026): 25 defaults set to the author's tuned values; Sound quality High (author plays Ultra), ear ringing off; diagnostics and body sounds left as they were
+- [ ] Plain-language descriptions
 - [ ] Migrate renamed settings so values survive; back up the config first
 
 ---

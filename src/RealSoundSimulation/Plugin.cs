@@ -209,7 +209,7 @@ namespace RealSoundSimulation
             ConcussionPressureOn = Bind(s01, "Concussion - by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             SoftCutOn = Bind(s01, "Concussion - soft hearing cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
             BodySoundsOn = Bind(s01, "Footsteps and body sounds - simulated", false, "Other people's footsteps, gear, looting, voices, meds, food and reloads reach you the way gunshots do: through walls, doors, windows and floors by their material (from where the person really is), and round through doorways and stairwells, muffled by the route. Both ways at once when both are loud enough. Your own sounds don't change. Off = the game's own. Was F.");
-            EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", true, "Without a headset, loud shots near you bring in a ring: a faint one after a few shots, a strong one after a lot, and the world gets a bit quieter. Supersonic ammo rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. Small rooms ring more. A headset takes off half and stops the ring. Was 5r.");
+            EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", false, "Without a headset, loud shots near you bring in a ring: a faint one after a few shots, a strong one after a lot, and the world gets a bit quieter. Supersonic ammo rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. Small rooms ring more. A headset takes off half and stops the ring. Was 5r.");
             YourRoomOn = Bind(s01, "Concussion - your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
             ShotVariationOn = Bind(s01, "Shot variation - on", true, "Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so no two shots, or their echoes, sound exactly alike. Its tail and echoes share the same shot's change. Off = every shot identical, as in the game.");
             ShotPitchPct = Bind(s01, "Shot variation - pitch %", 2f, "How far each shot's pitch can vary, either way. 2 = up to 2% higher or lower. 0 = no pitch change.", R(0f, 6f));
@@ -217,7 +217,7 @@ namespace RealSoundSimulation
             ShotOverlapOn = Bind(s01, "Shots ring out under the next", true, "Every gun, yours and everyone else's. The game stops a shot dead when the same gun's next sound starts; with this on it rings out underneath. Off = the game's behaviour. Was 1e.");
             GunSounds = Bind(s01, "Gun recordings", GunSoundSet.SPT, "Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings, once built into the seb_sounds folder with tools/build_seb_sounds.py. Changes at the next trigger pull. Was 0.");
             SebOnFullAuto = Bind(s01, "Gun recordings - SEB on full-auto guns", false, "Also use SEB's recordings on guns that can fire full auto. Off because the game loops one recording while the trigger is held and SEB's are single shots, so bursts sound wrong. Was 0a.", null, adv);
-            RayQualityCfg = Bind(s01, "Sound quality", AcousticProbe.RayQuality.Medium, "How many sound paths are traced through the map each second. Higher = steadier, more accurate sound deep inside buildings, for more CPU. Low costs about half of Medium, High twice, Ultra four times. Was 9g.");
+            RayQualityCfg = Bind(s01, "Sound quality", AcousticProbe.RayQuality.High, "How many sound paths are traced through the map each second. Higher = steadier, more accurate sound deep inside buildings, for more CPU. Low costs about half of Medium, High twice, Ultra four times. Was 9g.");
             FoleyPresetsOn = Bind(s01, "Footsteps and handling like EFT 1.0", true, "Footsteps, gear and weapon handling use EFT 1.0's distance curves, stereo spread and 3D processing, from Sound Engine Backport by red_the_fox. Volumes stay the same. Restart the game to switch. Was 10a.");
             LogsOn = Bind(s01, "Bug report - logs", false, "Found a bug? Turn this on, play one raid, and press the Bug report - mark key (F10) wherever something sounds wrong. After the raid, send the newest Bug report zip from the RealSoundSimulation Logs folder in your SPT folder (next to EscapeFromTarkov.exe). Off for normal play. Starts at the next raid. Was Write logs.");
             MarkKey = Bind(s01, "Bug report - mark key", new KeyboardShortcut(KeyCode.F10), "With Bug report logs on, press this in raid wherever something sounds wrong. The spot is saved in the bug report with what the mod measured there. Change it here if F10 clashes with another mod. Was Mark key.");
@@ -230,14 +230,14 @@ namespace RealSoundSimulation
             MuzzleWeight = Bind(s02, "Mix - muzzle weight", 0.7f, "The room is measured at your head and at the muzzle. This is how much the muzzle counts. Was 3g.", R(0f, 1f), adv);
             MuzzleLobe = Bind(s02, "Mix - muzzle lobe", 1f, "How much the muzzle measure favours the directions in front of it. 0 = all round, 2 = tighter. Was 3k.", R(0f, 2f), adv);
             ThinSurfaceCount = Bind(s02, "Mix - thin surfaces count as walls", 0.5f, "How much glass, thin planks, cardboard and fabric count as walls. 1 = like concrete, 0 = like open air. Was 3f.", R(0f, 1f), adv);
-            SmallSpace = Bind(s02, "Mix - small space rule", SmallSpaceRule.Soft, "Only with Room tail off: small furnished spaces get less of the indoor recording. Current = down to half, Soft = at least 85%, Off = never. With the room tail on, small rooms always play the indoor recording. Was 3i.", null, adv);
+            SmallSpace = Bind(s02, "Mix - small space rule", SmallSpaceRule.Current, "Only with Room tail off: small furnished spaces get less of the indoor recording. Current = down to half, Soft = at least 85%, Off = never. With the room tail on, small rooms always play the indoor recording. Was 3i.", null, adv);
             BlendSteepness = Bind(s02, "Mix - blend steepness", 0.5f, "How quickly the mix leaves an even indoor/outdoor split. 0 = straight, 1 = steep. Was 3j.", R(0f, 1f), adv);
             OpenSkyLowersIndoor = Bind(s02, "Mix - open sky lowers the indoor mix", 1f, "How much open sky around you takes off the room part of your shot. Only with Mix - traced gunshots (test) on. Was 3n.", R(0f, 1f), adv);
-            ShotRingFollowsTurn = Bind(s02, "Mix - ring follows your turning", 1f, "Where your shot mixes indoor and outdoor, turning after the shot moves them around your head, and whichever is behind you gets duller. 0 = off. Was 3o.", R(0f, 1f), adv);
-            GunV2On = Bind(s02, "Mix - traced gunshots (test)", false, "Your shot's indoor/outdoor mix and the hard room boosts use the full sound tracer instead of the quicker 32-ray room measure. Was 9a.", null, adv);
+            ShotRingFollowsTurn = Bind(s02, "Mix - ring follows your turning", 0.37f, "Where your shot mixes indoor and outdoor, turning after the shot moves them around your head, and whichever is behind you gets duller. 0 = off. Was 3o.", R(0f, 1f), adv);
+            GunV2On = Bind(s02, "Mix - traced gunshots (test)", true, "Your shot's indoor/outdoor mix and the hard room boosts use the full sound tracer instead of the quicker 32-ray room measure. Was 9a.", null, adv);
             EchoOn = Bind(s02, "Echoes - on", true, "Your shots echo off the real surfaces around you (walls, ceilings, building faces, hills), each delayed by its distance and coloured by its material. Was 6.");
             EchoLevelDb = Bind(s02, "Echoes - volume dB", 0f, "Raise or lower all your echoes. 0 = the physical estimate. Was 6a.", R(-18f, 12f));
-            EchoMaxTaps = Bind(s02, "Echoes - per shot", 4, "The loudest this many reflections play for each shot. Was 6b.", N(1, 8));
+            EchoMaxTaps = Bind(s02, "Echoes - per shot", 5, "The loudest this many reflections play for each shot. Was 6b.", N(1, 8));
             EchoFar = Bind(s02, "Echoes - far (buildings and hills)", true, "Also echo off building faces, cliffs and hills 30 to 250 m away. Was 6d.", null, adv);
             EchoHardRoomDb = Bind(s02, "Echoes - hard room boost dB", 4f, "In bare concrete stairwells and corridors your echoes are louder and up to 3 more play, by how hard and closed the room is. Was 6e.", R(0f, 12f), adv);
             EchoDirectivityDb = Bind(s02, "Echoes - muzzle directivity dB", 10f, "How much quieter your muzzle blast is behind you than in front, so firing into a room sounds different from firing out of one. Was 6c.", R(0f, 20f), adv);
@@ -294,20 +294,20 @@ namespace RealSoundSimulation
             BlastOpeningStrength = Bind(s04, "Direction - doorway strength", 1f, "How far towards the opening the blast is moved. 1 = all the way, 0.5 = halfway. Was 6.4a.", R(0f, 1f), adv);
             BlastArrivalOn = Bind(s04, "Direction - arrives by its route", true, "A blast from a doorway or corner arrives after the extra distance, so the thump through the wall lands first. Was 6.4d.", null, adv);
             BlastCornerOn = Bind(s04, "Direction - around corners outdoors", true, "Outdoors, a blast behind a building comes from around its corner, muffled and quieter. Was 6.8.", null, adv);
-            BlastCornerLossDb = Bind(s04, "Direction - corner loss dB", 4f, "How much quieter a blast is coming around a corner; twice this with no way round. Was 6.8a.", R(0f, 18f), adv);
+            BlastCornerLossDb = Bind(s04, "Direction - corner loss dB", 3f, "How much quieter a blast is coming around a corner; twice this with no way round. Was 6.8a.", R(0f, 18f), adv);
             BlastDullOn = Bind(s04, "Direction - muffle by route", true, "The blast loses its highs by the way it got to you. Was 6.4b.", null, adv);
             BlastDullStrength = Bind(s04, "Direction - muffle strength", 0.5f, "How strongly the route muffles a blast. 1 = as much as gunshots, 0 = not at all. Was 6.4c.", R(0f, 2f), adv);
             ThumpExplosionDb = Bind(s04, "Thump - volume dB", 12f, "Extra volume for an explosion's low thump through walls. Was 6.2h.", R(-12f, 24f));
-            ThumpOpenDb = Bind(s04, "Thump - open air volume dB", -6f, "A blast with no wall in the way gets the thump too, this much quieter. Was 6.2i.", R(-24f, 6f), adv);
+            ThumpOpenDb = Bind(s04, "Thump - open air volume dB", -5.5f, "A blast with no wall in the way gets the thump too, this much quieter. Was 6.2i.", R(-24f, 6f), adv);
             ThumpExplosionCutoffHz = Bind(s04, "Thump - depth through walls Hz", 80f, "How deep an explosion's thump through a wall is. Lower = deeper; depends on your headset. Was 6.2c.", R(20f, 400f), adv);
-            ThumpOpenCutoffHz = Bind(s04, "Thump - depth in open air Hz", 80f, "How deep the thump is for a blast with no wall in the way, outdoors or in your room. Lower = deeper. Walled blasts use Explosion thump cutoff Hz in Doors and walls; while concussed, Felt thump cutoff Hz wins. Was 6.2k.", R(20f, 400f), adv);
-            FeltThumpCutoffHz = Bind(s04, "Thump - depth while concussed Hz", 80f, "How deep the explosion thump is while concussion cuts your hearing. Lower = deeper and duller. The normal thump uses Explosion thump cutoff Hz in Doors and walls. Was 6.9p.", R(20f, 400f), adv);
-            ThumpExplosionLengthS = Bind(s04, "Thump - length s", 1.5f, "How long an explosion's thump plays. It fades over the second half. Was 6.2j.", R(0.2f, 5f), adv);
+            ThumpOpenCutoffHz = Bind(s04, "Thump - depth in open air Hz", 70f, "How deep the thump is for a blast with no wall in the way, outdoors or in your room. Lower = deeper. Walled blasts use Explosion thump cutoff Hz in Doors and walls; while concussed, Felt thump cutoff Hz wins. Was 6.2k.", R(20f, 400f), adv);
+            FeltThumpCutoffHz = Bind(s04, "Thump - depth while concussed Hz", 105f, "How deep the explosion thump is while concussion cuts your hearing. Lower = deeper and duller. The normal thump uses Explosion thump cutoff Hz in Doors and walls. Was 6.9p.", R(20f, 400f), adv);
+            ThumpExplosionLengthS = Bind(s04, "Thump - length s", 2.2f, "How long an explosion's thump plays. It fades over the second half. Was 6.2j.", R(0.2f, 5f), adv);
             ThumpExplosionReach = Bind(s04, "Thump - reach through walls dB", 80f, "How much distance and wall an explosion's thump can get through. One concrete wall is about 24 to 36 dB, earth 75. Was 6.2g.", R(0f, 120f), adv);
             ExplosionEchoOn = Bind(s04, "Echoes - on", true, "Explosions echo off walls that both the blast and you can reach. Was 6.3.");
-            ExplosionEchoDb = Bind(s04, "Echoes - volume dB", 0f, "Raise or lower explosion echoes. Was 6.3a.", R(-24f, 12f));
+            ExplosionEchoDb = Bind(s04, "Echoes - volume dB", 12f, "Raise or lower explosion echoes. Was 6.3a.", R(-24f, 12f));
             ExplosionEchoCount = Bind(s04, "Echoes - per explosion", 6, "The loudest this many play. Was 6.3b.", N(1, 12), adv);
-            ExplosionEchoLengthS = Bind(s04, "Echoes - length s", 1.5f, "How long each echo lasts. Shorter = tighter, longer = bigger. Was 6.3c.", R(0.3f, 3f), adv);
+            ExplosionEchoLengthS = Bind(s04, "Echoes - length s", 1.8f, "How long each echo lasts. Shorter = tighter, longer = bigger. Was 6.3c.", R(0.3f, 3f), adv);
             ExplosionEchoRangeM = Bind(s04, "Echoes - range m", 120f, "How far away a blast can be and still echo. Was 6.3d.", R(20f, 250f), adv);
             RoomEchoOn = Bind(s04, "Echoes - room echoes from the doorway", true, "An explosion in another room also sends its room's reflections out through the opening. Was 6.3e.", null, adv);
             RoomEchoDb = Bind(s04, "Echoes - room echo volume dB", 0f, "Raise or lower the room echoes from the opening. Was 6.3f.", R(-24f, 12f), adv);
@@ -329,12 +329,12 @@ namespace RealSoundSimulation
             WorldHeardDb = Bind(s05, "Concussion - world heard at dB", -25f, "How far down the world (voices, footsteps, ambience) goes at most; a little further than the blast. Was 6.9t.", R(-50f, 0f), adv);
             MuffleHz = Bind(s05, "Concussion - muffled to Hz", 2500f, "How muffled everything gets at the worst of a close blast's cut; lighter cuts muffle less. Was 6.9t.", R(500f, 8000f), adv);
             CrackOn = Bind(s05, "Concussion - crack before the cut", true, "A blast close enough to cut your hearing is heard sharp for a split second first; the cut starts after it, as your ears' own reflex does. With a headset the crack is shorter and 6 dB quieter. Off = the cut starts at once. Was 6.9r.");
-            CrackMs = Bind(s05, "Concussion - crack length ms", 100f, "How long the blast is heard before the hearing cut starts. Was 6.9r.", R(0f, 250f), adv);
+            CrackMs = Bind(s05, "Concussion - crack length ms", 250f, "How long the blast is heard before the hearing cut starts. Was 6.9r.", R(0f, 250f), adv);
             AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
             HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
-            HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.6f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
+            HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.4f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
             HardBreathOn = Bind(s05, "Adrenaline - hard breathing", true, "After a big blast your character is out of breath in their own voice, then breathes normally again as the heartbeat settles, ending with it. Needs Adrenaline - after close blasts. Was A.");
-            AdrenalineSeconds = Bind(s05, "Adrenaline - settles over s", 17f, "How long the heartbeat takes to settle after the strongest blast, on a smooth curve (it holds 3 s first, so about 20 s in all). Was A.", R(5f, 60f), adv);
+            AdrenalineSeconds = Bind(s05, "Adrenaline - settles over s", 12f, "How long the heartbeat takes to settle after the strongest blast, on a smooth curve (it holds 3 s first, so about 20 s in all). Was A.", R(5f, 60f), adv);
             ShockCrackOn = Bind(s05, "Shock wave - sharp start", true, "The pressure hit starts with a short, bright crack that an opening or corner barely muffles (a wall still takes it), so a close blast bites before it booms. Was 6.9s.");
             ShockCrackDb = Bind(s05, "Shock wave - sharp start level dB", -6f, "How loud the crack is against the pressure hit. Was 6.9s.", R(-24f, 6f), adv);
             ShockLevelDb = Bind(s05, "Shock wave - pressure hit volume dB", 0f, "Full strength from 5 m in, weaker further out by real blast pressure. Was 6.9a.", R(-24f, 12f));
@@ -344,18 +344,18 @@ namespace RealSoundSimulation
             ShockRepeats = Bind(s05, "Shock wave - repeat hits", 3, "Indoors the shock arrives as a train of fading pulses, spaced by the size of the room. Was 6.9f.", N(0, 4), adv);
             ShockPushDb = Bind(s05, "Shock wave - slow push dB", 0f, "The long low swell after the hit in a closed space. -24 = off. Was 6.9g.", R(-24f, 12f), adv);
             ShockDuckDb = Bind(s05, "Shock wave - dip in other sounds dB", 8f, "How far other sounds dip for a moment when a close blast arrives. 0 = no dip. Was 6.9c.", R(0f, 24f), adv);
-            ConcussionPressureDb = Bind(s05, "Concussion - strength dB", 0f, "Makes blasts count as stronger or weaker for concussion. +6 is about like being two-thirds as far away. Was 6.9m.", R(-12f, 12f));
+            ConcussionPressureDb = Bind(s05, "Concussion - strength dB", 2.5f, "Makes blasts count as stronger or weaker for concussion. +6 is about like being two-thirds as far away. Was 6.9m.", R(-12f, 12f));
             HeadsetProtectionPct = Bind(s05, "Concussion - headset protection %", 75f, "With any headset on, how much of the hearing cut from a blast is taken away. 75 = the closest blast lowers your hearing by about 20 dB instead of going silent, and light blasts don't cut at all. Ear ringing already never plays with a headset. 0 = headsets don't help. Was 6.9q.", R(0f, 100f));
             EarsReachDb = Bind(s05, "Concussion - ears reach dB", 6f, "How much further the hearing cut and ringing reach than full concussion. Was 6.9l.", R(0f, 18f), adv);
-            YourRoomDb = Bind(s05, "Concussion - your room build-up dB", 3f, "The most your own room adds to a blast that comes in from elsewhere, in a very small closed room. Was 6.9o.", R(0f, 6f), adv);
-            BlastTailFadeS = Bind(s05, "Concussion - blast tail fade s", 0.8f, "How long the blast's tail and echoes take to fade when concussion cuts your hearing. Was 6.9i.", R(0.1f, 3f), adv);
+            YourRoomDb = Bind(s05, "Concussion - your room build-up dB", 1.5f, "The most your own room adds to a blast that comes in from elsewhere, in a very small closed room. Was 6.9o.", R(0f, 6f), adv);
+            BlastTailFadeS = Bind(s05, "Concussion - blast tail fade s", 3f, "How long the blast's tail and echoes take to fade when concussion cuts your hearing. Was 6.9i.", R(0.1f, 3f), adv);
             FeltThroughCutDb = Bind(s05, "Concussion - felt through the cut dB", 0f, "Volume of the thump and pressure hit you still feel when concussion cuts your hearing. Was 6.9j.", R(-24f, 12f), adv);
 
             // 06 | FRAGMENTS AND GLASS
             FragmentPassOn = Bind(s06, "Pass-bys - on", true, "Fragments that pass you whizz along their real flight path, and crack when they come very close. Was 6.7f.");
-            FragmentPassDb = Bind(s06, "Pass-bys - volume dB", 0f, "How loud a fragment passing 1 m away is. Was 6.7g.", R(-24f, 12f), adv);
+            FragmentPassDb = Bind(s06, "Pass-bys - volume dB", 1.5f, "How loud a fragment passing 1 m away is. Was 6.7g.", R(-24f, 12f), adv);
             FragmentPassReachM = Bind(s06, "Pass-bys - reach m", 5f, "How close a fragment has to pass to be heard. Was 6.7h.", R(1f, 15f), adv);
-            FragmentPassCount = Bind(s06, "Pass-bys - per grenade", 4, "The most that play per grenade, so it doesn't turn to mush. Was 6.7i.", N(1, 12), adv);
+            FragmentPassCount = Bind(s06, "Pass-bys - per grenade", 6, "The most that play per grenade, so it doesn't turn to mush. Was 6.7i.", N(1, 12), adv);
             FragmentRouteOn = Bind(s06, "Fragment hits - from other rooms", true, "Fragments hitting things in another room come from the opening, muffled by the route. Was 6.7c.", null, adv);
             FragmentDullStrength = Bind(s06, "Fragment hits - muffle strength", 1f, "How strongly the route muffles a fragment hit. Was 6.7d.", R(0f, 2f), adv);
             FragmentLossDb = Bind(s06, "Fragment hits - loss per opening dB", 4f, "How much quieter a fragment hit gets for each opening on its way to you. Was 6.7e.", R(0f, 12f), adv);
@@ -365,7 +365,7 @@ namespace RealSoundSimulation
 
             // 07 | RAIN AND OUTDOORS
             ExposureMixOn = Bind(s07, "Outdoors - sound heard indoors", true, "Outdoor sound follows how open the space around you is and comes from the open directions, so nothing switches at the doorway. Was 8.");
-            AmbienceV2On = Bind(s07, "Outdoors - traced ambience", false, "Rain, wind and the outdoor background are set by the sound tracer: how much reaches you, from where, and how muffled. Needs Outdoors - sound heard indoors and Doors and walls > Doorways - smooth on. Was 9.");
+            AmbienceV2On = Bind(s07, "Outdoors - traced ambience", true, "Rain, wind and the outdoor background are set by the sound tracer: how much reaches you, from where, and how muffled. Needs Outdoors - sound heard indoors and Doors and walls > Doorways - smooth on. Was 9.");
             DirectionCueStrength = Bind(s07, "Outdoors - direction cue", 0.6f, "How strongly outdoor sound is panned toward the open side, and duller when it's behind you. 0 = off. Was 8a.", R(0f, 1f), adv);
             ThroughGlass = Bind(s07, "Outdoors - through glass", 0.45f, "How much outdoor sound an intact window lets through compared with an opening. Was 8c.", R(0f, 1f), adv);
             IndoorFadeNearOpenings = Bind(s07, "Outdoors - indoor sound fade near openings", 0.6f, "How early room tone, indoor wind and roof rain fade as the space opens up. 0 = only when you're almost outside. Was 8d.", R(0f, 1f), adv);
@@ -373,7 +373,7 @@ namespace RealSoundSimulation
             OpeningHrtf = Bind(s07, "Outdoors - 3D on opening sounds", true, "Run the sound from openings through the game's 3D audio for front/back and up/down. Off = plain left/right. Was 8f.", null, adv);
             IndoorWindFollowsOpenings = Bind(s07, "Outdoors - indoor wind follows openings", true, "A room's draught sound follows how much of the outside reaches you, so it fades deep in a stairwell. Was 8g.", null, adv);
             RoofRainLevel = Bind(s07, "Roof rain - volume", 0.3f, "How loud rain on the roof is, before the roof, floors and material are applied. Was 9t.", R(0f, 1f));
-            RoofRainByMaterial = Bind(s07, "Roof rain - roof material matters", 1f, "Rain is louder on a thin metal roof and quieter on a soft one. 0 = every roof the same. Was 9r.", R(0f, 1.5f));
+            RoofRainByMaterial = Bind(s07, "Roof rain - roof material matters", 1.5f, "Rain is louder on a thin metal roof and quieter on a soft one. 0 = every roof the same. Was 9r.", R(0f, 1.5f));
             RainFixOn = Bind(s07, "Roof rain - fix cutting out", true, "Fixes a game bug where rain on the roof fades to silence when you move between some rooms. Was 7.", null, adv);
             RoofRainFromProbe = Bind(s07, "Roof rain - traced from the roof", true, "Rain on the roof is traced from the roof itself: full right under it, partly under a mezzanine, down the stairwell from below. Off = a simple count of floors above. Was 9i.", null, adv);
             RoofCountsFloors = Bind(s07, "Roof rain - counts floors above", true, "Each floor above takes off an amount by its material, so rain fades gradually the more floors there are. Was 9p.", null, adv);
@@ -382,7 +382,7 @@ namespace RealSoundSimulation
             RoofCountsLowDetail = Bind(s07, "Roof rain - count low-detail floors", true, "Also count large low-detail floors, which much of the Capital is built from. Was 9v.", null, adv);
             RoofRainNoRainRooms = Bind(s07, "Roof rain - respect no-rain rooms", true, "Roof rain fades out in rooms the game gives no rain. Was 9w.", null, adv);
             RoofRainUnderFloors = Bind(s07, "Roof rain - under one floor", 0.3f, "Roof rain volume with one floor above you, when it isn't traced from the roof. Was 8b.", R(0f, 1f), adv);
-            RoofBedMode = Bind(s07, "Roof rain - panning", BedDirection.Mode.UnityPanner, "The same choice for roof rain, where up and down matter most. Was 9m.", null, adv);
+            RoofBedMode = Bind(s07, "Roof rain - panning", BedDirection.Mode.MetaHrtf, "The same choice for roof rain, where up and down matter most. Was 9m.", null, adv);
             RainFromOpenings = Bind(s07, "Rain - from the window it comes in by", true, "Indoors, rain and wind come from the window or door they get in by. Off = from the direction they reach you. Was 9j.", null, adv);
             RainThroughBuildingDb = Bind(s07, "Rain - through the building dB", -32f, "Deep inside, outdoor sound never drops below this, as a low rumble through the structure. -60 = off. Was 9l.", R(-60f, -20f), adv);
 
@@ -405,7 +405,7 @@ namespace RealSoundSimulation
             DirectionStrength = Bind(s09, "Direction strength", 1f, "How clearly outdoor sound and roof rain come from the openings indoors. 0 = always all round. Was 9h.", R(0f, 3f), adv);
             BedDirectional = Bind(s09, "Outdoor sounds directional", 1f, "How far the game's own outdoor sounds become positioned sound from the open directions as you go inside. 0 = flat stereo. Was 9b.", R(0f, 1f), adv);
             BedMode = Bind(s09, "Outdoor sounds panning", BedDirection.Mode.UnityPanner, "UnityPanner = left/right with width, duller from behind. MetaHrtf = the game's 3D audio with front/back and up/down. Was 9c.", null, adv);
-            GlassLossDb = Bind(s09, "Glass loss dB", 22f, "How much quieter outdoor sound is through closed glass. Broken windows let it through. Was 9d.", R(0f, 40f), adv);
+            GlassLossDb = Bind(s09, "Glass loss dB", 25f, "How much quieter outdoor sound is through closed glass. Broken windows let it through. Was 9d.", R(0f, 40f), adv);
             RoomBuildUp = Bind(s09, "Build-up in rooms", 1f, "How much sound coming in builds up by bouncing inside: a bare concrete garage gets loud, a furnished room doesn't. 1 = as measured. Was 9e.", R(0f, 2f), adv);
             DeepBounceDulling = Bind(s09, "Deep bounce dulling", 0.8f, "Each bounce past the third gets duller by this much, so rooms deep inside rumble rather than hiss. 1 = off. Was 9n.", R(0.3f, 1f), adv);
             GuidedRays = Bind(s09, "Guided rays", true, "Aim a third of the traced paths at openings already found, for steadier sound deep inside. Was 9f.", null, adv);
