@@ -171,7 +171,7 @@ namespace RealSoundSimulation.Fixes
         {
             Measure(h.Pos);
             Dose(h.Dist, h.Walls, h.LossDb, h.WallFade, w, h.Listener, out float dose, out float duration);
-            Adrenaline.Blast(dose); // 0.7.22 "A"
+            Adrenaline.Blast(dose, h.Pos); // 0.7.22 "A"; the place, to tell your own grenades
             if (_youState == "added") YourRoomAdded++; else if (_youState == "same room") YourRoomSame++;
             bool felt = ConcussionProof.WillCut(h.Dist, dose);
             if (felt) ConcussionProof.Crack(h.Played); // 0.7.22 "6.9r": heard before the cut

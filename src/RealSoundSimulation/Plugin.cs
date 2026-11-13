@@ -137,6 +137,8 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> AdrenalineOn, HeartOn, HardBreathOn; // 0.7.22 "A"
         internal static ConfigEntry<float> HeartVolume, AdrenalineSeconds, BreathVolume; // 0.7.22 "A"
         internal static ConfigEntry<float> EarRingLongestS; // 11 Nov 2026, replaces EarRingRecovery
+        internal static ConfigEntry<float> OwnGrenadeShare, HeartLowCutHz, HeartBodyHz, HeartDubPitch, HeartLength, HeartTexture, HeartGapS; // 13 Nov 2026
+        internal static ConfigEntry<bool> AdrenalineUnderFireOn; // 13 Nov 2026
         internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb, ShockCornerDb, ShockEnclosedDb, ShockPushDb; // 0.6.54 "6.9d", "6.9e", "6.9g"
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
@@ -334,6 +336,14 @@ namespace RealSoundSimulation
             AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
             HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
             HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.4f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
+            OwnGrenadeShare = Bind(s05, "Adrenaline - your own grenades", 0.4f, "How much a grenade you threw yourself counts, since you knew it was coming. 1 = like anyone else's, 0 = not at all. Was A.", R(0f, 1f));
+            AdrenalineUnderFireOn = Bind(s05, "Adrenaline - stays up under fire", true, "Once a blast has your heart racing, being hit keeps it up (about 110 beats a minute) and bullets passing close keep it up a little (about 95), until the shooting stops. Was A.");
+            HeartLowCutHz = Bind(s05, "Heartbeat - low cut Hz", 55f, "Tone: the deep bass below this is taken out. Higher = less boomy. Changes apply at the next heartbeat. Was A.", R(10f, 150f), adv);
+            HeartBodyHz = Bind(s05, "Heartbeat - body Hz", 85f, "Tone: where the thump's body sits. Higher = lighter, lower = deeper. Was A.", R(30f, 250f), adv);
+            HeartDubPitch = Bind(s05, "Heartbeat - second beat pitch", 0.85f, "Tone: the second sound of each beat against the first. Below 1 = deeper (more bass), above 1 = higher. Was A.", R(0.4f, 2f), adv);
+            HeartLength = Bind(s05, "Heartbeat - beat length", 1f, "Tone: how long each thump swells and rings. Was A.", R(0.4f, 2.5f), adv);
+            HeartTexture = Bind(s05, "Heartbeat - texture", 0.25f, "Tone: 0 = a smooth swell, 1 = a rough throbbing one. Was A.", R(0f, 1f), adv);
+            HeartGapS = Bind(s05, "Heartbeat - lub-dub gap s", 0.24f, "Time between the two sounds of each beat; it stays the same at any heart rate. Was A.", R(0.12f, 0.45f), adv);
             BreathVolume = Bind(s05, "Adrenaline - breathing volume", 1.5f, "How loud your character's breathing after a blast is, against the game's own breathing level (1 = the same). Was A.", R(0f, 3f));
             HardBreathOn = Bind(s05, "Adrenaline - hard breathing", true, "After a big blast your character is out of breath in their own voice, then breathes normally again as the heartbeat settles, ending with it. Needs Adrenaline - after close blasts. Was A.");
             AdrenalineSeconds = Bind(s05, "Adrenaline - settles over s", 12f, "How long the heartbeat takes to settle after the strongest blast, on a smooth curve (it holds 3 s first, so about 20 s in all). Was A.", R(5f, 60f), adv);
@@ -471,6 +481,7 @@ namespace RealSoundSimulation
             Safe("6.6 blast recording", () => BlastRecording.Apply(Harmony)); // 0.6.49
             Safe("6.9h soft concussion cut", () => ConcussionProof.Apply(Harmony)); // 0.6.55; the patch itself waits for the first raid
             Safe("5r gunfire hearing", () => GunfireHearing.Apply(Harmony)); // 0.7.13
+            Safe("A adrenaline", () => Adrenaline.Apply(Harmony)); // 13 Nov 2026: own grenades, hits, near misses
             Safe("F body sounds", () => BodySounds.Apply(Harmony)); // 0.7.15
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
