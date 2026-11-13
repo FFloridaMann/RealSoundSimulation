@@ -146,16 +146,6 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> ConcussionPressureDb, EarsReachDb; // 0.6.60 "6.9m", "6.9l"
         internal static ConfigEntry<float> HeadsetProtectionPct; // 0.7.10 "6.9q"
         internal static ConfigEntry<bool> EarRingOn; // 0.7.13 "5r"
-        internal static ConfigEntry<bool> BodySoundsOn; // 0.7.15 "F"
-        internal static ConfigEntry<float> BodySoundsRangeM, BodySoundsFloorStrength; // 0.7.15 "Fa", "Fb"
-        internal static ConfigEntry<bool> BodySecondOn; // 0.7.17 "Fc"
-        internal static ConfigEntry<bool> BodySteepOn; // 0.7.19 "Fg"
-        internal static ConfigEntry<bool> BodyThudOn, BodyHeightOn; // 0.7.22 "Fi", "Fj"
-        internal static ConfigEntry<float> BodyThudDb, BodyHeightDb; // 0.7.22
-        internal static ConfigEntry<KeyboardShortcut> BodyHeightTestKey; // 0.7.22 "Fk"
-        internal static ConfigEntry<bool> BodyFloorMuffleOn, BodyFloorToneOn, BodyBoomOn; // 0.7.22 "Fm", "Fo", "Fn"
-        internal static ConfigEntry<float> BodyFloorBright; // 0.7.22 "Fm"
-        internal static ConfigEntry<float> BodySecondWithinDb, BodySecondRangeM; // 0.7.17 "Fd", "Fe"
         internal static ConfigEntry<float> EarRingVolume, EarRingStrength, EarRingDullDb, EarRingNearbyM; // 0.7.13 "5s"-"5w"
         internal static ConfigEntry<bool> YourRoomOn; // 0.7.1 "6.9n"
         internal static ConfigEntry<bool> ShotVariationOn; // 0.7.3
@@ -212,7 +202,6 @@ namespace RealSoundSimulation
             // 01 | GENERAL
             ConcussionPressureOn = Bind(s01, "Concussion - by blast pressure", true, "How concussive a blast is comes from the pressure that reaches you: walls protect you, doors and corners help, small closed rooms hit hardest. Needs Bring Back Concussion. Was 6.9k.");
             SoftCutOn = Bind(s01, "Concussion - soft hearing cut", true, "When concussion cuts your hearing, the world goes at once but the blast's tail fades instead of snapping off, and you still feel its thump. Needs Bring Back Concussion. Was 6.9h.");
-            BodySoundsOn = Bind(s01, "Footsteps and body sounds - simulated", false, "Other people's footsteps, gear, looting, voices, meds, food and reloads reach you the way gunshots do: through walls, doors, windows and floors by their material (from where the person really is), and round through doorways and stairwells, muffled by the route. Both ways at once when both are loud enough. Your own sounds don't change. Off = the game's own. Was F.");
             EarRingOn = Bind(s01, "Ear ringing - from gunfire without a headset", false, "Without a headset, loud shots near you bring in a ring: a faint one after a few shots, a strong one after a lot, and the world gets a bit quieter. Supersonic ammo rings quickest, subsonic a little slower, a suppressor slower still, subsonic with a suppressor not at all. Small rooms ring more. A headset takes off half and stops the ring. Was 5r.");
             YourRoomOn = Bind(s01, "Concussion - your room builds up blasts", true, "A blast that gets into a small closed room you're in, through a door or window, bounces around it and hits a bit harder and longer. Needs Bring Back Concussion. Was 6.9n.");
             ShotVariationOn = Bind(s01, "Shot variation - on", true, "Every gun, yours and everyone else's: each shot gets a small random pitch and volume change before the simulation, so no two shots, or their echoes, sound exactly alike. Its tail and echoes share the same shot's change. Off = every shot identical, as in the game.");
@@ -261,21 +250,6 @@ namespace RealSoundSimulation
             PortalStrength = Bind(s03, "Direction - doorway strength", 1f, "How far towards the opening the shot is moved. 1 = all the way, 0.5 = halfway. Was 6.1a.", R(0f, 1f), adv);
             GunCornerOn = Bind(s03, "Direction - around corners outdoors", true, "Outdoors, a shot from behind a building comes from around its corner, muffled. Was 6.8b.", null, adv);
             TailHandoffOn = Bind(s03, "Tails - ring out on a spare voice", true, "When another gun fires again while its last shot is still ringing, that ring finishes on a spare voice instead of being cut off. Needs Shots ring out under the next. Off = cut as before. Was 1f.");
-            BodySoundsRangeM = Bind(s08, "Body sounds - range m", 40f, "Footsteps and body sounds are simulated for people within this distance. Was Fa.", R(10f, 80f), adv);
-            BodySoundsFloorStrength = Bind(s08, "Body sounds - wall and floor muffling", 1f, "How much a wall, door, window, floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
-            BodySteepOn = Bind(s08, "Body sounds - steeper above and below", false, "Only for the F8 test now: since 0.7.22 every body sound stays where the person is. Needs Footsteps and body sounds - simulated. Was Fg.");
-            BodyThudOn = Bind(s08, "Body sounds - knock from above", true, "Each footstep on a floor above you adds a short, sharp knock, as a ceiling does. Within 35 m. Needs Footsteps and body sounds - simulated. Was Fi.");
-            BodyBoomOn = Bind(s08, "Body sounds - boom from below", true, "Each footstep on a floor below you adds a soft, slower, deeper boom. A knock means above, a boom means below. Within 35 m. Needs Footsteps and body sounds - simulated. Was Fn.");
-            BodyThudDb = Bind(s08, "Body sounds - knock and boom level dB", -6f, "How loud the knock is against the footstep before the floor muffles it (the boom is 6 dB quieter; each extra floor 6 dB less). Was Fi.", R(-24f, 6f), adv);
-            BodyFloorMuffleOn = Bind(s08, "Body sounds - muffling by floors", true, "Through a floor, sounds are muffled by how many floors are between you and whether they're above or below: footsteps from above clearer, from below duller, two floors more than one. Off = by the measured wall loss (0.7.19), which reads nearly the same for everyone far off. Needs Footsteps and body sounds - simulated. Was Fm.");
-            BodyFloorBright = Bind(s08, "Body sounds - through-floor brightness", 0.7f, "Scales the muffling by floors: 0.7 = footsteps one floor above about 840 Hz, below about 315 Hz; lower = more muffled and more realistic, 1 = clearer. Was Fm.", R(0.25f, 2f), adv);
-            BodyFloorToneOn = Bind(s08, "Body sounds - floor tone", true, "Sound through a floor gets the slab's ring: a knocky tone from above, a hollow boom from below. Sound through a wall on your own floor stays plain. Needs Footsteps and body sounds - simulated. Was Fo.");
-            BodyHeightOn = Bind(s08, "Body sounds - height layer", true, "Adds a short, faint 3-9 kHz copy of each footstep, voice, gear and meds or food sound from another floor, placed nearly straight above or below you in their real direction. A headset tells up from down only from high sounds, which a floor takes away. Not realistic: a hearing aid for height. Needs Footsteps and body sounds - simulated. Was Fj.");
-            BodyHeightDb = Bind(s08, "Body sounds - height layer level dB", -12f, "How loud the height layer is against the sound before the floor muffles it (4 dB less per extra floor). Was Fj.", R(-30f, 0f), adv);
-            BodyHeightTestKey = Bind(s08, "Body sounds - height test key", new KeyboardShortcut(KeyCode.F8), "In raid: plays three of your footsteps one floor above you 20 m to your right, then three one floor below, as in a raid with the switches as set; then the same plain, without the floor cues, to compare. Take a step first. Was Fk.");
-            BodySecondOn = Bind(s08, "Body sounds - both ways at once", false, "A body sound that reaches you both through a wall and round through a doorway plays both ways, when the quieter way is loud enough to hear. Off = only the louder way. Needs Footsteps and body sounds - simulated. Was Fc.");
-            BodySecondWithinDb = Bind(s08, "Body sounds - second way within dB", 10f, "The quieter way plays only if it is at most this much quieter than the louder one. Was Fd.", R(0f, 30f), adv);
-            BodySecondRangeM = Bind(s08, "Body sounds - second way range m", 25f, "The quieter way plays only for people this close. Was Fe.", R(5f, 60f), adv);
             RouteDullOn = Bind(s03, "Muffling - by route", true, "A shot from another room loses its highs by the way it got to you: a wall on the straight line, each turn and each extra opening. Was 6.1b.");
             RouteDullStrength = Bind(s03, "Muffling - strength", 1f, "How strongly the route muffles a shot. 0 = not at all, 2 = twice as much. Was 6.1c.", R(0f, 2f), adv);
             RouteDullMinHz = Bind(s03, "Muffling - most muffled Hz", 800f, "The most a route can muffle a shot. Lower = more muffled on long routes. Was 6.1d.", R(400f, 4000f), adv);
@@ -485,7 +459,6 @@ namespace RealSoundSimulation
             Safe("5r gunfire hearing", () => GunfireHearing.Apply(Harmony)); // 0.7.13
             Safe("6.9u game ring", () => GameRing.Apply(Harmony)); // 13 Nov 2026; if this fails the game runs its own ring
             Safe("A adrenaline", () => Adrenaline.Apply(Harmony)); // 13 Nov 2026: own grenades, hits, near misses
-            Safe("F body sounds", () => BodySounds.Apply(Harmony)); // 0.7.15
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
             gameObject.AddComponent<DiagRunner>();
@@ -506,7 +479,6 @@ namespace RealSoundSimulation
             gameObject.AddComponent<MixerOwnerRunner>(); // 13 Nov 2026: writes the mixer for the cut, the crack, the ring, the dip and gunfire, last in the frame
             gameObject.AddComponent<GunfireHearing>(); // 0.7.13
             gameObject.AddComponent<Adrenaline>(); // 0.7.22 "A"
-            gameObject.AddComponent<BodySounds>(); // 0.7.15; runs after PortalPositioning
             gameObject.AddComponent<OwnShotTurn>(); // 0.6.30
             Log.LogInfo("Real Sound Simulation loaded");
         }
@@ -546,7 +518,7 @@ namespace RealSoundSimulation
             $"6.3h bot echoes {(BotEchoOn.Value ? $"ON ({BotEchoDb.Value:+0;-0;0} dB, {BotEchoCount.Value} per bot, ceiling {BotEchoCeiling.Value}, {BotEchoRangeM.Value:0} m, gate {BotEchoGateDb.Value:0} dB, {BotEchoLengthS.Value:0.0} s)" : "off")}, your gun keeps {OwnEchoShare.Value}, replace quietest {(EchoReplaceOn.Value ? "ON" : "off")} | " +
             $"6.3e room echoes {(RoomEchoOn.Value ? $"ON ({RoomEchoDb.Value:+0;-0;0} dB, {RoomEchoCount.Value})" : "off")} | " +
             $"6.6 blast recording {(BlastRecordingOn.Value ? $"ON (outdoor from {BlastOutdoorShare.Value:0.00}, close to {BlastCloseReachM.Value:0} m, outside pull {BlastOutsidePull.Value:0.00})" : "off")} | " +
-            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")}, 6.9k concussion by pressure {(ConcussionPressureOn.Value ? $"ON ({ConcussionPressureDb.Value:+0;-0;0} dB, ears +{EarsReachDb.Value:0} dB)" : "off")}, 6.9q headset protection {HeadsetProtectionPct.Value:0}%, 5r gunfire hearing {(EarRingOn.Value ? "ON" : "off")}, F body sounds {(BodySoundsOn.Value ? "ON" : "off")} | " +
+            $"6.9 shock wave {(ShockOn.Value ? $"ON ({ShockLevelDb.Value:+0;-0;0} dB, reach {ShockReachM.Value:0} m, corner {ShockCornerDb.Value:0} dB, enclosed +{ShockEnclosedDb.Value:0} dB, {ShockRepeats.Value} repeats, push {ShockPushDb.Value:+0;-0;0} dB, dip {ShockDuckDb.Value:0} dB)" : "off")}, 6.9h soft concussion cut {(SoftCutOn.Value ? $"ON (tail {BlastTailFadeS.Value:0.0} s, felt {FeltThroughCutDb.Value:+0;-0;0} dB)" : "off")}, 6.9k concussion by pressure {(ConcussionPressureOn.Value ? $"ON ({ConcussionPressureDb.Value:+0;-0;0} dB, ears +{EarsReachDb.Value:0} dB)" : "off")}, 6.9q headset protection {HeadsetProtectionPct.Value:0}%, 5r gunfire hearing {(EarRingOn.Value ? "ON" : "off")} | " +
             $"6.7c fragment hits by route {(FragmentRouteOn.Value ? $"ON (dull x{FragmentDullStrength.Value:0.00}, {FragmentLossDb.Value:0} dB per opening)" : "off")}, 6.7f pass-bys {(FragmentPassOn.Value ? $"ON ({FragmentPassDb.Value:+0;-0;0} dB, {FragmentPassReachM.Value:0.0} m, {FragmentPassCount.Value} per grenade)" : "off")} | " +
             $"6.8 blasts around a corner {(BlastCornerOn.Value ? $"ON ({BlastCornerLossDb.Value:0} dB)" : "off")}, bot gunshots {(GunCornerOn.Value ? "ON" : "off")}, 6.4d arrival by route {(BlastArrivalOn.Value ? "ON" : "off")} | " +
             $"6.7 glass by route {(GlassRouteOn.Value ? $"ON (dull x{GlassDullStrength.Value:0.00}, {GlassLossDb2.Value:0} dB per opening)" : "off")} | " +

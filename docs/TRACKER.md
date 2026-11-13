@@ -50,9 +50,9 @@ Built: from the opening, dulled by route (`6.4`); bounces (`6.2i`); the right re
 Built: any headset takes away ringing and most of a blast's hearing cut (`6.9q`); ear ringing from gunfire without a headset, by calibre, muzzle device and ammo (`5r`).
 - [ ] Final test: a few shots, then a lot, without a headset (rifle, pistol, subsonic, suppressed); a close grenade with and without one
 
-## Footsteps and body sounds (switch, off by default)
+## Footsteps and body sounds (on branch body-sounds, not in main)
 Built: footsteps, gear, looting, voices, meds and food from the opening, through walls and through floors (0.7.15-0.7.20); above or below: muffling by floors, floor tone, knock from above and boom from below, a height layer, the F8 test (0.7.22).
-- [x] Decided (user, 11 Nov 2026, after the Customs raid and "one person, one place"): "I really dont like the footstep sounds I think they are better off". Off for 1.0; finish after release (developer build only until then)
+- [x] Decided (user, 11 Nov 2026, after the Customs raid and "one person, one place"): "I really dont like the footstep sounds I think they are better off". Off for 1.0; finish after release (developer build only until then). Moved off main to the `body-sounds` branch on 13 Nov 2026 (code review step 2), so changes to the shared echo voices no longer have to keep it working; bring it back from there after 1.0
 
 ## Fika and co-op
 Built: works alongside Fika (review, 10 Nov 2026); off on a headless host (0.7.11); other players' guns echo and rank above bots (0.7.16 work, not committed).

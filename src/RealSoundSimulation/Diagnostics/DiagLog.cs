@@ -30,7 +30,6 @@ namespace RealSoundSimulation.Diagnostics
             ["roomtone.csv"] = Fixes.RoomTone.Header,
             ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["botshots.csv"] = BotShots.Header,
-            ["body.csv"] = Fixes.BodySounds.Header, // 0.7.19
             ["blastmix.csv"] = Fixes.ConcussionProof.MixHeader, // 0.7.22
             ["headsetmix.csv"] = Fixes.ConcussionProof.HeadsetHeader, // 0.7.22
             ["mixer.csv"] = Fixes.MixerOwner.Header, // 13 Nov 2026
