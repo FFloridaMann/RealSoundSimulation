@@ -173,9 +173,8 @@ namespace RealSoundSimulation.Fixes
             bool felt = ConcussionProof.WillCut(h.Dist, dose);
             if (felt) ConcussionProof.Crack(h.Played); // 0.7.22 "6.9r": heard before the cut
             ConcussionProof.Deliver(h.Pos, dose, duration);
-            if (felt) { ConcussionProof.FeltOn(); ConcussionProof.Felt++; }
-            try { FireCore(h, w, dose); }
-            finally { if (felt) ConcussionProof.FeltOff(); }
+            if (felt) ConcussionProof.Felt++;
+            FireCore(h, w, dose, ConcussionProof.FeltGroup(felt), ConcussionProof.FeltTrim);
         }
 
         // 0.6.60: how hard a blast hits you, for concussion. Same way through the building as the hit, but on the research (FIXES.md): a confined space raises the peak only a little and mostly makes the pressure last.
@@ -281,7 +280,7 @@ namespace RealSoundSimulation.Fixes
             return lo;
         }
 
-        private static void FireCore(Held h, Way w, float dose)
+        private static void FireCore(Held h, Way w, float dose, UnityEngine.Audio.AudioMixerGroup output, float outTrim)
         {
             if (h.Listener == null) return;
             float reach = Plugin.ShockReachM.Value;
@@ -320,15 +319,15 @@ namespace RealSoundSimulation.Fixes
             lean = lean.sqrMagnitude > 0.001f ? lean.normalized : fwd;
             float delay = usesWay && w.Kind == WayKind.Route ? Mathf.Max(path - HeadStartM, 0f) / OwnEchoes.SpeedOfSound : h.Delay;
             double now = AudioSettings.dspTime, start = Math.Max(h.Played + delay, now);
-            EchoVoices.Play(_hit, _hit, l + lean, start, _hit.length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true);
+            EchoVoices.Play(_hit, _hit, l + lean, start, _hit.length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, output: output, trim: outTrim);
             // 0.7.22 "6.9s": the front's crack, little muffled by an opening or corner (a wall still takes it); not raised by the felt trim
             if (Plugin.ShockCrackOn.Value && usesWay)
             {
-                float trim = EchoVoices.OutputOverride != null ? Mathf.Max(EchoVoices.VolumeTrim, 1e-3f) : 1f;
+                float trim = output != null ? Mathf.Max(outTrim, 1e-3f) : 1f;
                 float cv = Mathf.Clamp01(vol * Mathf.Pow(10f, Plugin.ShockCrackDb.Value / 20f) / trim);
                 if (cv >= MinVolume)
                 {
-                    EchoVoices.Play(_crack, _crack, l + lean, start, _crack.length, false, cv, 1f, open ? OpenHz : Mathf.Max(cutoff * CrackOpenUp, CrackMinHz), delay, minCutoff: 20f, ignoreCap: true);
+                    EchoVoices.Play(_crack, _crack, l + lean, start, _crack.length, false, cv, 1f, open ? OpenHz : Mathf.Max(cutoff * CrackOpenUp, CrackMinHz), delay, minCutoff: 20f, ignoreCap: true, output: output, trim: outTrim);
                     Cracked++;
                 }
             }
@@ -346,7 +345,7 @@ namespace RealSoundSimulation.Fixes
                     if (v < MinVolume) continue;
                     Vector3 side = Quaternion.AngleAxis((i % 2 == 0 ? 1f : -1f) * (20f + 15f * i), Vector3.up) * lean;
                     float t = (float)(gap * RepeatAt[i]);
-                    EchoVoices.Play(_slap, _slap, l + side, start + t, _slap.length, false, v, 1f, Mathf.Max(cutoff * Mathf.Pow(RepeatDull, i + 1), ThroughWallHz), delay + t, minCutoff: 20f);
+                    EchoVoices.Play(_slap, _slap, l + side, start + t, _slap.length, false, v, 1f, Mathf.Max(cutoff * Mathf.Pow(RepeatDull, i + 1), ThroughWallHz), delay + t, minCutoff: 20f, output: output, trim: outTrim);
                     if (!EchoVoices.LastDropped) { repeats++; Repeats++; }
                 }
 
@@ -358,7 +357,7 @@ namespace RealSoundSimulation.Fixes
                     float len = Mathf.Clamp(Mathf.Lerp(0.25f, 0.7f, small) + 0.15f * shut, 0.2f, 1.1f);
                     if (v >= MinVolume)
                     {
-                        EchoVoices.Play(_push, _push, l + lean, start + 0.02, len, false, v, 1f, OpenHz, delay, minCutoff: 20f, ignoreCap: true, fadeS: len * 0.5f);
+                        EchoVoices.Play(_push, _push, l + lean, start + 0.02, len, false, v, 1f, OpenHz, delay, minCutoff: 20f, ignoreCap: true, fadeS: len * 0.5f, output: output, trim: outTrim);
                         Pushes++;
                     }
                 }

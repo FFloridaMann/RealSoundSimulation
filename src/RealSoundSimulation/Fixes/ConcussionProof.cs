@@ -304,18 +304,11 @@ namespace RealSoundSimulation.Fixes
                 DiagLog.F(ShockWave.LastBlastRoomDb, "0.0"), DiagLog.F(ShockWave.LastYourRoomDb, "0.0"), DiagLog.F(ShockWave.LastYourRoomM, "0.0"), ShockWave.LastYourRoom));
         }
 
-        public static void FeltOn()
-        {
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return;
-            EchoVoices.OutputOverride = MonoBehaviourSingleton<BetterAudio>.Instance.MasterMixerGroup;
-            EchoVoices.VolumeTrim = Mathf.Pow(10f, Plugin.FeltThroughCutDb.Value / 20f);
-        }
-
-        public static void FeltOff()
-        {
-            EchoVoices.OutputOverride = null;
-            EchoVoices.VolumeTrim = 1f;
-        }
+        // Where a blast's felt layers play while the cut is on: the Master group, which no cut touches, at "6.9j".
+        // Passed to EchoVoices.Play; null means the usual gunshot group.
+        public static UnityEngine.Audio.AudioMixerGroup FeltGroup(bool felt) =>
+            felt && MonoBehaviourSingleton<BetterAudio>.Instantiated ? MonoBehaviourSingleton<BetterAudio>.Instance.MasterMixerGroup : null;
+        public static float FeltTrim => Mathf.Pow(10f, Plugin.FeltThroughCutDb.Value / 20f);
 
         private static bool TriggerPrefix(ref float closeness)
         {
