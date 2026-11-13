@@ -8,6 +8,11 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
 
+  <!-- The developer build (every setting in F12): dotnet build -p:DevBuild=true. Without it, the public build. -->
+  <PropertyGroup Condition="'$(DevBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);DEV</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\RealSoundSimulation.Dsp\RealSoundSimulation.Dsp.csproj" />
   </ItemGroup>

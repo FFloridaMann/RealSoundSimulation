@@ -16,12 +16,16 @@ Each area ends in one **final test**: a raid that covers the whole area, instead
   1. [x] Mixer owner (built 13 Nov 2026, 0.7.22; test raid still to run: close grenade with no headset, fire for a minute with gunfire ear ringing on, then the same with a headset): every feature submits an offset per mixer key; one place reads the game's value, sums the offsets and writes once per frame (today: ConcussionProof, ShockWave dip, GunfireHearing, AmbienceMix, DoorwayBlend snapshots). Fixes PutBack restoring blast-time values after a headset change.
   2. [x] Voice pool (13 Nov 2026: own file, per-play output, blast reserve of 8): a budget per feature and a per-feature count in voices.csv (nine features share EchoVoices); no rewrite.
   3. [x] Code review (13 Nov 2026, docs/dev/CODE-REVIEW-2026-11-13.md); its steps 1-5 done: comment headers, body sounds to a branch, Raid class, voice pool, BorrowGunVoice
-  4. Settings clean-up: delete settled A/B switches; body sounds behind a developer build; about 25 settings in the public build.
-- [ ] Release build: no diagnostics work while logs are off, load-in spikes gone (see Release build)
-- [ ] Settings clean-up: remove settled test switches, defaults = the tested setup (see S)
-- [ ] Fika: commit the co-op echoes (0.7.16 work), one raid as a Fika host
-- [ ] Commit, then the Forge fixes: plugin folder and GUID, LICENSE, install steps and dependencies (Bring Back Concussion optional), page text, credits
-- [ ] Publish v1.0: repo public, Forge page live
+  4. [x] Settings split (13 Nov 2026, 7a): public build with 31 settings (01 on/off page, then tuning per area), developer build with all of them (`deploy.ps1 -Dev`); test raid on the public build still to run
+- [ ] **Release as 0.9 beta first** (user, 13 Nov 2026), then 1.0 after feedback. For the beta, in order:
+  1. [ ] Test raid on the public build, commit the settings split
+  2. [ ] Diagnostics off for players: the hidden timing switches (Time the audio systems, Time the audio thread) default on, so the public build runs them for everyone; only with Bug report logs on. One raid
+  3. [x] SEB room routes (10b): decided 13 Nov 2026, ship red_the_fox's route files (seb_routes, 18 files, 508 MB, about 300 MB zipped) in the download; the user has his permission and shouts out his mod on the page. Still to do: package them in the release zip; without the folder the game's own routes are used
+  4. [ ] Licences and credits: THIRD_PARTY_NOTICES covers SEB (permission, MIT) and Bring Back Concussion (MIT, permission 11 Nov 2026); check the Forge page credits match
+  5. [ ] Forge page (FORGE-PAGE.md, DESCRIPTION-DRAFT.md): install steps, Bring Back Concussion optional, known issues, "solo tested, Fika not yet"
+  6. [ ] One raid on another map (Customs or Factory) on the public build
+  7. [ ] Publish 0.9 beta: repo public, Forge page live
+- [ ] After the beta: delete settled test switches (7b, one area per raid); Fika co-op echoes (branch fika-echoes, one raid as host); then 1.0
 
 ---
 

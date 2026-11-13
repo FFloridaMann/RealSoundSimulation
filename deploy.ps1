@@ -1,8 +1,9 @@
 # Builds Release and copies the plugin into SPT. Remove by deleting BepInEx\plugins\FFloridaMann-RealSoundSimulation.
-param([string]$SptDir = "G:\SPT")
+# -Dev builds the developer version (every setting in F12); without it, the public version.
+param([string]$SptDir = "G:\SPT", [switch]$Dev)
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-dotnet build "$root\src\RealSoundSimulation\RealSoundSimulation.csproj" -c Release
+dotnet build "$root\src\RealSoundSimulation\RealSoundSimulation.csproj" -c Release -p:DevBuild=$($Dev.IsPresent.ToString().ToLower())
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 $out = "$root\src\RealSoundSimulation\bin\Release\netstandard2.1"
 $dest = Join-Path $SptDir "BepInEx\plugins\FFloridaMann-RealSoundSimulation"
