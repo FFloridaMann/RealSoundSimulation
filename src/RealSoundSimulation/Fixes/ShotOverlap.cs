@@ -57,7 +57,7 @@ namespace RealSoundSimulation.Fixes
         private const double CutFadeS = 0.06;
         private struct Fading { public BetterSource Src; public double Start; public float Base; }
         private static readonly List<Fading> FadingOut = new List<Fading>();
-        public static int OwnExpanded, OwnTookRinging, FadedCuts, OwnUnoccluded;
+        public static int OwnExpanded, OwnTookRinging, FadedCuts;
 
         private struct Ringing { public BetterSource Src; public double Until; }
         private static readonly Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer> OwnerOf = new Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer>();
@@ -90,7 +90,7 @@ namespace RealSoundSimulation.Fixes
             RingingOut.Clear(); OwnerOf.Clear(); EndOf.Clear();
             HandedOff = NoSpare = MaxRinging = PoolEmpty = 0; PoolMin = int.MaxValue; PoolSum = 0;
             foreach (Fading f in FadingOut) { if (f.Src != null && f.Src.source1 != null) f.Src.source1.Stop(); Free(f.Src); }
-            FadingOut.Clear(); OwnExpanded = OwnTookRinging = FadedCuts = OwnUnoccluded = 0;
+            FadingOut.Clear(); OwnExpanded = OwnTookRinging = FadedCuts = 0;
         }
 
         // Called every frame in raid: a tail that has rung out gives its voice back to the game.
@@ -208,12 +208,6 @@ namespace RealSoundSimulation.Fixes
                     }
                     if (pick < 0) pick = (__instance._lastSource + 1) % sources.Length;
                     if (sources[pick].source1.isPlaying) OwnTookRinging++;
-                    // 13 Nov 2026 (raid_20261113_132414, user: "its like every other shot at times the shot drops off"): a voice borrowed from
-                    // the gun pool may still be in the occlusion process of the gun it last served (BetterSource.Release leaves it included),
-                    // so that gun's walls could mute or dull your shot. Your gun is never occluded: keep every one of its voices out of it.
-                    var own = (BetterSource)sources[pick];
-                    own.IncludeInOcclusionProcess(false);
-                    if (own.OcclusionVolumeFactor < 0.999f) { own.ResetOcclusion(); OwnUnoccluded++; }
                     __instance._lastSource = pick;
                     next = (SuperSource)sources[pick];
                 }
@@ -292,8 +286,6 @@ namespace RealSoundSimulation.Fixes
                 s.SetMixerGroup(first.source1.outputAudioMixerGroup);
                 s.EnableStereo(true); // your own gun plays in stereo (WeaponSoundPlayer: EnableStereo(FirstPerson))
                 s.EnableSpatialization = first.EnableSpatialization;
-                s.IncludeInOcclusionProcess(false); // your gun is never occluded (see the rotation above)
-                s.ResetOcclusion();
                 s.transform.position = first.transform.position;
                 all[i] = s;
             }
