@@ -27,15 +27,6 @@ namespace RealSoundSimulation.Fixes
     // 0.7.18: no reserve. 0.7.12 left at least 6 spare voices for new guns and so ran once in a raid (raid_20261110_221827: 1 handed off,
     // 42 skipped, 51% of bot sounds still cut). The game's pool never runs dry: BorrowSource makes a new voice when it's empty, as it
     // does in any big fight. Instead at most MaxRingingOut tails ring on their own at once; past that a tail is cut as before.
-    //
-    // 13 Nov 2026: your own gun too, and no click past the cap. Raid_20261113_115304 (user): crackle "at the end of tails or echos"
-    // after semi-auto bursts, still there with the room tail and your echoes both off. The game cuts a ringing voice dead when the next
-    // shot takes it back, and 1f left your own gun out (its two voices carry the indoor/outdoor blend).
-    //   own      your gun's queue gets OwnVoices voices instead of two (spares from the gun pool, added to the queue's own array, so the
-    //            game's per-shot setup - rolloff, mixer group, stereo, pitch, priority - and the blend's reverb sends reach them all, and
-    //            BetterAudio.ReleaseQueue gives them all back). The next shot takes a voice that has finished; only if all are still
-    //            ringing does it take the one ending soonest. A pooled queue is put back to two voices when the game reuses it.
-    //   fade     a tail past MaxRingingOut is still moved off the gun's pair, but fades out over CutFadeS instead of being cut dead.
     internal static class ShotOverlap
     {
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =
@@ -53,11 +44,7 @@ namespace RealSoundSimulation.Fixes
 
         private const double ReleaseMargin = 1.0;
         private const double MinLeftS = 0.15, FreeAfterS = 0.1;
-        private const int MaxRingingOut = 8, OwnVoices = 4;
-        private const double CutFadeS = 0.06;
-        private struct Fading { public BetterSource Src; public double Start; public float Base; }
-        private static readonly List<Fading> FadingOut = new List<Fading>();
-        public static int OwnExpanded, OwnTookRinging, FadedCuts;
+        private const int MaxRingingOut = 8;
 
         private struct Ringing { public BetterSource Src; public double Until; }
         private static readonly Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer> OwnerOf = new Dictionary<SuperBetterAudioQueue, WeaponSoundPlayer>();
@@ -79,8 +66,6 @@ namespace RealSoundSimulation.Fixes
                 postfix: new HarmonyMethod(typeof(ShotOverlap), nameof(FirePostfix)));
             h.Patch(AccessTools.Method(typeof(BetterAudio), nameof(BetterAudio.BorrowWeaponAudioQueue)),
                 postfix: new HarmonyMethod(typeof(ShotOverlap), nameof(BorrowPostfix)));
-            h.Patch(AccessTools.Method(typeof(SuperBetterAudioQueue), nameof(SuperBetterAudioQueue.Initialize)),
-                postfix: new HarmonyMethod(typeof(ShotOverlap), nameof(InitializePostfix)));
         }
 
         public static void Reset()
@@ -89,14 +74,11 @@ namespace RealSoundSimulation.Fixes
             foreach (Ringing r in RingingOut) Free(r.Src);
             RingingOut.Clear(); OwnerOf.Clear(); EndOf.Clear();
             HandedOff = NoSpare = MaxRinging = PoolEmpty = 0; PoolMin = int.MaxValue; PoolSum = 0;
-            foreach (Fading f in FadingOut) { if (f.Src != null && f.Src.source1 != null) f.Src.source1.Stop(); Free(f.Src); }
-            FadingOut.Clear(); OwnExpanded = OwnTookRinging = FadedCuts = 0;
         }
 
         // Called every frame in raid: a tail that has rung out gives its voice back to the game.
         public static void Tick()
         {
-            if (FadingOut.Count > 0) TickFades();
             if (RingingOut.Count == 0) return;
             double now = AudioSettings.dspTime;
             for (int i = RingingOut.Count - 1; i >= 0; i--)
@@ -104,28 +86,6 @@ namespace RealSoundSimulation.Fixes
                 if (now < RingingOut[i].Until) continue;
                 Free(RingingOut[i].Src);
                 RingingOut.RemoveAt(i);
-            }
-        }
-
-        // a tail past the cap: quiet over CutFadeS, then stopped and given back (no click)
-        private static void TickFades()
-        {
-            double now = AudioSettings.dspTime;
-            for (int i = FadingOut.Count - 1; i >= 0; i--)
-            {
-                Fading f = FadingOut[i];
-                float left = (float)(1.0 - (now - f.Start) / CutFadeS);
-                if (left > 0f && f.Src != null && f.Src.source1 != null)
-                {
-                    float v = f.Base * left * left;
-                    f.Src.source1.volume = v;
-                    if (f.Src is SuperSource ss && ss.source2 != null) ss.source2.volume = v;
-                    continue;
-                }
-                if (f.Src != null && f.Src.source1 != null) f.Src.source1.Stop();
-                if (f.Src is SuperSource s2 && s2.source2 != null) s2.source2.Stop();
-                Free(f.Src);
-                FadingOut.RemoveAt(i);
             }
         }
 
@@ -151,8 +111,7 @@ namespace RealSoundSimulation.Fixes
             if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return null;
             BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
             var pool = ba.SourceGroups != null ? ba.SourceGroups[(int)BetterAudio.AudioSourceGroupType.Gunshots] as BetterAudio.NonspatialAudioMixer<Audio.ReverbSubsystem.ReverbSuperSource> : null;
-            if (pool == null) { NoSpare++; return null; }
-            bool fade = RingingOut.Count >= MaxRingingOut; // past the cap: still moved off, but faded out instead of cut dead
+            if (pool == null || RingingOut.Count >= MaxRingingOut) { NoSpare++; return null; }
             int spare0 = pool.stack_0.Count; // for the summary: how many spare voices the game had at this moment
             PoolSum += spare0; if (spare0 < PoolMin) PoolMin = spare0; if (spare0 == 0) PoolEmpty++;
             var spare = pool.BorrowSource() as SuperSource;
@@ -167,12 +126,6 @@ namespace RealSoundSimulation.Fixes
                 MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ProcessSourceOcclusion(b.iPlayer, spare);
             q.AudioSources[idx] = spare;
             EndOf.Remove(ringing);
-            if (fade)
-            {
-                FadingOut.Add(new Fading { Src = ringing, Start = AudioSettings.dspTime, Base = ringing.source1 != null ? ringing.source1.volume : 1f });
-                NoSpare++; FadedCuts++;
-                return spare;
-            }
             RingingOut.Add(new Ringing { Src = ringing, Until = end + FreeAfterS });
             if (RingingOut.Count > MaxRinging) MaxRinging = RingingOut.Count;
             HandedOff++;
@@ -191,34 +144,11 @@ namespace RealSoundSimulation.Fixes
                 taken = true;
                 bool looping = sample.End == 0.0;
                 BetterSource[] sources = __instance.AudioSources;
-                SuperSource previous, next;
-                if (sources.Length > 2)
-                {
-                    // your own gun with OwnVoices voices: a finished one if there is one, else the one ending soonest
-                    previous = (SuperSource)sources[__instance._lastSource];
-                    int pick = -1; double soonest = double.MaxValue;
-                    for (int k = 1; k <= sources.Length; k++)
-                    {
-                        int i = (__instance._lastSource + k) % sources.Length;
-                        var s = sources[i] as SuperSource;
-                        if (s == null || s.source1 == null) continue;
-                        if (!s.source1.isPlaying) { pick = i; break; }
-                        double e = EndOf.TryGetValue(s, out double ee) ? ee : double.MaxValue - 1;
-                        if (!s.Loop && e < soonest) { soonest = e; pick = i; }
-                    }
-                    if (pick < 0) pick = (__instance._lastSource + 1) % sources.Length;
-                    if (sources[pick].source1.isPlaying) OwnTookRinging++;
-                    __instance._lastSource = pick;
-                    next = (SuperSource)sources[pick];
-                }
-                else
-                {
-                    if (!sources[__instance._lastSource].source1.isPlaying) __instance._lastSource = __instance._lastSource == 0 ? 1 : 0;
-                    previous = (SuperSource)sources[__instance._lastSource];
-                    __instance._lastSource = __instance._lastSource == 0 ? 1 : 0;
-                    next = (SuperSource)sources[__instance._lastSource];
-                }
-                if (sources.Length <= 2 && Plugin.TailHandoffOn.Value && !next.Loop && next.source1 != null && next.source1.isPlaying)
+                if (!sources[__instance._lastSource].source1.isPlaying) __instance._lastSource = __instance._lastSource == 0 ? 1 : 0;
+                var previous = (SuperSource)sources[__instance._lastSource];
+                __instance._lastSource = __instance._lastSource == 0 ? 1 : 0;
+                var next = (SuperSource)sources[__instance._lastSource];
+                if (Plugin.TailHandoffOn.Value && !next.Loop && next.source1 != null && next.source1.isPlaying)
                 {
                     SuperSource spare = HandOff(__instance, __instance._lastSource, next, sample.Start);
                     if (spare != null) next = spare;
@@ -254,8 +184,6 @@ namespace RealSoundSimulation.Fixes
                 if (q == null) return;
                 Holders.Add(__instance);
                 OwnerOf[q] = __instance; // 1f: which gun a queue belongs to (queues are pooled and change hands)
-                BaseSoundPlayer.IObserverToPlayerBridge ob = BridgeRef(__instance);
-                if (ob != null && ob.PointOfView == EPointOfView.FirstPerson && Plugin.OwnRingOutOn.Value && q.AudioSources.Length < OwnVoices) Expand(q);
                 // The game keeps a non-auto gun's voices 1 s past the recording but doesn't count the sound's flight time, so at
                 // range a ringing shot could be released before it finishes.
                 if (__instance.Non_auto)
@@ -267,36 +195,6 @@ namespace RealSoundSimulation.Fixes
                 }
             }
             catch (Exception e) { DiagRunner.ReportOnce("1e shot overlap (fire)", e); }
-        }
-
-        // Your gun's queue: OwnVoices voices. The new ones are set up like the first (the game sets them all on the next shot anyway).
-        private static void Expand(SuperBetterAudioQueue q)
-        {
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return;
-            var pool = MonoBehaviourSingleton<BetterAudio>.Instance.SourceGroups[(int)BetterAudio.AudioSourceGroupType.Gunshots] as BetterAudio.NonspatialAudioMixer<Audio.ReverbSubsystem.ReverbSuperSource>;
-            if (pool == null || !(q.AudioSources[0] is SuperSource first) || first.source1 == null) return;
-            var all = new BetterSource[OwnVoices];
-            all[0] = q.AudioSources[0]; all[1] = q.AudioSources[1];
-            for (int i = 2; i < OwnVoices; i++)
-            {
-                var s = pool.BorrowSource() as SuperSource;
-                if (s == null) { for (int k = 2; k < i; k++) all[k]?.Release(); return; }
-                s.SetRolloff(first.MaxDistance);
-                s.SetPriority(first.source1.priority);
-                s.SetMixerGroup(first.source1.outputAudioMixerGroup);
-                s.EnableStereo(true); // your own gun plays in stereo (WeaponSoundPlayer: EnableStereo(FirstPerson))
-                s.EnableSpatialization = first.EnableSpatialization;
-                s.transform.position = first.transform.position;
-                all[i] = s;
-            }
-            q.AudioSources = all;
-            OwnExpanded++;
-        }
-
-        // A pooled queue handed to the next gun gets two voices again (the game sets only [0] and [1]).
-        private static void InitializePostfix(SuperBetterAudioQueue __instance, BetterSource source1, BetterSource source2)
-        {
-            if (__instance.AudioSources != null && __instance.AudioSources.Length != 2) __instance.AudioSources = new BetterSource[] { source1, source2 };
         }
 
         // The pool is empty. The gun closest to finishing gives up its voices so this shot still plays.
