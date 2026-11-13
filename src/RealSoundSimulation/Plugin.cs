@@ -139,6 +139,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> EarRingLongestS; // 11 Nov 2026, replaces EarRingRecovery
         internal static ConfigEntry<float> OwnGrenadeShare, HeartLowCutHz, HeartBodyHz, HeartDubPitch, HeartLength, HeartTexture, HeartGapS; // 13 Nov 2026
         internal static ConfigEntry<bool> AdrenalineUnderFireOn; // 13 Nov 2026
+        internal static ConfigEntry<bool> OwnRingOutOn; // 13 Nov 2026
         internal static ConfigEntry<float> ShockLevelDb, ShockReachM, ShockDuckDb, ShockCornerDb, ShockEnclosedDb, ShockPushDb; // 0.6.54 "6.9d", "6.9e", "6.9g"
         internal static ConfigEntry<int> ShockRepeats; // 0.6.54 "6.9f"
         internal static ConfigEntry<bool> ConcussionPressureOn; // 0.6.60 "6.9k"
@@ -259,6 +260,7 @@ namespace RealSoundSimulation
             PortalPositioningOn = Bind(s03, "Direction - from the doorway", true, "A shot from another room comes from the doorway, window or stairwell it reaches you through, at the length of that route, instead of through the wall. Was 6.1.");
             PortalStrength = Bind(s03, "Direction - doorway strength", 1f, "How far towards the opening the shot is moved. 1 = all the way, 0.5 = halfway. Was 6.1a.", R(0f, 1f), adv);
             GunCornerOn = Bind(s03, "Direction - around corners outdoors", true, "Outdoors, a shot from behind a building comes from around its corner, muffled. Was 6.8b.", null, adv);
+            OwnRingOutOn = Bind(s02, "Tails - your shots ring out", true, "Quick shots from your gun no longer cut the last one's ring off dead (the click or crackle at the end of a tail): your gun gets four voices instead of two, so each shot's tail can finish. Needs General > Shots ring out under the next. Was 1g.");
             TailHandoffOn = Bind(s03, "Tails - ring out on a spare voice", true, "When another gun fires again while its last shot is still ringing, that ring finishes on a spare voice instead of being cut off. Needs Shots ring out under the next. Off = cut as before. Was 1f.");
             BodySoundsRangeM = Bind(s08, "Body sounds - range m", 40f, "Footsteps and body sounds are simulated for people within this distance. Was Fa.", R(10f, 80f), adv);
             BodySoundsFloorStrength = Bind(s08, "Body sounds - wall and floor muffling", 1f, "How much a wall, door, window, floor or ceiling muffles footsteps and body sounds. 2 = as if twice as thick. Was Fb.", R(0f, 2f), adv);
