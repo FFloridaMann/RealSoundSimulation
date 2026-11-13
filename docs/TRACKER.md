@@ -107,6 +107,7 @@ Built: works alongside Fika (review, 10 Nov 2026); off on a headless host (0.7.1
 ## Known issues
 - [ ] Bring Back Concussion puts the mixer back to before the blast when its fade ends; crossing a doorway during those seconds can leave the indoor ambience at the old level until it next changes
 - [ ] The G36 never blends indoor/outdoor (raid_20261109_083938); looks like one recording
+- [ ] ADAR 2-15: slight static (about 0.3-0.5 s) at the end of tails after quick semi-auto shots. Not from cut voices: in raid_20261113_155943 no tail was cut or faded (tailcuts.csv), yet it was still heard. Left for now (user, 13 Nov 2026). Next check: the same strings with the mod off, to see whether it is in the game's own recording; then your echoes, the room tail and the outdoor tail off one at a time
 
 ## Not in Real Sound Simulation (separate mods)
 GC and spawn stutters, branch `claude/gc-and-spawn-stutters`. Fix before using its GC mode:

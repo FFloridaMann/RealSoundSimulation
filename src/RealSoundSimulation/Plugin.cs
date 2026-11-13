@@ -60,6 +60,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> FirstBurstOn; // 0.6.21
         internal static ConfigEntry<bool> ShotOverlapOn; // 0.6.23
         internal static ConfigEntry<bool> TailHandoffOn; // 0.7.12 "1f"
+        internal static ConfigEntry<bool> OwnRingOutOn; // 13 Nov 2026, 1f for your gun
         internal static ConfigEntry<bool> PortalPositioningOn; // 0.6.24
         internal static ConfigEntry<float> PortalStrength;
         internal static ConfigEntry<bool> RouteDullOn; // 0.6.40 "6.1b"
@@ -249,6 +250,7 @@ namespace RealSoundSimulation
             PortalPositioningOn = Bind(s03, "Direction - from the doorway", true, "A shot from another room comes from the doorway, window or stairwell it reaches you through, at the length of that route, instead of through the wall. Was 6.1.");
             PortalStrength = Bind(s03, "Direction - doorway strength", 1f, "How far towards the opening the shot is moved. 1 = all the way, 0.5 = halfway. Was 6.1a.", R(0f, 1f), adv);
             GunCornerOn = Bind(s03, "Direction - around corners outdoors", true, "Outdoors, a shot from behind a building comes from around its corner, muffled. Was 6.8b.", null, adv);
+            OwnRingOutOn = Bind(s02, "Tails - your shots ring out", true, "Your next shot no longer cuts the last one's ring off dead (the crackle at the end of a tail after quick single shots): the ringing voice finishes on its own and a spare takes its place. Your gun still has two voices. Needs Other guns > Tails - ring out on a spare voice.");
             TailHandoffOn = Bind(s03, "Tails - ring out on a spare voice", true, "When another gun fires again while its last shot is still ringing, that ring finishes on a spare voice instead of being cut off. Needs Shots ring out under the next. Off = cut as before. Was 1f.");
             RouteDullOn = Bind(s03, "Muffling - by route", true, "A shot from another room loses its highs by the way it got to you: a wall on the straight line, each turn and each extra opening. Was 6.1b.");
             RouteDullStrength = Bind(s03, "Muffling - strength", 1f, "How strongly the route muffles a shot. 0 = not at all, 2 = twice as much. Was 6.1c.", R(0f, 2f), adv);
