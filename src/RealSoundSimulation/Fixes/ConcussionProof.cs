@@ -16,57 +16,17 @@ using UnityEngine.Audio;
 
 namespace RealSoundSimulation.Fixes
 {
-    // 6.9h (0.6.55, reworked 0.6.57, 0.6.58): hearing goes when concussion hits, the blast is still felt, and nothing is chopped. User, 9 Nov 2026: "better if the hearing cuts out with concussion when the effect is applied.
-    // but we find a way to keep the feeling of the blast wave alive and no sharp cut offs for tails".
-    // Bring Back Concussion takes Main, Guns, World and both ambience volumes down, by closeness, in 0.05 to 0.3 s. Explosions, echoes and tails are on Guns, so they were cut off mid-sound.
-    //   cut      that mod's cut is taken over and copied: same depth, cut time, hold, fade-back (its own setting), same ringing check. World sounds still go at its speed.
-    //   tail     only Guns differs: it goes down over "6.9i" s, so the bang, echoes and tails melt away.
-    //   felt     inside the part of its radius where it cuts (95%), the pressure hit, thump, repeat hits and slow push go to the Master group, which no cut touches, at "6.9j". Echoes and the recording stay on Guns and fade.
-    // The cut's depth, timing and tinnitus check are adapted from Bring Back Concussion by harmony (harmonyzt), MIT: see THIRD_PARTY_NOTICES.md.
-    // That mod's code is found by name once a raid starts. If it's gone or changed, its own cut runs as normal. The game's own ringing (no headset) still drives Main and Guns, as that mod allows.
-    //
-    // 0.6.60 "6.9k": how concussive a blast is comes from its pressure, not the straight-line distance. User, 9 Nov 2026: "shouldnt it be more concussive indoors", and research "a wall may protect but the blast through a door delivers concussive effects ... room indoors but very big? very small? lots of windows no windows".
-    // ShockWave.Dose works out the pressure by the way it reached you and the blast's room. That's turned into the open-air distance with the same pressure, and that mod's own explosion patch is called with the blast moved to that distance, so its radius and closeness still decide.
-    // Two levels: ears (the sound cut, and ringing) reach "6.9l" dB further than the full concussion. Length and strength scale with how long the pressure lasted and how close it was. That mod's patch is called a frame late, because the game queues the blast sound and the route is only known then.
-    //
-    // 0.7.10 "6.9q": headsets protect your hearing. User, 10 Nov 2026: "for the time being, all headsets should remove ear ringing and most hearing loss from concussions. so they function well then later actually improved and optionally simulated."
-    // Ringing already never plays with a headset (the game's, that mod's, and the ears-only ringing all check the earpiece slot). The hearing cut didn't check, so with any headset on
-    // its closeness is scaled by (1 - "6.9q"): at 75% the closest blast cuts to -20 dB with a shorter hold, and light blasts don't cut. Concussion itself, the felt thump and blur are unchanged.
-    //
-    // 0.7.22 "6.9r": the crack before the cut. User, 11 Nov 2026, of a grenade 3.8 m away round a doorway (headset on): "maybe you should hear
-    // the blast for a split second at the beginning? it just sounds like duuum". blastlevel.csv showed Guns already about -50 dB 0.17 s
-    // after close blasts (also raid_20261110_212706), far deeper than our cut (-12 dB with the headset), so another writer cuts at once and
-    // only the felt layers (pressure hit dulled to ~1.9 kHz, thump ~100 Hz) were left. In reality the ear's reflex and the hearing loss come
-    // after the bang. So for "6.9r" ms after a blast that will cut (shorter and 6 dB quieter with a headset), Main and Guns are held at what
-    // they were before the blast, whoever writes them (last in the frame); then any other writer's value is put back (their cut, a split
-    // second late) unless our cut runs, and our cut starts only then. blastmix.csv: both volumes every frame for 1.5 s after a blast, to
-    // find who the other writer is.
-    // Found (raid_20261111_192106, no headset): the game's own ring (BetterAudio.method_8, tinnitus) sets Guns to the headset template's
-    // DryVolume plus a -50 dB curve and sends Main and Guns to the tinnitus low-pass, from the frame the blast is processed, often before
-    // our sound arrives. With a headset on, Guns *normally* sits at the template's DryVolume (-50/-60: a headset carries guns on its own
-    // compressor path), which is what the earlier -50 dB readings were. So the window now holds Guns at DryVolume, Main at its value from
-    // before the blast (never read while the game rings), and both tinnitus sends at -80, then gives the game its values back.
-    //
-    // 0.7.22 "6.9t": the blast heard through the cut. User (via the SEB comparison session): "grenades when you lose the hearing just feel a
-    // bit dull. maybe we need to let more of the explosion noise through the whole time", then "Try it". After the crack only the felt
-    // layers were left: World, Guns and Main all went to the cut's full depth (to -58 dB), and without a headset the game's ring also pulls
-    // Guns down 50 dB. Real hearing after a blast goes muffled, not silent: highs first, the rumble, echoes and the world stay, roughly
-    // 20-40 dB down, under the ringing. The mixer (mastermixer.bundle): Master > InGame > World > {Headphones, Guns, Main, Occlusion}, and
-    // World has an exposed low-pass (WorldMixerLowpassFreq). So with 6.9t on: World goes down only to "blast heard at dB" and its low-pass
-    // to "muffled to Hz" (less for a light cut); Main goes a little further, to "world heard at dB"; Guns and the ambience add nothing.
-    // While the game's ring runs (no headset) its pull on Guns and Main is held at those floors, so the blast is still heard under it.
-    // Also fixed: every key went to the cut's absolute depth, so with a headset (Guns normally at the template's DryVolume, -50/-60) the
-    // cut *raised* dry Guns to about -13 dB. Depths are now offsets from where each key started.
-    //
-    // 13 Nov 2026 "mixer owner": nothing here writes the mixer any more. The cut, the crack and the ring's deafening are asked for
-    // through MixerOwner, which adds them up on the game's own values and writes once, last in the frame. The bugs came from each
-    // part keeping its own copy of "where to go back to": in that day's raids the crack's headset trim stayed on Main and Guns for
-    // about 10 s, and the hold against the game's ring and the ring itself took turns every frame, so the user heard gun audio
-    // flickering "in and out"; and PutBack restored values read at the blast, wrong after a headset change. So the copies are gone (Start, Last,
-    // Calm, Normal, Theirs, PutBack): the cut is only so many dB down from whatever the game's value is now, the crack is an ask
-    // that stands alone for its length and then lapses by itself, and the game's ring is run by the mod (GameRing, 6.9u) with its
-    // deafening stopped at the 6.9t floors. Bring Back Concussion's own cut, when it runs instead of ours, is shown the game's values
-    // first (MixerOwner.ShowNormal), because it keeps what it reads and puts it back later.
+    // 6.9h, k, q, r, t: what a close blast does to your hearing. History and raid evidence: docs/dev/FIXES.md (6.9h to 6.9t, mixer owner).
+    //   dose     how concussive a blast is comes from its pressure (ShockWave.Dose), turned into the open-air distance with the same pressure;
+    //            Bring Back Concussion's explosion patch is then called with that distance. The ears reach "6.9l" dB further.
+    //   crack    for "6.9r" ms the blast is heard at full level, then the cut starts.
+    //   cut      Main, World and the ambience go down by that mod's depth and timing; Guns goes down over "6.9i" so tails fade, not chop.
+    //            With 6.9t the blast and the world stay heard through it, muffled by the World low-pass instead of silent.
+    //   felt     inside 95% of its radius the pressure hit and thump go to Master, which no cut touches. A headset scales the cut by (1 - "6.9q").
+    // Nothing here writes the mixer: every change is an ask to MixerOwner, as offsets from the game's own values. Don't add SetFloat calls
+    // or keep a copy of "the value to go back to"; that caused the stuck trims and the in-and-out audio of 13 Nov 2026.
+    // That mod's code is found by name; if it's gone or changed, its own cut runs. The cut's depth, timing and tinnitus check are adapted
+    // from Bring Back Concussion by harmony (harmonyzt), MIT: see THIRD_PARTY_NOTICES.md.
     [DefaultExecutionOrder(32002)]
     internal class ConcussionProof : MonoBehaviour
     {

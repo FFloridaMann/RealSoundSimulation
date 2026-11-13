@@ -6,34 +6,14 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // 0.7.4: your own shot's reverb tail from the room the mod measures. The game's reverb copy of your shot (Meta XR) takes its
-    // length from Meta's coarse baked map, and the mod could only change its volume. This plays the dry (outdoor) recording of
-    // each shot into one Unity reverb whose decay is the room's measured reverb time (probe v2), whose high end dies faster in
-    // soft rooms than in hard ones, and whose loudness follows how indoor the shot is (after the open-air pull). Overlapping
-    // shots share it, like one real room. The game's own reverb copy is turned down under it ("Game reverb under the tail").
-    //
-    // One voice, kept playing silence while you shoot so the tail isn't cut when a shot's sample ends (a stopped source stops
-    // its effects too), and stopped again after a few quiet seconds.
-    //
-    // 0.7.6: three of them, used in turn, and counted. With one source every shot's dry sample was one more real voice for
-    // its whole length (PlayOneShot starts a new voice each time and none can be ended alone), so ten quick shots stacked
-    // ten voices that the echo headroom (EchoVoices.Allowed) never saw. Now each shot takes the source whose dry sample ends
-    // soonest; if that one is still sounding (a fourth shot inside one sample's length) it is restarted, which ends only that
-    // oldest sample, by then under three newer shots. So at most MaxTails dry samples sound at once, and with the three
-    // silent keep-alive voices that is at most 6 real voices, all counted in Voices. Each source has its own reverb with the
-    // room as it was for its shot (a later shot no longer changes the reverb or the pitch of a tail that is still ringing).
-    //
-    // 13 Nov 2026: no more crackle. Raid_20261113_111558 (user): with the tail off "def sounds better ... Crackling gone"; with it on,
-    // "crackling at the very end of the echo but only after multiple shots ... 1 shot no crackle two quick shots crackle", and after a
-    // quiet spell a first shot whose "full audio didnt play". Two causes in the handling: a fourth quick shot stopped the oldest source
-    // dead while its reverb still rang (Restarted, 10 that raid), and every shot rewrote its source's reverb settings even while the
-    // previous shot's tail was still ringing in it. Now nothing ringing is ever stopped or retuned:
-    //   share    a shot whose room matches a ringing source (reverb time within 15%, hardness within 0.15) is added to it unchanged
-    //   fresh    else a source that has fully rung out is tuned to this room
-    //   nearest  else the ringing source closest in settings takes it unchanged; if every source already has MaxDry dry samples
-    //            sounding, the shot has no room tail (the ones ringing cover it), never a cut
-    // A source's pitch only changes when no dry sample is playing on it, and sources stay alive QuietStopS after the last shot and
-    // until their tail has rung out, so a fight doesn't start each burst on a cold reverb.
+    // Your own shot's room reverb tail, from the room the mod measures (probe v2 reverb time and hardness). History: docs/dev/FIXES.md (Room tail).
+    // Each shot's dry recording plays into one of MaxTails Unity reverbs, as loud as the shot is indoor; the game's own Meta XR reverb
+    // copy is turned down under it ("Game reverb under the tail").
+    //   share    a shot whose room matches a ringing tail (SameRt, SameHard) is added to it unchanged
+    //   fresh    else a tail that has fully rung out is tuned to this room
+    //   nearest  else the closest ringing one takes it unchanged; if every one has MaxDry dry samples sounding, the shot gets no tail
+    // Never stop or retune a tail that is still ringing: that was the crackle at tail ends (13 Nov 2026). Tails stay alive, playing
+    // silence, QuietStopS after the last shot, because a stopped source stops its reverb too.
     internal static class RoomTail
     {
         [ThreadStatic] private static bool _own;

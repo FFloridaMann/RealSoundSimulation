@@ -84,6 +84,16 @@ F12 → Real Sound Simulation → **"0. Gun sounds"** (top of the list). Not a f
 
 **Check.** `1e` off and on with bots firing short bursts. Summary BOT GUNSHOTS: the cut count should fall sharply; "gun voices taken" should normally be 0.
 
+### 1f: A ringing tail rings out on a spare voice (0.7.12, 0.7.18)
+
+**Problem.** A gun still has only two voices, and an automatic gun fired in single shots or short bursts uses both for every shot (the bang and its tail). So the next shot took back a voice whose tail was still ringing. Fika test raid, tag 1: an AK's 2 s tail was cut after 0.23 s; 23 to 64% of bot sounds were cut in earlier raids.
+
+**Fix.** For anyone else's gun, the ringing voice is taken out of the gun's pair and left to finish where it is, and a spare voice from the game's own gun pool takes its place. The tail keeps everything the game gave it: its position, occlusion, mixer group and the route muffling. 0.7.12 kept at least 6 spare voices for new guns and so ran once in a raid (raid_20261110_221827: 1 handed off, 42 skipped, 51% of bot sounds still cut). 0.7.18 drops that reserve: the game's pool never runs dry, because `BorrowSource` makes a new voice when it's empty. Instead at most `MaxRingingOut` (8) tails ring on their own at once; past that a tail is cut as before.
+
+**Your own gun stays on two voices.** 13 Nov 2026 (13d4965) gave your gun four voices, added to its queue, to stop crackle at the end of the ADAR's tails after semi-auto bursts. In raids it dropped shots (about every other shot after a grenade, whole full-auto rounds) and made the indoor/outdoor mix cut in and out. An occlusion reset on top of it (abd80e4) changed nothing: `OwnUnoccluded` stayed at 0. Both were reverted (0be89e0, 153faa9), and the next raid had no drop-outs. Game code around the gun queue assumes exactly two voices. The ADAR crackle needs another fix.
+
+**Check.** Summary BOT GUNSHOTS: "rang out on a spare voice instead" should cover most of the cut count; "already 8 ringing" should stay small.
+
 ## Fix 2: Obstruction score
 
 **Problem.** When you and a sound are in the same space with something between you, the game runs up to three checks (`SpatialAudioOcclusionCombinedCalculator`): **transmission** (through the obstacle), **diffraction** (around its edges) and **reflection** (bouncing off surfaces). Each gives 0 (clear) to 1 (blocked), and the game takes the **average**. But a check that *fails to find a path* returns 1.0, so a thin wall (0.2) plus a failed corner search (1.0) averages to 0.6, which is over the 0.55 muffle line.
@@ -735,6 +745,36 @@ Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's g
 
 **Check.** A grenade inside 6.5 m, `6.9h` off and on; summary CONCUSSION SOUND CUT; concussion.csv.
 
+## 6.9q: Headsets protect your hearing (0.7.10)
+
+**Request.** User, 10 Nov 2026: "for the time being, all headsets should remove ear ringing and most hearing loss from concussions", to be improved and simulated later.
+
+**Fix.** Ringing already never plays with a headset (the game's, Bring Back Concussion's and the ears-only ringing all check the earpiece slot). The hearing cut didn't check, so with any headset on its closeness is scaled by (1 − `6.9q`). At 75% the closest blast cuts to −20 dB with a shorter hold, and light blasts don't cut. Concussion itself, the felt thump and the blur are unchanged.
+
+## 6.9r: The crack before the cut (0.7.22)
+
+**Problem.** User, 11 Nov 2026, of a grenade 3.8 m away round a doorway, headset on: "maybe you should hear the blast for a split second at the beginning? it just sounds like duuum". blastlevel.csv showed Guns already about −50 dB 0.17 s after close blasts (also raid_20261110_212706), far deeper than our cut, so only the felt layers were left. In reality the ear's reflex and the hearing loss come after the bang.
+
+**Finding.** raid_20261111_192106, no headset: the game's own ring (`BetterAudio.method_8`, tinnitus) sets Guns to the headset template's `DryVolume` plus a −50 dB curve, and sends Main and Guns to the tinnitus low-pass, from the frame the blast is processed, often before our sound arrives. With a headset on, Guns *normally* sits at the template's `DryVolume` (−50/−60: a headset carries guns on its own compressor path), which is what the earlier −50 dB readings were.
+
+**Fix.** For `6.9r` ms after a blast that will cut (shorter and 6 dB quieter with a headset), Guns sits at `DryVolume`, Main at its calm value and both tinnitus sends at −80. Then the cut starts. Since the mixer owner (below) this is an ask that lapses by itself.
+
+## 6.9t: The blast heard through the cut (0.7.22)
+
+**Problem.** User (via the SEB comparison session): "grenades when you lose the hearing just feel a bit dull. maybe we need to let more of the explosion noise through the whole time", then "Try it". After the crack only the felt layers were left: World, Guns and Main all went to the cut's full depth (to −58 dB), and without a headset the game's ring also pulled Guns down 50 dB. Real hearing after a blast goes muffled, not silent: highs first, while the rumble, echoes and the world stay, roughly 20 to 40 dB down, under the ringing.
+
+**Fix.** The mixer (mastermixer.bundle) is Master > InGame > World > {Headphones, Guns, Main, Occlusion}, and World has an exposed low-pass (`WorldMixerLowpassFreq`). With 6.9t on, World goes down only to "blast heard at dB" and its low-pass to "muffled to Hz" (less for a light cut); Main goes a little further, to "world heard at dB"; Guns and the ambience add nothing. While the game's ring runs (no headset) its pull on Guns and Main stops at those floors.
+
+**Also fixed.** Every key went to the cut's absolute depth, so with a headset (Guns normally at −50/−60) the cut *raised* dry Guns to about −13 dB. Depths are now offsets from where each key started.
+
+## Mixer owner and the mod-run game ring (13 Nov 2026, 6.9u)
+
+**Problem.** Several features each wrote the game's mixer and kept their own copy of "where to go back to". In that day's raids the crack's headset trim stayed on Main and Guns for about 10 s. The hold against the game's ring and the ring itself took turns every frame, so gun audio flickered "in and out". A put-back restored values read at the blast, wrong after a headset change. Separately, firing during a blast's ring pushed the game's ring end later on every shot, with no limit, so in a fight the ring and its deafening ran until extraction.
+
+**Fix.** `Fixes/MixerOwner.cs` is the only writer of Main, Guns, World, the low-pass, the tinnitus sends and the ambience. Features ask for offsets, ceilings or floors on short leases; it adds them on top of the game's own values and writes once, last in the frame (order 32010). Anything that asks runs before 32010. The copies are gone from `ConcussionProof`, `ShockWave` and `GunfireHearing`. `Fixes/GameRing.cs` (6.9u, "Ear ringing - mod plays the game ring") takes over `BetterAudio.StartTinnitusEffect`: it plays the ring itself and asks for the deafening through the owner, stopped at the 6.9t floors. Bring Back Concussion's own cut, when it runs instead of ours, is shown the game's values first (`MixerOwner.ShowNormal`), because it keeps what it reads and puts it back later. Gunfire's hold on a blast's ring is capped at 10 s past the ring's own end.
+
+**Check.** mixer.csv: each column with who asked for what. Summary MIXER OWNER: "ring extensions capped" small; after a grenade, every value back to normal within the ring's length.
+
 ## 6.7c: Fragment hits by route (0.6.55)
 
 **Problem.** A fragment is an ordinary bullet to the game, so its hit in another room plays at the hit point with only the game's muffling.
@@ -780,6 +820,52 @@ Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's g
 **Limits.** It affects any source off the baked map, not only SPTBattleAmbience. That includes a bot standing outside the baked area, which is also treated as outdoors (more correct than fully blocked).
 
 ---
+
+## 5r: Ear ringing from gunfire (0.7.13, off by default)
+
+**Request.** User, 10 Nov 2026: "can we add in the ear ringing without headset logic from my older mod? same logic basis". Ported from the author's earlier audio mod ("Gunfire hearing") as new code.
+
+**Fix.**
+- **Noise:** every shot near you adds to it: yours, and anyone else's within "5r nearby" m, less the further away. How much depends on the calibre, the muzzle device, the barrel and the ammo.
+- **Room:** instead of the game's indoor flag, the room the mod measures around you: a small closed room counts up to 60% more, a big hall 20%, a doorway half that. Another shooter's shot through a wall counts by how much the game's occlusion lets through.
+- **Ring:** without a headset, a ring fades in as the noise builds and out as it drains, using the game's own ringing sound. If a blast's ring is already playing, firing holds that ring instead of starting a second one.
+- **Dull:** everything but the guns gets quieter while the noise is high.
+- **Gear:** a headset takes off half, helmets that cover the ears a little; a helmet with a built-in headset counts as a headset.
+
+Only your own ears, so it's the same with Fika.
+
+**Tuning (0.7.14).** First raid (raid_20261110_212706): 49 pistol shots were left out as subsonic, and six Tavor shots in 7 s never built up. User: "present but not so punishing its just annoying: a few shots should start some sort of ring and a lot a lot of ringing". By ammo: supersonic unsuppressed rings quickest, subsonic unsuppressed a little slower, supersonic suppressed slower than that, subsonic suppressed not at all. So those four tiers; the ring starts at 10 (faint, so a few shots are heard) and is full at 70.
+
+**Drain (11 Nov 2026).** The noise drained at a fixed rate, up to about 47 s from the loudest. Now the loudest ring drains over "Ear ringing - longest ring s" (15 s), replacing the recovery setting.
+
+**13 Nov 2026.** The hold on a blast's ring is capped (see the mixer owner), and the dulling is an ask through `MixerOwner` instead of its own copy of Main's volume.
+
+## Room tail: your shot's reverb from the measured room (0.7.4)
+
+**Problem.** The game's reverb copy of your shot (Meta XR) takes its length from Meta's coarse baked map, and the mod could only change its volume.
+
+**Fix.** The dry (outdoor) recording of each shot plays into a Unity reverb whose decay is the room's measured reverb time (probe v2), whose high end dies faster in soft rooms than in hard ones, and whose loudness follows how indoor the shot is (after the open-air pull). Overlapping shots share it, like one real room. The game's own reverb copy is turned down under it ("Game reverb under the tail"). The voice is kept playing silence while you shoot, because a stopped source stops its effects too.
+
+**Three tails (0.7.6).** With one source every shot's dry sample was one more real voice for its whole length (`PlayOneShot` starts a new voice each time and none can be ended alone), so ten quick shots stacked ten voices the echo headroom never saw. Now there are three sources, used in turn and counted in `Voices`, each with the room as it was for its shot.
+
+**No more crackle (13 Nov 2026, 7a18758).** raid_20261113_111558, user: with the tail off "def sounds better ... Crackling gone"; with it on, "crackling at the very end of the echo but only after multiple shots ... 1 shot no crackle two quick shots crackle", and after a quiet spell a first shot whose "full audio didnt play". Two causes: a fourth quick shot stopped the oldest source dead while its reverb still rang, and every shot rewrote its source's reverb settings while the previous tail was still ringing in it. Now nothing ringing is stopped or retuned. A shot shares a ringing tail with a matching room (reverb time within 15%, hardness within 0.15), else takes one that has rung out and tunes it, else takes the closest ringing one unchanged, else gets no tail. Sources stay alive 20 s after the last shot, so a fight doesn't start each burst on a cold reverb.
+
+**Check.** Summary ROOM TAIL: "added to a ringing tail" and "no tail (all 3 busy)"; no crackle after quick semi-auto shots indoors.
+
+## A: Adrenaline after close calls (0.7.22, tuned 13 Nov 2026)
+
+**Request.** User, 11 Nov 2026: "maybe its because we are missing the heartbeat sounds and rushed breathing Adrenaline audio during the blast from my last audio mod", "I think that the hr and breathing will help alot with grenades", "Add it to 1.0". That old private mod played clips from the Realism mod, so none of it is used. A scan of the game's sounds found no heartbeat, but every character voice has its own breathing.
+
+**Fix.**
+- **Stress:** a close blast sets it 0 to 1 from its pressure dose (`ShockWave.Dose`: −15 dB → 0, +6 dB → 1; a second blast on top pushes it higher). It holds 3 s, then settles on a smooth curve over "settles over s" × (0.5 + 0.5 × peak), so a small scare is quieter and shorter.
+- **Heart:** 2D on the Master group, so the concussion cut doesn't touch it. 75 bpm at the start up to 150 at full stress, scheduled on the audio clock so the beat never stutters with the frame rate. Only once a blast has concussed you, cut your hearing or rung your ears (user: "only grenades that play the concussion effects").
+- **Breath:** your character's own breathing from the voice's OnBreath bank, on our own source in the voice's mixer group: out of breath (Healthy | Aware) while the heart is fast, normal (Healthy | Unaware) below 0.4, ending with the episode, at "Adrenaline - breathing volume".
+- **Your own grenades** (`Grenade.Explosion`'s thrower is you) count at "Adrenaline - your own grenades" (0.4).
+- **Under fire:** while an episode runs, a hit holds stress at about 110 bpm for 10 s and a bullet passing close at about 95 bpm for 6 s; then it settles from there.
+
+**Sound (13 Nov 2026).** Tuned through previews against a recording the user liked (Realism's, listened to only; nothing of it is used, sampled or traced). User: "ours is to drummy", "the low volume parts ... need to be lower. and less bass", "heartbeats follow a similar beat interval the space between both parts of the beat is what grows as a hr drops", "like realism I think our second beat needs more base". Each beat is two generated clips, "lub" then "dub" a fixed gap later (only the pause between beats changes with the rate): low noise through two low-passes over a high-pass, a soft rise, a short hold and a quick fall to silence. The dub is deeper (× 0.85) with its low cut lower. Four variants each. The tone is in F12 ("Heartbeat - ..."), and the clips are rebuilt when a tone setting changes.
+
+**Check.** Summary ADRENALINE: close blasts, concussing, peak stress, heartbeats; held by hits and near misses.
 
 ## Planned (not built)
 

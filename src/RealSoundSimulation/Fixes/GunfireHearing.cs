@@ -11,32 +11,14 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // 0.7.13 "5r": your ears ring from gunfire when you wear no headset. User, 10 Nov 2026: "can we add in the ear ringing without headset
-    // logic from my older mod? same logic basis". Ported from the author's earlier audio mod ("Gunfire hearing"), new code:
-    //   noise    every shot near you adds to it: yours, and anyone else's within "5r nearby" m, less the further away. How much depends on
-    //            the calibre, the muzzle device (anything with a suppressor on it adds nothing), the barrel and the ammo. Subsonic shots
-    //            add nothing. It drains once the shooting has stopped for half a second.
-    //   room     instead of the game's indoor flag, the room the mod measures around you: a small closed room counts up to 60% more, a big
-    //            hall 20%, a doorway half that. Another shooter's shot through a wall counts by how much the game's occlusion lets through.
-    //   ring     without a headset, a ring fades in as the noise builds and out as it drains, using the game's own ringing sound. If a
-    //            blast's ring is already playing, firing holds that ring where it is instead of starting a second one.
-    //   dull     everything but the guns gets quieter while the noise is high (never while a concussion cut or another fade is working).
-    //   gear     a headset takes off half, helmets that cover the ears a little; a helmet with a built-in headset counts as a headset.
-    // Only your own ears, so it's the same with Fika.
-    //
-    // 0.7.14: tuned after the first raid (raid_20261110_212706): 49 pistol shots were left out as subsonic and six Tavor shots in 7 s
-    // never built up. User: "present but not so punishing its just annoying: a few shots should start some sort of ring and a lot a lot
-    // of ringing", and by ammo: supersonic unsuppressed rings quickest, subsonic unsuppressed a little slower, supersonic suppressed
-    // slower than that, subsonic suppressed not at all. So: those four tiers (the suppressor no longer also counts through its own
-    // loudness), the noise waits 2 s after a shot before draining and then drains 3 a second, and the ring starts at 10 (faint, so a
-    // few shots are heard) and is full at 70. A final pass may simulate the noise level with the probes.
-    //
-    // 13 Nov 2026 "mixer owner": two changes after a raid where, with no headset, voices and guns went "in and out" until extraction.
-    //   hold     firing while a blast's ring played pushed the game's ring end later on every shot, with no limit, so in a fight the
-    //            game's ring, and its deafening, never ended. Now the hold is at most 10 s past the ring's own end. When the mod runs
-    //            the game's ring (GameRing, 6.9u) only the ring's sound is held and the deafening runs its own course.
-    //   dull     the dulling is asked for through MixerOwner as so many dB off Main, added to whatever else asks. It no longer keeps
-    //            its own copy of Main's volume, and no longer has to stand back while a ring or a cut is working.
+    // 5r: your ears ring from gunfire when you wear no headset (off by default). History and tuning: docs/dev/FIXES.md (5r).
+    //   noise  every shot near you adds to it by calibre, muzzle device, barrel and ammo (supersonic unsuppressed most, subsonic suppressed
+    //          nothing), more in a small closed room, through walls by the game's occlusion. It drains over "Ear ringing - longest ring s".
+    //   ring   the game's ringing sound fades in from RingStart and is full at RingFull. Firing during a blast's ring holds that ring,
+    //          at most MaxHoldPastEndS past its own end (only its sound when GameRing runs the ring).
+    //   dull   everything but the guns gets quieter while the noise is high, asked for through MixerOwner.
+    //   gear   a headset takes off half, ear-covering helmets a little. WearsHeadset counts a helmet with a built-in headset too.
+    // Only your own ears, so it's the same in co-op.
     internal class GunfireHearing : MonoBehaviour
     {
         private const float MaxNoise = 150f, NoiseFade = 3f, DropPerNoise = 0.15f, RingStart = 10f, RingFull = 70f, RingFloor = 0.15f;

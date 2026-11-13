@@ -8,25 +8,12 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // 1e (0.6.23): each shot rings out under the next one. A gun has two voices that alternate, and the game ends the older one
-    // at the exact start of the next sound with no fade, so a semi-auto gun's next shot chops the last one's decay and a new
-    // burst chops the last burst's tail (raid 36: 89 of 224 bot sounds, on average 1.85 s lost; the STM-9 on the FRT
-    // "sounds like a looping single shot" for the same reason). This is SuperBetterAudioQueue.Update with one change: only a
-    // firing loop is ended when the next sound starts. Ported from the old Gun Audio mod (removed 5 Nov), without its random
-    // pitch and volume. A gun still has two voices, so a third sound takes back the oldest one.
-    //
-    // Holding a voice a little longer could leave the game's gun pool empty, and FireBullet then plays nothing at all. So if
-    // a gun finds no free voices, the gun closest to finishing (not firing, never yours) gives up its two: a fading tail is
-    // cut rather than a shot going silent. Only runs when the pool is actually empty.
-    //
-    // 0.7.12 "1f": a ringing tail rings out on a spare voice. A gun still has only two voices, and an automatic gun fired in single shots
-    // or short bursts uses both for every shot (the bang and its tail), so the next shot took back a voice whose tail was still ringing
-    // (Fika test raid, tag 1: an AK's 2 s tail cut after 0.23 s; 23-64% of bot sounds in earlier raids). Now, for anyone else's gun,
-    // the ringing voice is taken out of the gun's pair and left to finish where it is, and a spare voice from the game's own gun pool
-    // takes its place. The tail keeps everything the game gave it: its position, occlusion, mixer group and our route muffling.
-    // 0.7.18: no reserve. 0.7.12 left at least 6 spare voices for new guns and so ran once in a raid (raid_20261110_221827: 1 handed off,
-    // 42 skipped, 51% of bot sounds still cut). The game's pool never runs dry: BorrowSource makes a new voice when it's empty, as it
-    // does in any big fight. Instead at most MaxRingingOut tails ring on their own at once; past that a tail is cut as before.
+    // 1e and 1f: a gun's shots ring out instead of chopping each other. History and raid evidence: docs/dev/FIXES.md (1e, 1f).
+    //   1e   SuperBetterAudioQueue.Update with one change: only a firing loop is ended when the next sound starts. If the game's gun pool
+    //        is empty, the gun closest to finishing (not firing, never yours) gives up its voices so the new shot still plays.
+    //   1f   for anyone else's gun, a voice whose tail is still ringing is taken out of the gun's pair and left to finish where it is, and
+    //        a spare voice from the game's gun pool takes its place. At most MaxRingingOut ring on their own; past that a tail is cut as before.
+    // A gun's queue must keep exactly two voices: game code assumes it. Giving your own gun four (13d4965) dropped shots and was reverted.
     internal static class ShotOverlap
     {
         private static readonly AccessTools.FieldRef<BaseSoundPlayer, BaseSoundPlayer.IObserverToPlayerBridge> BridgeRef =

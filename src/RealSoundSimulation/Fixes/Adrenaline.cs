@@ -8,32 +8,15 @@ using UnityEngine;
 
 namespace RealSoundSimulation.Fixes
 {
-    // 0.7.22 "A": adrenaline after close calls. User, 11 Nov 2026: "maybe its because we are missing the heartbeat sounds and rushed breathing
-    // Adrenaline audio during the blast from my last audio mod", "I think that the hr and breathing will help alot with grenades", "Add it to 1.0".
-    // That old private mod played clips ported from the Realism mod, so none of it is used here. A scan of the game's sounds (11 Nov 2026)
-    // found no heartbeat anywhere, but every character voice has its own breathing.
-    //   stress   a close blast sets it 0..1 from its pressure dose (ShockWave.Dose: -15 dB -> 0, +6 dB -> 1; a second blast on top pushes it
-    //            higher). It holds HoldS, then settles along a smooth curve.
-    //   heart    2D on the Master group, so the concussion cut doesn't touch it: it's felt, like the shock wave. 75 bpm at the start up to
-    //            150 at full stress, scheduled on the audio clock so the beat never stutters with the frame rate. Only once a blast has
-    //            concussed you, cut your hearing or rung your ears (user: "only grenades that play the concussion effects").
-    //   breath   your character's own breathing from the voice's OnBreath bank, on our own source in the voice's mixer group: out of breath
-    //            (Healthy | Aware) while the heart is fast, normal (Healthy | Unaware) below CalmAt, ending with the episode; at the clip's
-    //            volume times "Adrenaline - breathing volume".
-    //
-    // 13 Nov 2026, after previews against a reference the user liked (Realism's recording, listened to only, nothing of it used): "ours
-    // is to drummy", "the low volume parts ... need to be lower. and less bass", "heartbeats follow a similar beat interval the space between
-    // both parts of the beat is what grows as a hr drops", "still maybe a bit bassy", "work on the fade out as this heartrate will have
-    // alot of variability", "grenades thrown by the player [should] trigger a lesser effect", "if the player is being shot at or being hit
-    // [it should] stay present (come down a bit but not all the way)", "I want to experiment with HR sound a little more".
-    //   sound    each beat is two separate clips, "lub" then "dub" a fixed gap later (only the pause between beats changes with the rate):
-    //            low noise through two low-passes over a high-pass, a soft raised-cosine rise, a short hold and a quick fall that fades to
-    //            silence, with a gentle throb (no pitch, no drum attack). Four variants each. The tone is set in F12 ("Heartbeat - ..."),
-    //            and the clips are rebuilt when a tone setting changes, so it can be tuned by ear in raid.
-    //   size     a small scare is quieter (level by stress) and settles sooner (settle x 0.5..1 by its peak).
-    //   own      a grenade you threw (Grenade.Explosion's thrower = you) counts at "Adrenaline - your own grenades" of its strength.
-    //   fight    while an episode runs, a hit holds stress at HitFloor (~110 bpm) for HitHoldS, a bullet passing close at MissFloor (~95 bpm)
-    //            for MissHoldS; after that it settles from there.
+    // A: a heartbeat and hard breathing after close calls. History and the tuning notes: docs/dev/FIXES.md (Adrenaline).
+    //   stress   a close blast sets it 0..1 from its pressure dose (DoseLowDb..DoseHighDb); your own grenades count at "your own grenades".
+    //            It holds HoldS, then settles over "settles over s" x (0.5 + 0.5 x peak) on a smooth curve. While it runs, a hit holds it
+    //            at HitFloor for HitHoldS and a near miss at MissFloor for MissHoldS.
+    //   heart    only once a blast has concussed you, cut your hearing or rung your ears. 2D on Master (no cut touches it), BpmLow..BpmHigh,
+    //            on the audio clock. Each beat is a generated "lub" then "dub" a fixed gap later; the tone is set in F12 and the clips
+    //            are rebuilt when it changes.
+    //   breath   your character's own OnBreath clips on our source in the voice's mixer group: out of breath above CalmAt, normal below.
+    // Nothing is taken from Realism or any other mod; every sound here is generated or the game's own.
     internal class Adrenaline : MonoBehaviour
     {
         private const float DoseLowDb = -15f, DoseHighDb = 6f, HoldS = 3f, StartAt = 0.08f, StopAt = 0.02f, BpmLow = 75f, BpmHigh = 150f,
