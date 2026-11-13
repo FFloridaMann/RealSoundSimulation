@@ -4,6 +4,8 @@ A simulated audio overhaul for SPT. Instead of playing a recording at a volume, 
 
 **The full description, with what you'll hear in a raid, the concussion system, performance and credits, is in [FORGE-PAGE.md](FORGE-PAGE.md).** This README covers installing, settings, bug reports and building from source.
 
+**Status: 0.9.0 beta.** Feature-complete and tested in solo raids on SPT 4.1.6. Not yet tested with Fika or co-op. Bug reports are very welcome (see [Reporting a bug](#reporting-a-bug)); 1.0 follows once players have tried it on other maps and PCs.
+
 ## Requirements
 
 - SPT 4.1.
@@ -32,7 +34,17 @@ The public build shows 31 settings, everything else keeps its tested value:
 | 06 HEARING | Concussion strength, headset protection, adrenaline, ear ringing |
 | 07 OUTDOORS AND WALLS | Roof rain volume |
 
-Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does. The developer build (`.\deploy.ps1 -Dev`) shows every setting, about 200, in sections 11 to 21.
+Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does. Turning a feature off gives you the game's own sound for it. For example, if rain or roof rain sounds wrong somewhere, untick **01 FEATURES → Outdoors - rain and outdoor sound indoors**; **Roof rain - volume** at 0 removes roof rain altogether.
+
+The developer build (`.\deploy.ps1 -Dev`) shows every setting, about 200, in sections 11 to 21.
+
+## Known issues
+
+- ADAR 2-15: a slight static at the end of tails after quick single shots. It isn't from cut sounds; it may be in the game's own recording.
+- G36: never blends its indoor and outdoor recordings (it seems to have only one).
+- With Bring Back Concussion: crossing a doorway while its hearing cut fades back can leave the indoor ambience at the old level until it next changes.
+- Not tested with Fika or co-op yet.
+- Heavy maps such as Woods with many bots stutter in places; in testing that was the game itself (the mod costs about 2% of one CPU core). If you suspect the mod, try **02 GENERAL → Sound quality** at Medium.
 
 ## Reporting a bug
 
