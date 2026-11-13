@@ -13,7 +13,7 @@ Each area ends in one **final test**: a raid that covers the whole area, instead
 - [x] Fixed test route and checklist ([TEST-ROUTE.md](TEST-ROUTE.md)) and `tools/compare_raids.py` to compare a raid with the reference (11 Nov 2026)
 - [ ] Run the route once on the current build: that raid becomes the reference
 - [ ] After one more test raid (user, 11 Nov 2026), in order, one test raid after each:
-  1. Mixer owner: every feature submits an offset per mixer key; one place reads the game's value, sums the offsets and writes once per frame (today: ConcussionProof, ShockWave dip, GunfireHearing, AmbienceMix, DoorwayBlend snapshots). Fixes PutBack restoring blast-time values after a headset change.
+  1. [x] Mixer owner (built 13 Nov 2026, 0.7.22; test raid still to run: close grenade with no headset, fire for a minute with gunfire ear ringing on, then the same with a headset): every feature submits an offset per mixer key; one place reads the game's value, sums the offsets and writes once per frame (today: ConcussionProof, ShockWave dip, GunfireHearing, AmbienceMix, DoorwayBlend snapshots). Fixes PutBack restoring blast-time values after a headset change.
   2. Voice pool: a budget per feature and a per-feature count in voices.csv (nine features share EchoVoices); no rewrite.
   3. One read-only review of those two areas only.
   4. Settings clean-up: delete settled A/B switches; body sounds behind a developer build; about 25 settings in the public build.

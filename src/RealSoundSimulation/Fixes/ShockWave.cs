@@ -17,8 +17,8 @@ namespace RealSoundSimulation.Fixes
     //            arrives as a train of shrinking pulses.
     //   push     a long low swell after the hit (the gas pressure phase, which lasts until the room vents): strongest and longest in a small or shut room. "6.9g", -24 = off.
     //   thump    above full volume 6.2 adds a second voice in step, up to +6 dB.
-    //   dip      the rest of the world dips for a moment, up to "6.9c", on the Main and ambience mixer volumes; explosions and guns are on another bus. It sits on top of what anything else sets, every frame,
-    //            so it can't fight Bring Back Concussion's cut or the ambience blend, and it only restores a control nobody else has moved.
+    //   dip      the rest of the world dips for a moment, up to "6.9c", on the Main and ambience mixer volumes; explosions and guns are on another bus. 13 Nov 2026: it's asked for through MixerOwner, which adds it
+    //            to the game's own values and to anything else that asks, and puts the game's values back when it ends. The dip keeps no copy of the volumes any more (Slots, Take and Restore are gone).
     // Levels, the boost, the repeats and the swell are by ear; the papers behind them are mostly small-scale.
     [DefaultExecutionOrder(32000)]
     internal class ShockWave : MonoBehaviour
@@ -27,7 +27,7 @@ namespace RealSoundSimulation.Fixes
 
         private const float FullAtM = 5f, ChargeRoot = 0.464f, AirKPa = 101.3f, MinVolume = 0.002f, ThroughWallHz = 200f, OpenHz = 22000f, RouteHz = 3000f, LeanToBlast = 0.25f, HeadStartM = 1.5f, DoorDb = 20f, SameM = 0.2f, HeldMaxS = 0.2f;
         private const float RiseS = 0.002f, PushS = 0.014f, LengthS = 0.45f, BodyShare = 0.8f, BodyDecayS = 0.09f, BodyLowHz = 42f, BodyHighHz = 80f, SweepS = 0.03f;
-        private const float AttackS = 0.015f, HoldS = 0.08f, TotalS = 0.38f, DuckRangeDb = 24f, MovedByOther = 0.05f, TooQuietDb = -60f;
+        private const float AttackS = 0.015f, HoldS = 0.08f, TotalS = 0.38f, DuckRangeDb = 24f;
         private const float SmallRoomM = 3f, BigRoomM = 14f, RightNextToM = 2.5f, RightNextToDb = -2f;
         private const float EnclosedFrom = 0.2f, RepeatMinS = 0.006f, RepeatMaxS = 0.05f, RepeatDull = 0.7f, PushOffDb = -24f;
         private static readonly float[] RepeatAt = { 1f, 1.7f, 2.5f, 3.4f }, RepeatDb = { -5f, -9f, -13f, -17f };
@@ -35,9 +35,7 @@ namespace RealSoundSimulation.Fixes
         private enum WayKind { None, Clear, Route, Waiting }
         private struct Way { public WayKind Kind; public Vector3 At, Near; public float Path, Turn, Closure; public int Openings; public string Name; }
         private struct Held { public Transform Listener; public Vector3 Pos; public float Dist, LossDb, WallFade, Delay, Extra; public int Walls; public double Played; public string Name; }
-        private struct Slot { public string Key; public float Base, Last; public bool On, Moved; }
 
-        private static readonly Slot[] Slots = new Slot[3];
         private static readonly Dictionary<string, int> Skips = new Dictionary<string, int>(), Ways = new Dictionary<string, int>();
         private static AudioClip _hit, _slap, _push;
         private static Way _way;
@@ -46,19 +44,18 @@ namespace RealSoundSimulation.Fixes
         private static double _armAt, _t0;
         private static float _armDepth, _depth, _fromEnv, _lastExtra;
 
-        public static int Played, ThumpDoubled, Ducks, Followed, Repeats, Pushes, Cracked;
+        public static int Played, ThumpDoubled, Ducks, Repeats, Pushes, Cracked;
         private static AudioClip _crack; // 0.7.22 "6.9s"
         private const float CrackOpenUp = 4f, CrackMinHz = 6000f;
         private static double _volSum;
 
         public static void Reset()
         {
-            if (_active) { try { Restore(); } catch (Exception e) { DiagRunner.ReportOnce("6.9 dip (reset)", e); } }
-            _armed = _active = _hasHeld = false;
+            _armed = _active = _hasHeld = false; // the mixer owner forgets the dip's asks at its own reset
             _way = default;
             _lastExtra = 0f;
             Skips.Clear(); Ways.Clear();
-            Played = ThumpDoubled = Ducks = Followed = Repeats = Pushes = YourRoomAdded = YourRoomSame = Cracked = 0;
+            Played = ThumpDoubled = Ducks = Repeats = Pushes = YourRoomAdded = YourRoomSame = Cracked = 0;
             _volSum = 0;
         }
 
@@ -162,7 +159,7 @@ namespace RealSoundSimulation.Fixes
         {
             _armed = false;
             if (!_active) return;
-            Restore();
+            MixerOwner.Clear(MixBy.Dip);
             _active = false;
         }
 
@@ -381,7 +378,7 @@ namespace RealSoundSimulation.Fixes
                 if (_hasHeld && AudioSettings.dspTime > _held.Played + HeldMaxS) { _hasHeld = false; Fire(_held, default); }
                 Tick();
             }
-            catch (Exception e) { DiagRunner.ReportOnce("6.9 shock wave", e); _armed = _active = false; }
+            catch (Exception e) { DiagRunner.ReportOnce("6.9 shock wave", e); _armed = _active = false; MixerOwner.Clear(MixBy.Dip); }
         }
 
         private static float Envelope(float t)
@@ -394,67 +391,24 @@ namespace RealSoundSimulation.Fixes
         private static void Tick()
         {
             if (!_armed && !_active) return;
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) { _armed = _active = false; return; }
-            BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
-            AudioMixer m = ba.Master;
-            if (m == null || ba.AudioMixerData == null) { _armed = _active = false; return; }
             double now = AudioSettings.dspTime;
             if (_armed && now >= _armAt)
             {
                 _armed = false;
                 float current = _active ? Envelope((float)(now - _t0)) * _depth : 0f;
-                if (!_active)
-                {
-                    Take(m, 0, ba.AudioMixerData.MainMixerVolume);
-                    Take(m, 1, ba.AudioMixerData.AmbientInMixerVolume);
-                    Take(m, 2, ba.AudioMixerData.AmbientOutMixerVolume);
-                    _active = true;
-                }
+                _active = true;
                 _depth = Mathf.Max(_armDepth, current);
                 _fromEnv = _depth > 0f ? current / _depth : 0f;
                 _t0 = now;
             }
             if (!_active) return;
             float t = (float)(now - _t0);
-            if (t >= TotalS) { Restore(); _active = false; return; }
+            if (t >= TotalS) { MixerOwner.Clear(MixBy.Dip); _active = false; return; }
+            // Asked again every frame. Outside a raid the owner takes no asks, and a volume the game has muted is left alone there.
             float down = Envelope(t) * _depth;
-            for (int i = 0; i < Slots.Length; i++)
-            {
-                if (!Slots[i].On) continue;
-                if (!m.GetFloat(Slots[i].Key, out float cur)) { Slots[i].On = false; continue; }
-                if (Mathf.Abs(cur - Slots[i].Last) > MovedByOther) // someone else set it: the dip goes on top of their value
-                {
-                    Slots[i].Base = cur;
-                    if (!Slots[i].Moved) { Slots[i].Moved = true; Followed++; }
-                }
-                if (Slots[i].Base <= TooQuietDb) { Slots[i].Last = cur; continue; }
-                float v = Slots[i].Base - down;
-                m.SetFloat(Slots[i].Key, v);
-                Slots[i].Last = v;
-            }
-        }
-
-        private static void Take(AudioMixer m, int i, string key)
-        {
-            bool got = !string.IsNullOrEmpty(key) && m.GetFloat(key, out Slots[i].Base);
-            Slots[i].Key = key;
-            Slots[i].Last = Slots[i].Base;
-            Slots[i].Moved = false;
-            Slots[i].On = got;
-        }
-
-        // Only a control still at our value goes back; anything else belongs to whoever moved it.
-        private static void Restore()
-        {
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return;
-            AudioMixer m = MonoBehaviourSingleton<BetterAudio>.Instance.Master;
-            if (m == null) return;
-            for (int i = 0; i < Slots.Length; i++)
-            {
-                if (!Slots[i].On) continue;
-                if (m.GetFloat(Slots[i].Key, out float cur) && Mathf.Abs(cur - Slots[i].Last) <= MovedByOther) m.SetFloat(Slots[i].Key, Slots[i].Base);
-                Slots[i].On = false;
-            }
+            MixerOwner.Offset(MixKey.Main, MixBy.Dip, -down);
+            MixerOwner.Offset(MixKey.AmbientIn, MixBy.Dip, -down);
+            MixerOwner.Offset(MixKey.AmbientOut, MixBy.Dip, -down);
         }
 
         private static void Skip(string why, float dist, int walls, float lossDb, string name)
@@ -479,7 +433,7 @@ namespace RealSoundSimulation.Fixes
         public static string Summary()
         {
             string state = Plugin.ShockOn.Value ? $"ON, level {Plugin.ShockLevelDb.Value:+0;-0;0} dB, reach {Plugin.ShockReachM.Value:0} m, corner {Plugin.ShockCornerDb.Value:0} dB, enclosed +{Plugin.ShockEnclosedDb.Value:0} dB, {Plugin.ShockRepeats.Value} repeats, push {Plugin.ShockPushDb.Value:+0;-0;0} dB, dip {Plugin.ShockDuckDb.Value:0} dB" : "off";
-            return $"SHOCK WAVE (6.9 {state}): hits {Played}" + (Played > 0 ? $", mean volume {_volSum / Played:0.00}" : "") + $" (by way: {Counts(Ways)}); repeat hits {Repeats}; slow pushes {Pushes}; thump second voice {ThumpDoubled}; sharp starts (6.9s {(Plugin.ShockCrackOn.Value ? $"ON {Plugin.ShockCrackDb.Value:+0;-0;0} dB" : "off")}) {Cracked}; dips {Ducks}, controls also moved by something else {Followed}; not played: {Counts(Skips)}  (shock.csv)\n";
+            return $"SHOCK WAVE (6.9 {state}): hits {Played}" + (Played > 0 ? $", mean volume {_volSum / Played:0.00}" : "") + $" (by way: {Counts(Ways)}); repeat hits {Repeats}; slow pushes {Pushes}; thump second voice {ThumpDoubled}; sharp starts (6.9s {(Plugin.ShockCrackOn.Value ? $"ON {Plugin.ShockCrackDb.Value:+0;-0;0} dB" : "off")}) {Cracked}; dips {Ducks}; not played: {Counts(Skips)}  (shock.csv)\n";
         }
     }
 }

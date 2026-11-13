@@ -57,90 +57,64 @@ namespace RealSoundSimulation.Fixes
     // While the game's ring runs (no headset) its pull on Guns and Main is held at those floors, so the blast is still heard under it.
     // Also fixed: every key went to the cut's absolute depth, so with a headset (Guns normally at the template's DryVolume, -50/-60) the
     // cut *raised* dry Guns to about -13 dB. Depths are now offsets from where each key started.
+    //
+    // 13 Nov 2026 "mixer owner": nothing here writes the mixer any more. The cut, the crack and the ring's deafening are asked for
+    // through MixerOwner, which adds them up on the game's own values and writes once, last in the frame. The bugs came from each
+    // part keeping its own copy of "where to go back to": in that day's raids the crack's headset trim stayed on Main and Guns for
+    // about 10 s, and the hold against the game's ring and the ring itself took turns every frame, so the user heard gun audio
+    // flickering "in and out"; and PutBack restored values read at the blast, wrong after a headset change. So the copies are gone (Start, Last,
+    // Calm, Normal, Theirs, PutBack): the cut is only so many dB down from whatever the game's value is now, the crack is an ask
+    // that stands alone for its length and then lapses by itself, and the game's ring is run by the mod (GameRing, 6.9u) with its
+    // deafening stopped at the 6.9t floors. Bring Back Concussion's own cut, when it runs instead of ours, is shown the game's values
+    // first (MixerOwner.ShowNormal), because it keeps what it reads and puts it back later.
     [DefaultExecutionOrder(32002)]
     internal class ConcussionProof : MonoBehaviour
     {
-        public const string MixHeader = "t,sinceBlastS,mainDb,gunsDb,worldDb,gameRinging,ourCut,window,theirsMainDb,theirsGunsDb";
-        private const float HeadsetCrackShare = 0.6f, HeadsetCrackDb = -6f, MinCrackS = 0.04f, CalmAfterS = 2f, MixLogS = 1.5f;
+        public const string MixHeader = "t,sinceBlastS,mainDb,gunsDb,worldDb,gameRinging,ourCut,window,mainBy,gunsBy"; // 13 Nov 2026: who asks, in place of the other writer's values
+        private const float HeadsetCrackShare = 0.6f, HeadsetCrackDb = -6f, MinCrackS = 0.04f, MixLogS = 1.5f;
         private static float _crackUntil = -1f, _blastAt = -100f;
-        private const int CrackKeys = 4; // Main, Guns, Main tinnitus send, Guns tinnitus send
-        private static readonly float[] Calm = { 0f, 0f }, Forced = new float[CrackKeys], Theirs = new float[CrackKeys];
-        private static readonly bool[] Had = new bool[CrackKeys];
-        private static readonly float[] Normal = new float[CrackKeys]; // 13 Nov 2026: what each key goes back to when nobody else wrote it
-        private static readonly string[] CrackKey = new string[CrackKeys];
         private static readonly string[] HeadsetKeys = { "MainVolume", "GunsVolume", "AmbientVolume", "AmbientOccluded", "EnvironmentVolume", "OcclusionVolume", "OutEnvironmentVolume", "HeadphonesMixerVolume", "AmbientCompressorSendLevel" };
         public const string HeadsetHeader = "t,headset,tplDryDb,tplAmbientDb,mainDb,gunsDb,ambientDb,ambientOccludedDb,environmentDb,occlusionDb,outEnvironmentDb,headphonesDb,ambientCompressorSendDb";
         private static float _nextHeadsetRow;
-        public static int Cracks, CrackOverrides, RingHeld;
+        public static int Cracks;
 
-        // ShockWave: a blast's sound has just started. Stops reading the "before" volumes for a while.
+        // What the cut takes off World and Main right now (0 when it isn't running). GameRing counts these towards the 6.9t floors.
+        public static float CutWorldDb, CutMainDb;
+
+        // ShockWave: a blast's sound has just started. blastmix.csv logs every frame for a while after it.
         public static void BlastEvent() => _blastAt = Time.unscaledTime;
 
         // ShockWave: this blast will cut your hearing; let it be heard first. playedDsp = when its sound started.
+        // Main and Guns stand at the game's normal values (less 6 dB with a headset) and the ring sends stay off, whatever else asks,
+        // until the window ends; then the asks lapse and the ring's deafening and the cut come through.
         public static void Crack(double playedDsp)
         {
             if (!Plugin.CrackOn.Value || Plugin.CrackMs.Value <= 0f) return;
             bool hs = HeadsetOn();
             float len = Plugin.CrackMs.Value / 1000f * (hs ? HeadsetCrackShare : 1f);
             float late = (float)Math.Max(0.0, AudioSettings.dspTime - playedDsp);
-            float trim = hs ? HeadsetCrackDb : 0f, dry = 0f;
-            try { if (MonoBehaviourSingleton<BetterAudio>.Instantiated) dry = MonoBehaviourSingleton<BetterAudio>.Instance.CurrentHeadphonesTemplate.DryVolume; } catch { dry = Calm[1]; }
-            Forced[0] = (Calm[0] < -20f ? 0f : Calm[0]) + trim; // Main as it was (the game's normal is 0)
-            Forced[1] = dry + trim;                                // Guns: the game's normal for this headset (0 without one)
-            Forced[2] = Forced[3] = -80f;                          // no tinnitus low-pass yet
-            Normal[0] = Forced[0] - trim; Normal[1] = Forced[1] - trim; Normal[2] = Normal[3] = -80f;
-            for (int i = 0; i < CrackKeys; i++) Had[i] = false;
-            _crackUntil = Time.unscaledTime + Mathf.Max(len - late, MinCrackS);
+            float trim = hs ? HeadsetCrackDb : 0f, forS = Mathf.Max(len - late, MinCrackS);
+            MixerOwner.Alone(MixKey.Main, MixBy.Crack, trim, forS);
+            MixerOwner.Alone(MixKey.Guns, MixBy.Crack, trim, forS);
+            MixerOwner.Alone(MixKey.MainRingSend, MixBy.Crack, 0f, forS); // no tinnitus low-pass yet
+            MixerOwner.Alone(MixKey.GunsRingSend, MixBy.Crack, 0f, forS);
+            _crackUntil = Time.unscaledTime + forS;
             Cracks++;
         }
 
         private static float CrackLeft() => Mathf.Max(0f, _crackUntil - Time.unscaledTime);
 
-        private void LateUpdate()
+        // Called by the mixer owner once it has written this frame, so the rows show what is really heard.
+        internal static void AfterMix(BetterAudio ba)
         {
             try
             {
-                if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return;
-                BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
+                if (!DiagLog.IsOpen) return;
                 AudioMixer m = ba.Master;
-                if (m == null || ba.AudioMixerData == null) return;
-                string mk = ba.AudioMixerData.MainMixerVolume, gk = ba.AudioMixerData.GunsMixerVolume;
-                CrackKey[0] = mk; CrackKey[1] = gk; CrackKey[2] = ba.AudioMixerData.MainMixerTinnitusSendLevel; CrackKey[3] = ba.AudioMixerData.GunsMixerTinnitusSendLevel;
                 float now = Time.unscaledTime;
-                bool window = now < _crackUntil;
-                if (window)
-                {
-                    for (int i = 0; i < CrackKeys; i++)
-                    {
-                        string k = CrackKey[i];
-                        if (string.IsNullOrEmpty(k)) continue;
-                        if (m.GetFloat(k, out float v) && Mathf.Abs(v - Forced[i]) > 0.5f) { Theirs[i] = v; Had[i] = true; CrackOverrides++; }
-                        m.SetFloat(k, Forced[i]);
-                    }
-                }
-                else if (_crackUntil > 0f)
-                {
-                    // 13 Nov 2026: always put every key back: the game's ring (or another cut) gets its values, and a key nobody else wrote
-                    // goes back to normal. The headset trim (-6 dB) used to stay on Main and Guns until the end of our cut, about 10 s,
-                    // because a light cut never writes them (raid_20261113_111558: Main -6, Guns -66 with a ComTac on).
-                    for (int i = 0; i < CrackKeys; i++) { if (!string.IsNullOrEmpty(CrackKey[i])) m.SetFloat(CrackKey[i], Had[i] ? Theirs[i] : Normal[i]); Had[i] = false; }
-                    _crackUntil = -1f;
-                }
-                else if (now - _blastAt > CalmAfterS && !_active && !Tinnitus(ba))
-                {
-                    if (m.GetFloat(mk, out float a)) Calm[0] = a <= -75f ? 0f : a;
-                    if (m.GetFloat(gk, out float b)) Calm[1] = b <= -75f ? 0f : b;
-                }
-                // 0.7.22 "6.9t": while our cut runs and the game's ring pulls Main and Guns down, hold them at our floors so the blast stays heard
-                if (_active && Plugin.HeardThroughOn.Value && Tinnitus(ba) && Time.time >= _t0)
-                {
-                    float rt = Remaining(MainIndex, Time.time - _t0);
-                    if (m.GetFloat(mk, out float cm) && cm < Start[MainIndex] + Depth[MainIndex] * rt - 0.5f) { m.SetFloat(mk, Start[MainIndex] + Depth[MainIndex] * rt); RingHeld++; }
-                    if (m.GetFloat(gk, out float cg) && cg < Start[GunsIndex] - 0.5f) { m.SetFloat(gk, Start[GunsIndex]); RingHeld++; }
-                }
                 // 0.7.22: the headset's own mixer values every 5 s, to see whether anything moves them off the template (user: "I feel like
                 // I hear footsteps worse with headsets? is this our mod mixer?")
-                if (DiagLog.IsOpen && now >= _nextHeadsetRow)
+                if (now >= _nextHeadsetRow)
                 {
                     _nextHeadsetRow = now + 5f;
                     var tpl = ba.CurrentHeadphonesTemplate;
@@ -150,21 +124,21 @@ namespace RealSoundSimulation.Fixes
                     foreach (string k in HeadsetKeys) { sb.Append(','); sb.Append(m.GetFloat(k, out float hv) ? DiagLog.F(hv, "0.0") : ""); }
                     DiagLog.Row("headsetmix.csv", sb.ToString());
                 }
-                if (DiagLog.IsOpen && now - _blastAt < MixLogS)
+                if (now - _blastAt < MixLogS)
                 {
-                    m.GetFloat(mk, out float mv); m.GetFloat(gk, out float gv);
+                    m.GetFloat(ba.AudioMixerData.MainMixerVolume, out float mv); m.GetFloat(ba.AudioMixerData.GunsMixerVolume, out float gv);
                     float wv = 0f; if (!string.IsNullOrEmpty(ba.AudioMixerData.WorldMixerVolume)) m.GetFloat(ba.AudioMixerData.WorldMixerVolume, out wv);
                     DiagLog.Row("blastmix.csv", string.Join(",", DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.000"), DiagLog.F(now - _blastAt, "0.000"),
-                        DiagLog.F(mv, "0.0"), DiagLog.F(gv, "0.0"), DiagLog.F(wv, "0.0"), Tinnitus(ba) ? "1" : "0", _active ? "1" : "0", window ? "1" : "0",
-                        Had[0] ? DiagLog.F(Theirs[0], "0.0") : "", Had[1] ? DiagLog.F(Theirs[1], "0.0") : ""));
+                        DiagLog.F(mv, "0.0"), DiagLog.F(gv, "0.0"), DiagLog.F(wv, "0.0"), Tinnitus(ba) ? "1" : "0", _active ? "1" : "0", now < _crackUntil ? "1" : "0",
+                        MixerOwner.By(MixKey.Main), MixerOwner.By(MixKey.Guns)));
                 }
             }
-            catch (Exception e) { DiagRunner.ReportOnce("6.9r crack before the cut", e); _crackUntil = -1f; }
+            catch (Exception e) { DiagRunner.ReportOnce("6.9r mixer rows", e); }
         }
         public const string Header = "t,closeness,endDb,cutS,tailS,holdS,fadeS,tinnitus,headset"; // 0.7.10: headset
         public const string DoseHeader = "t,doseDb,equivalentM,earsEquivalentM,earsCloseness,concussed,duration,ringOnly,blastRoomDb,yourRoomDb,yourRoomM,yourRoom"; // 0.7.1: the last four, 6.9n
         private const string OtherMod = "com.harmonyzt.BringBackConcussion", CutType = "BringBackConcussion.Patches.ExplosionSoundCutoff", ProximityType = "BringBackConcussion.Patches.ExplosionProximityPatch";
-        private const float NoCutAtOrBelow = 0.05f, CutsBelow = 0.95f, DefaultFadeS = 6f, WriteStepDb = 0.01f, PendingMaxS = 0.25f, SamePosM = 1f, RingMinS = 1.5f, RingMaxS = 4f;
+        private const float NoCutAtOrBelow = 0.05f, CutsBelow = 0.95f, DefaultFadeS = 6f, PendingMaxS = 0.25f, SamePosM = 1f, RingMinS = 1.5f, RingMaxS = 4f;
         private const int GunsIndex = 1, MaxPending = 6;
 
         private class Pending { public IExplosiveItem Item; public Vector3 Pos; public float T; }
@@ -181,11 +155,11 @@ namespace RealSoundSimulation.Fixes
         private static ConfigEntry<float> _radius, _fadeEntry;
         private static ConfigEntry<bool> _cutEntry;
         private static FieldInfo _tinnitusEnd;
-        private static readonly string[] Keys = new string[5];
-        private static readonly float[] Start = new float[5], Last = new float[5], Depth = new float[5];
-        private const int MainIndex = 0, WorldIndex = 2, LightCutFullMuffle = 0; // Keys: Main, Guns, World, AmbientIn, AmbientOut
-        private static string _lpKey;
-        private static float _lpStart, _lpEnd, _lpLast;
+        private static readonly MixKey[] Keys = { MixKey.Main, MixKey.Guns, MixKey.World, MixKey.AmbientIn, MixKey.AmbientOut };
+        private static readonly float[] Depth = new float[5]; // how far down each goes at the cut's deepest, from the game's own value
+        private const int MainIndex = 0, WorldIndex = 2;
+        private static bool _lpOn;
+        private static float _lpStart, _lpEnd;
         private static float _t0, _end, _cut, _tail, _hold, _fade;
 
         public static int Soft, LeftToMod, Felt, Protected;
@@ -197,10 +171,10 @@ namespace RealSoundSimulation.Fixes
         public static void Reset()
         {
             Soft = LeftToMod = Felt = Protected = 0;
-            Cracks = CrackOverrides = RingHeld = 0; _crackUntil = -1f; _nextHeadsetRow = 0f; for (int i = 0; i < CrackKeys; i++) Had[i] = false;
+            Cracks = 0; _crackUntil = -1f; _nextHeadsetRow = 0f;
             Concussed = RingOnly = EarsOnly = Dropped = Plain = 0;
             Waiting.Clear();
-            _active = false;
+            _active = _lpOn = false; CutWorldDb = CutMainDb = 0f;
             TryPatch();
         }
 
@@ -329,6 +303,7 @@ namespace RealSoundSimulation.Fixes
                     else
                     {
                         LeftToMod++;
+                        MixerOwner.ShowNormal(); // that mod keeps what it reads now and puts it back later
                         _reentry = true;
                         try { _trigger.Invoke(null, new object[] { cutEars }); }
                         finally { _reentry = false; }
@@ -386,12 +361,12 @@ namespace RealSoundSimulation.Fixes
         {
             if (_reentry) return true;
             if (_byDose) return false; // ears were already dealt with
-            ShockWave.EndDipNow(); // before anyone reads the volumes that get put back
+            ShockWave.EndDipNow(); // the cut does that job from here
             float raw = closeness;
             closeness = CutCloseness(closeness); // "6.9q", also for that mod's own cut
             if (_headsetNow && raw > NoCutAtOrBelow) Protected++;
             if (closeness <= NoCutAtOrBelow) return !_headsetNow || raw <= NoCutAtOrBelow; // a headset took the whole cut away
-            if (!Plugin.SoftCutOn.Value) return true;
+            if (!Plugin.SoftCutOn.Value) { MixerOwner.ShowNormal(); return true; } // that mod keeps what it reads now and puts it back later
             try
             {
                 if (TryStart(closeness, 1f)) { Soft++; Adrenaline.Concussion(); return false; }
@@ -399,37 +374,28 @@ namespace RealSoundSimulation.Fixes
             catch (Exception e) { DiagRunner.ReportOnce("6.9h soft concussion cut", e); }
             LeftToMod++;
             Adrenaline.Concussion();
+            MixerOwner.ShowNormal();
             return true;
         }
 
         private static bool TryStart(float closeness, float holdScale)
         {
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated) return false;
+            if (!MixerOwner.Running || !MonoBehaviourSingleton<BetterAudio>.Instantiated) return false; // no owner, no soft cut: that mod's own runs
             BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
-            AudioMixer m = ba.Master;
-            if (m == null || ba.AudioMixerData == null) return false;
-            if (_active) { PutBack(m); _active = false; }
-            Keys[0] = ba.AudioMixerData.MainMixerVolume; Keys[1] = ba.AudioMixerData.GunsMixerVolume; Keys[2] = ba.AudioMixerData.WorldMixerVolume; Keys[3] = ba.AudioMixerData.AmbientInMixerVolume; Keys[4] = ba.AudioMixerData.AmbientOutMixerVolume;
-            for (int i = 0; i < Keys.Length; i++)
-            {
-                if (!m.GetFloat(Keys[i], out Start[i])) return false;
-                if (Start[i] <= -75f) Start[i] = 0f;
-                Last[i] = Start[i];
-            }
+            MixerOwner.Clear(MixBy.Cut); // a cut still running starts again from the game's values, as before
+            CutWorldDb = CutMainDb = 0f;
             _end = Mathf.Lerp(0f, -80f, closeness);
-            // 0.7.22: depths are offsets from where each key started; with "6.9t" the world stays heard, muffled
+            // 0.7.22: depths are offsets from the game's own values; with "6.9t" the world stays heard, muffled
             for (int i = 0; i < Depth.Length; i++) Depth[i] = 0f;
             bool heard = Plugin.HeardThroughOn.Value;
             Depth[WorldIndex] = heard ? Mathf.Max(_end, Plugin.BlastHeardDb.Value) : _end;
             if (heard) Depth[MainIndex] = Mathf.Min(0f, Mathf.Max(_end, Plugin.WorldHeardDb.Value) - Depth[WorldIndex]);
-            _lpKey = heard ? ba.AudioMixerData.WorldMixerLowpassFreq : null;
-            if (!string.IsNullOrEmpty(_lpKey) && m.GetFloat(_lpKey, out _lpStart) && _lpStart > 100f)
+            _lpOn = heard && MixerOwner.LowpassNormal(out _lpStart);
+            if (_lpOn)
             {
                 float muffle = Mathf.Clamp01(closeness * 1.5f); // a light cut muffles less
                 _lpEnd = Mathf.Exp(Mathf.Lerp(Mathf.Log(_lpStart), Mathf.Log(Mathf.Min(Plugin.MuffleHz.Value, _lpStart)), muffle));
-                _lpLast = _lpStart;
             }
-            else _lpKey = null;
             _cut = Mathf.Lerp(0.3f, 0.05f, closeness);
             _hold = Mathf.Lerp(0.2f, 1.5f, closeness) * holdScale;
             _fade = _fadeEntry != null ? _fadeEntry.Value : DefaultFadeS;
@@ -472,37 +438,28 @@ namespace RealSoundSimulation.Fixes
             if (!_active) return;
             try
             {
-                if (!SpatialAudioSystem.Initialized || !MonoBehaviourSingleton<BetterAudio>.Instantiated) { _active = false; return; } // raid over: the game owns these now
-                BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
-                AudioMixer m = ba.Master;
-                if (m == null) { _active = false; return; }
+                if (!MixerOwner.Running) { EndCut(); return; } // raid over, or the owner stopped: the game owns these now
                 float t = Time.time - _t0;
                 if (t < 0f) return; // "6.9r": the crack is still playing
-                if (t >= Mathf.Max(_cut, _tail) + _hold + _fade) { PutBack(m); _active = false; return; }
-                bool ringing = Tinnitus(ba);
+                if (t >= Mathf.Max(_cut, _tail) + _hold + _fade) { EndCut(); return; }
+                // Asked again every frame; the owner adds the game's ring and anything else on top and writes once.
                 for (int i = 0; i < Keys.Length; i++)
-                {
-                    if (ringing && i <= GunsIndex) continue; // the game's ringing drives Main and Guns (held at our floors in LateUpdate with 6.9t)
-                    float v = Start[i] + Depth[i] * Remaining(i, t);
-                    if (Mathf.Abs(v - Last[i]) < WriteStepDb) continue; // nothing to change during the hold, so other writers aren't overruled
-                    m.SetFloat(Keys[i], v);
-                    Last[i] = v;
-                }
-                if (_lpKey != null)
-                {
-                    float hz = Mathf.Exp(Mathf.Lerp(Mathf.Log(_lpStart), Mathf.Log(_lpEnd), Remaining(WorldIndex, t)));
-                    if (Mathf.Abs(hz - _lpLast) > 1f) { m.SetFloat(_lpKey, hz); _lpLast = hz; }
-                }
+                    if (Depth[i] != 0f) MixerOwner.Offset(Keys[i], MixBy.Cut, Depth[i] * Remaining(i, t));
+                CutWorldDb = Depth[WorldIndex] * Remaining(WorldIndex, t);
+                CutMainDb = Depth[MainIndex] * Remaining(MainIndex, t);
+                if (_lpOn) MixerOwner.Ceiling(MixBy.Cut, Mathf.Exp(Mathf.Lerp(Mathf.Log(_lpStart), Mathf.Log(_lpEnd), Remaining(WorldIndex, t))));
             }
-            catch (Exception e) { DiagRunner.ReportOnce("6.9h soft concussion cut (update)", e); _active = false; }
+            catch (Exception e) { DiagRunner.ReportOnce("6.9h soft concussion cut (update)", e); EndCut(); }
         }
 
-        private static void PutBack(AudioMixer m)
+        // The owner writes the game's values back once the asks are gone.
+        private static void EndCut()
         {
-            for (int i = 0; i < Keys.Length; i++) if (!string.IsNullOrEmpty(Keys[i])) m.SetFloat(Keys[i], Start[i]);
-            if (_lpKey != null) { m.SetFloat(_lpKey, _lpStart); _lpKey = null; }
+            _active = _lpOn = false;
+            CutWorldDb = CutMainDb = 0f;
+            MixerOwner.Clear(MixBy.Cut);
         }
 
-        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; heard through the cut (6.9t {(Plugin.HeardThroughOn.Value ? $"ON blast {Plugin.BlastHeardDb.Value:0} dB, world {Plugin.WorldHeardDb.Value:0} dB, {Plugin.MuffleHz.Value:0} Hz" : "off")}, game ring held {RingHeld} frames); crack before the cut (6.9r {(Plugin.CrackOn.Value ? $"ON {Plugin.CrackMs.Value:0} ms" : "off")}) {Cracks}, other writers held off {CrackOverrides} frames; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), softened by a headset {Protected} (6.9q {Plugin.HeadsetProtectionPct.Value:0}%), walled off {Dropped}, by distance as a fallback {Plain}; your room (6.9n {(Plugin.YourRoomOn.Value ? $"ON, up to +{Plugin.YourRoomDb.Value:0.#} dB" : "off")}) added to {ShockWave.YourRoomAdded}, same room as the blast {ShockWave.YourRoomSame}  (concussion.csv, concdose.csv)\n";
+        public static string Summary() => $"CONCUSSION SOUND CUT (6.9h {(Plugin.SoftCutOn.Value ? $"ON, blast tail {Plugin.BlastTailFadeS.Value:0.0} s, felt {Plugin.FeltThroughCutDb.Value:+0;-0;0} dB" : "off")}): that mod's cut {(_trigger != null ? "found" : "not found or not installed")}; soft cuts {Soft}, left to that mod {LeftToMod}; layers kept through the cut for {Felt} blasts; heard through the cut (6.9t {(Plugin.HeardThroughOn.Value ? $"ON blast {Plugin.BlastHeardDb.Value:0} dB, world {Plugin.WorldHeardDb.Value:0} dB, {Plugin.MuffleHz.Value:0} Hz" : "off")}); crack before the cut (6.9r {(Plugin.CrackOn.Value ? $"ON {Plugin.CrackMs.Value:0} ms" : "off")}) {Cracks}; by pressure (6.9k {(ByPressure ? $"ON, {Plugin.ConcussionPressureDb.Value:+0;-0;0} dB, ears +{Plugin.EarsReachDb.Value:0} dB" : "off or not found")}): concussed {Concussed}, ears only {EarsOnly} (with ringing {RingOnly}), softened by a headset {Protected} (6.9q {Plugin.HeadsetProtectionPct.Value:0}%), walled off {Dropped}, by distance as a fallback {Plain}; your room (6.9n {(Plugin.YourRoomOn.Value ? $"ON, up to +{Plugin.YourRoomDb.Value:0.#} dB" : "off")}) added to {ShockWave.YourRoomAdded}, same room as the blast {ShockWave.YourRoomSame}  (concussion.csv, concdose.csv, blastmix.csv)\n";
     }
 }

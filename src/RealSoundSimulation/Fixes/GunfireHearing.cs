@@ -30,16 +30,23 @@ namespace RealSoundSimulation.Fixes
     // slower than that, subsonic suppressed not at all. So: those four tiers (the suppressor no longer also counts through its own
     // loudness), the noise waits 2 s after a shot before draining and then drains 3 a second, and the ring starts at 10 (faint, so a
     // few shots are heard) and is full at 70. A final pass may simulate the noise level with the probes.
+    //
+    // 13 Nov 2026 "mixer owner": two changes after a raid where, with no headset, voices and guns went "in and out" until extraction.
+    //   hold     firing while a blast's ring played pushed the game's ring end later on every shot, with no limit, so in a fight the
+    //            game's ring, and its deafening, never ended. Now the hold is at most 10 s past the ring's own end. When the mod runs
+    //            the game's ring (GameRing, 6.9u) only the ring's sound is held and the deafening runs its own course.
+    //   dull     the dulling is asked for through MixerOwner as so many dB off Main, added to whatever else asks. It no longer keeps
+    //            its own copy of Main's volume, and no longer has to stand back while a ring or a cut is working.
     internal class GunfireHearing : MonoBehaviour
     {
         private const float MaxNoise = 150f, NoiseFade = 3f, DropPerNoise = 0.15f, RingStart = 10f, RingFull = 70f, RingFloor = 0.15f;
         private const float SubsonicOpen = 0.75f, SupersonicSuppressed = 0.45f; // 0.7.14: supersonic open = 1, subsonic suppressed = 0
         private const float DropRise = 1f, DropFall = 2f, RingFadeTime = 1.5f, RingSilent = 0.001f, GearCheckInterval = 0.5f;
-        private const float FiringWindow = 2f, VolumeFinished = 0.01f, SameLevel = 0.01f, MidFadeDb = -20f, SpeedOfSound = 335f;
+        private const float FiringWindow = 2f, VolumeFinished = 0.01f, SpeedOfSound = 335f;
         private const float MinAmmoFactor = 0.2f, MaxAmmoFactor = 2f, MinModFactor = 0.1f, LoudnessScale = 80f, UnknownCaliber = 2f;
         private const float NearbyMax = 5f, NearbyBoost = 1.25f, LightHelmet = 0.9f, HeavyHelmet = 0.8f, HeadsetLetsThrough = 0.5f;
         private const float BigRoomExtra = 0.2f, SmallRoomExtra = 0.6f, SmallRoomM = 2f, BigRoomM = 8f, MinThroughWall = 0.1f;
-        private const float RingHoldSeconds = 2.5f, MaxRingProgress = 0.95f;
+        private const float RingHoldSeconds = 2.5f, MaxRingProgress = 0.95f, MaxHoldPastEndS = 10f, SameEndS = 0.01f;
 
         private static readonly Dictionary<string, float> Calibers = new Dictionary<string, float>
         {
@@ -59,13 +66,13 @@ namespace RealSoundSimulation.Fixes
         private static readonly AccessTools.FieldRef<Player, AudioClip> RingClip = AccessTools.FieldRefAccess<Player, AudioClip>("_tinnitus");
 
         private static AudioSource _ring;
-        private static float _ringLevel, _noise, _volumeDrop, _firingUntil = -1f, _writtenVolume, _nextGearCheck;
-        private static bool _wearsHeadset, _writing;
-        private static float _base;
+        private static float _ringLevel, _noise, _volumeDrop, _firingUntil = -1f, _nextGearCheck;
+        private static bool _wearsHeadset, _capCounted;
+        private static float _ownEnd = float.NaN, _heldEnd = float.NaN; // the game's ring: where it would have ended by itself, and where the hold last put its end
         private static Player _gearOf;
 
         // Raid figures for the summary.
-        public static int OwnShots, OtherShots, Subsonic, RingStarts, Holds, SuperOpen, SubOpen, SuperSup;
+        public static int OwnShots, OtherShots, Subsonic, RingStarts, Holds, HoldsCapped, SuperOpen, SubOpen, SuperSup;
         public static float MaxNoiseSeen, MaxDrop, RingSeconds;
 
         public static void Apply(Harmony h)
@@ -76,9 +83,9 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset()
         {
-            _noise = _volumeDrop = _ringLevel = 0f; _firingUntil = -1f; _nextGearCheck = 0f; _gearOf = null; _writing = false;
+            _noise = _volumeDrop = _ringLevel = 0f; _firingUntil = -1f; _nextGearCheck = 0f; _gearOf = null; _ownEnd = _heldEnd = float.NaN; _capCounted = false;
             if (_ring != null) _ring.Stop();
-            OwnShots = OtherShots = Subsonic = RingStarts = Holds = SuperOpen = SubOpen = SuperSup = 0;
+            OwnShots = OtherShots = Subsonic = RingStarts = Holds = HoldsCapped = SuperOpen = SubOpen = SuperSup = 0;
             MaxNoiseSeen = MaxDrop = RingSeconds = 0f;
         }
 
@@ -285,43 +292,44 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
-        // The game's ring follows a curve from start to end. Moving the end later while keeping the same point on the curve holds it
-        // at its current strength, and it fades normally once the shooting stops.
+        // The ring recording your character carries, for the mod's run of the game's ring when the game passes none.
+        internal static AudioClip ClipOf(Player player) => player != null ? RingClip(player) : null;
+
+        // Firing while a blast's ring plays keeps that ring going, but never for more than 10 s past its own end.
         private static void HoldGameRing()
         {
             BetterAudio ba = Singleton<BetterAudio>.Instance;
-            float left = RingEnd(ba) - Time.time;
+            if (GameRing.Hold(ba)) return; // the mod runs this ring: only its sound is held, and GameRing keeps the count
+
+            // The game's own coroutine runs it (6.9u off, or it failed). Its ring follows a curve from start to end: moving the end
+            // later while keeping the same point on the curve holds it at its current strength, deafening included, and it fades
+            // normally once the shooting stops. An end this hold didn't set is a new ring, or a new blast: its own end counts from there.
+            float end = RingEnd(ba);
+            if (float.IsNaN(_heldEnd) || Mathf.Abs(end - _heldEnd) > SameEndS) { _ownEnd = end; _heldEnd = float.NaN; _capCounted = false; }
+            float left = end - Time.time;
             if (left >= RingHoldSeconds) return;
+            float newEnd = Time.time + RingHoldSeconds;
+            if (newEnd > _ownEnd + MaxHoldPastEndS)
+            {
+                if (!_capCounted) { _capCounted = true; HoldsCapped++; }
+                return; // held long enough: it fades out now, however much you fire
+            }
             float length = Mathf.Max(RingLength(ba), 0.01f);
             float progress = Mathf.Clamp(1f - left / length, 0f, MaxRingProgress);
-            RingEnd(ba) = Time.time + RingHoldSeconds;
+            RingEnd(ba) = newEnd;
             RingLength(ba) = RingHoldSeconds / (1f - progress);
+            _heldEnd = newEnd;
             Holds++;
         }
 
         private static float Approach(float value, float target, float seconds) => Mathf.Lerp(value, target, 1f - Mathf.Exp(-Time.deltaTime / seconds));
 
-        // The main mixer leaves out the guns. Writes nothing while hearing is untouched, and leaves the game's ring, the concussion cut,
-        // a blast's dip and the game's own fades alone.
+        // The main mixer leaves out the guns. The mixer owner adds this to the game's value and to the ring, the concussion cut and a
+        // blast's dip, and puts the game's value back when it ends.
         private static void Write(float dropDb)
         {
-            BetterAudio ba = Singleton<BetterAudio>.Instance;
-            if (ba == null || ba.Master == null || ba.AudioMixerData == null) return;
-            if (dropDb <= 0f && !_writing) return;
-            if (GameRinging || ConcussionProof.CutActive) return;
-            string key = ba.AudioMixerData.MainMixerVolume;
-            if (!ba.Master.GetFloat(key, out float current)) return;
-            if (!_writing)
-            {
-                // Starting: whatever the main mix is at now (the game's own volume setting) is where it goes back to.
-                if (current < MidFadeDb) return; // a fade or cut is working on it: wait
-                _base = current; _writtenVolume = current; _writing = true;
-            }
-            else if (Mathf.Abs(current - _writtenVolume) > SameLevel) return; // someone else moved it since: leave it to them
-            float level = dropDb <= 0f ? _base : _base - dropDb;
-            ba.Master.SetFloat(key, level);
-            _writtenVolume = level;
-            if (dropDb <= 0f) _writing = false;
+            if (dropDb > 0f) MixerOwner.Offset(MixKey.Main, MixBy.Gunfire, -dropDb);
+            else MixerOwner.Clear(MixKey.Main, MixBy.Gunfire);
         }
 
         public static string Summary()
@@ -329,7 +337,7 @@ namespace RealSoundSimulation.Fixes
             if (!Plugin.EarRingOn.Value) return "GUNFIRE HEARING (5r off)\n";
             return $"GUNFIRE HEARING (5r ON, ring {Plugin.EarRingVolume.Value:0.00}, strength x{Plugin.EarRingStrength.Value:0.00}, longest ring {Plugin.EarRingLongestS.Value:0} s, dulls up to {Plugin.EarRingDullDb.Value:0} dB, nearby {Plugin.EarRingNearbyM.Value:0} m): " +
                    $"shots counted yours {OwnShots}, others {OtherShots} (supersonic {SuperOpen}, subsonic {SubOpen}, supersonic suppressed {SuperSup}; subsonic suppressed left out {Subsonic}); most noise {MaxNoiseSeen:0} (ring from {RingStart:0}, full at {RingFull:0}); " +
-                   $"ring started {RingStarts} times, {RingSeconds:0} s in all; a blast's ring held {Holds} frames; most dulled {MaxDrop:0.0} dB; headset on at the end {_wearsHeadset}\n";
+                   $"ring started {RingStarts} times, {RingSeconds:0} s in all; a blast's ring held {Holds + GameRing.HeldFrames} frames (capped {HoldsCapped + GameRing.Capped} times at {MaxHoldPastEndS:0} s); most dulled {MaxDrop:0.0} dB; headset on at the end {_wearsHeadset}\n";
         }
     }
 }
