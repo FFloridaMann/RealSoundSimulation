@@ -247,8 +247,10 @@ namespace RealSoundSimulation.Fixes
             float body = Mathf.Clamp(Plugin.HeartBodyHz.Value, 30f, 300f) * (dub ? Mathf.Clamp(Plugin.HeartDubPitch.Value, 0.4f, 2f) : 1f);
             float cut = Mathf.Clamp(Plugin.HeartLowCutHz.Value - (dub ? 10f : 0f), 10f, 200f);
             float len = Mathf.Clamp(Plugin.HeartLength.Value, 0.3f, 3f), rough = Mathf.Clamp01(Plugin.HeartTexture.Value);
-            float att = (dub ? 0.02f : 0.022f) * len, hold = 0.03f * len, dec = (dub ? 0.036f : 0.032f) * len, am = (dub ? 18f : 20f) * j();
-            Biquad lp1 = Biquad.LowPass(body * j(), 1.8f), lp2 = Biquad.LowPass(body * 1.35f * j(), 1.4f), hp = Biquad.HighPass(cut, 0.707f);
+            float att = (dub ? 0.02f : 0.022f) * len, hold = 0.03f * len, dec = (dub ? 0.022f : 0.032f) * len, am = (dub ? 18f : 20f) * j();
+            // v11 (user: "more lower volume after the bass of part 2 before part 1 of the next"): the dub rings less (lower Q), falls faster and is gated off sooner
+            Biquad lp1 = Biquad.LowPass(body * j(), dub ? 1.1f : 1.8f), lp2 = Biquad.LowPass(body * 1.35f * j(), dub ? 0.9f : 1.4f), hp = Biquad.HighPass(cut, 0.707f);
+            float gateLo = dub ? 0.03f : 0.01f, gateSpan = dub ? 0.07f : 0.03f;
             float length = att + hold + dec * 5f + 0.05f;
             return ShockWave.MakeClip(name, length, t =>
             {
@@ -256,7 +258,7 @@ namespace RealSoundSimulation.Fixes
                 if (t < att) e = 0.5f - 0.5f * Mathf.Cos(Mathf.PI * t / att);
                 else if (t < att + hold) e = 1f;
                 else e = Mathf.Exp(-(t - att - hold) / dec);
-                float g = Mathf.Clamp01((e - 0.01f) / 0.03f);
+                float g = Mathf.Clamp01((e - gateLo) / gateSpan);
                 e *= g * g * (3f - 2f * g); // quiet between beats, no click
                 float throb = 1f - rough + rough * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * am * t));
                 float n = (float)(r.NextDouble() * 2.0 - 1.0);
