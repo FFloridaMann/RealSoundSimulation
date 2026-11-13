@@ -89,6 +89,7 @@ Built: works alongside Fika (review, 10 Nov 2026); off on a headless host (0.7.1
 - [ ] **RT** · Their room rings too: a shooter's own room rings, close shooters only
 - [ ] **E** · Echo tuning for big fights: end quiet echoes early, full-auto thinning, give up in stages, thin others while you fire, a lower ceiling when the audio thread falls behind
 - [ ] **5r** final pass: the noise at your ears from the probes, indoors and outdoors
+- [ ] Ear ringing from blasts by loudness too (user, 13 Nov 2026): grenades add to the same gunfire ring by the pressure that reaches you, like concussion; indoors stacks faster
 - [ ] Gunshots on Factory: most sound basically the same across the map (user, 11 Nov 2026: "a small item maybe tweak after 1.0"); give rooms and halls more of their own character
 - [ ] "Headset on" from the game's own template, not the earpiece check: headsetmix.csv (raid_20261111_194709) showed the check and the game disagreeing for minutes at a time (headset counted with the game on its default template, and the reverse)
 
