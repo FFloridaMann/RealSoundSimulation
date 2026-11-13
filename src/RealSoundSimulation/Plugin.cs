@@ -336,7 +336,7 @@ namespace RealSoundSimulation
             MuffleHz = Bind(s05, "Concussion - muffled to Hz", 2500f, "How muffled everything gets at the worst of a close blast's cut; lighter cuts muffle less. Was 6.9t.", R(500f, 8000f), adv);
             CrackOn = Bind(s05, "Concussion - crack before the cut", true, "A blast close enough to cut your hearing is heard sharp for a split second first; the cut starts after it, as your ears' own reflex does. With a headset the crack is shorter and 6 dB quieter. Off = the cut starts at once. Was 6.9r.");
             CrackMs = Bind(s05, "Concussion - crack length ms", 250f, "How long the blast is heard before the hearing cut starts. Was 6.9r.", R(0f, 250f), adv);
-            RingTakeoverOn = Bind(s05, "Ear ringing - the mod runs the game's ring", true, "In a raid, the game's ear ring after a blast or a head hit is run by the mod: the same ring and the same deafening, but added to the mod's hearing cut instead of fighting it (guns and voices used to flicker in and out), stopped at the Concussion - heard at dB levels when Concussion - blast heard through the cut is on, and held by gunfire for at most 10 s. Off = the game's own ring. Was 6.9u.", null, adv);
+            RingTakeoverOn = Bind(s05, "Ear ringing - mod plays the game ring", true, "In a raid, the game's ear ring after a blast or a head hit is run by the mod: the same ring and the same deafening, but added to the mod's hearing cut instead of fighting it (guns and voices used to flicker in and out), stopped at the Concussion - heard at dB levels when Concussion - blast heard through the cut is on, and held by gunfire for at most 10 s. Off = the game's own ring. Was 6.9u.", null, adv);
             AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
             HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
             HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.4f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);
@@ -527,9 +527,16 @@ namespace RealSoundSimulation
         private int _order = 1000;
 
         // Binds one setting with its place in F12. Advanced ones only show with "Advanced settings" ticked.
+        // 13 Nov 2026: BepInEx refuses = \n \t \ " ' [ ] in a setting's name and the whole plugin then fails to load (it happened twice,
+        // both times an apostrophe). Strip them here so a name can never stop the mod loading again.
+        private static readonly char[] BadKeyChars = { '=', '\n', '\t', '\\', '"', '\'', '[', ']' };
+
         private ConfigEntry<T> Bind<T>(string section, string key, T value, string description, AcceptableValueBase range = null, bool advanced = false)
-            => Config.Bind(section, key, value, new ConfigDescription(description, range,
+        {
+            if (key.IndexOfAny(BadKeyChars) >= 0) { foreach (char c in BadKeyChars) key = key.Replace(c.ToString(), ""); }
+            return Config.Bind(section, key, value, new ConfigDescription(description, range,
                 new ConfigurationManagerAttributes { Order = _order--, IsAdvanced = advanced }));
+        }
 
         private static AcceptableValueRange<float> R(float min, float max) => new AcceptableValueRange<float>(min, max);
         private static AcceptableValueRange<int> N(int min, int max) => new AcceptableValueRange<int>(min, max);
