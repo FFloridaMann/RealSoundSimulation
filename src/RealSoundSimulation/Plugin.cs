@@ -133,7 +133,6 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> ShockOn; // 0.6.53 "6.9"
         internal static ConfigEntry<bool> CrackOn, ShockCrackOn; // 0.7.22 "6.9r", "6.9s"
         internal static ConfigEntry<bool> HeardThroughOn; // 0.7.22 "6.9t"
-        internal static ConfigEntry<bool> RingTakeoverOn; // 13 Nov 2026 "6.9u"
         internal static ConfigEntry<float> BlastHeardDb, WorldHeardDb, MuffleHz; // 0.7.22 "6.9t"
         internal static ConfigEntry<float> CrackMs, ShockCrackDb; // 0.7.22
         internal static ConfigEntry<bool> AdrenalineOn, HeartOn, HardBreathOn; // 0.7.22 "A"
@@ -310,7 +309,6 @@ namespace RealSoundSimulation
             MuffleHz = Bind(s05, "Concussion - muffled to Hz", 2500f, "How muffled everything gets at the worst of a close blast's cut; lighter cuts muffle less. Was 6.9t.", R(500f, 8000f), adv);
             CrackOn = Bind(s05, "Concussion - crack before the cut", true, "A blast close enough to cut your hearing is heard sharp for a split second first; the cut starts after it, as your ears' own reflex does. With a headset the crack is shorter and 6 dB quieter. Off = the cut starts at once. Was 6.9r.");
             CrackMs = Bind(s05, "Concussion - crack length ms", 250f, "How long the blast is heard before the hearing cut starts. Was 6.9r.", R(0f, 250f), adv);
-            RingTakeoverOn = Bind(s05, "Ear ringing - mod plays the game ring", true, "In a raid, the game's ear ring after a blast or a head hit is run by the mod: the same ring and the same deafening, but added to the mod's hearing cut instead of fighting it (guns and voices used to flicker in and out), stopped at the Concussion - heard at dB levels when Concussion - blast heard through the cut is on, and held by gunfire for at most 10 s. Off = the game's own ring. Was 6.9u.", null, adv);
             AdrenalineOn = Bind(s05, "Adrenaline - after close blasts", true, "A blast close enough to shake you sets your heart racing, then it settles; after a big one your character breathes hard too. The heartbeat is made by the mod and your character's breathing comes from the game. Was A.");
             HeartOn = Bind(s05, "Adrenaline - heartbeat", true, "A heartbeat you feel more than hear, from about 75 up to 150 beats a minute, slowing as it settles. Not cut by concussion. Needs Adrenaline - after close blasts. Was A.");
             HeartVolume = Bind(s05, "Adrenaline - heartbeat volume", 0.4f, "How loud the heartbeat is at its strongest. Was A.", R(0f, 1f), adv);

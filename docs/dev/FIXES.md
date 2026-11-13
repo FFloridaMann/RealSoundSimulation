@@ -773,6 +773,8 @@ Before this: 0.6.55 sent the whole blast to Master, which loses the Guns bus's g
 
 **Fix.** `Fixes/MixerOwner.cs` is the only writer of Main, Guns, World, the low-pass, the tinnitus sends and the ambience. Features ask for offsets, ceilings or floors on short leases; it adds them on top of the game's own values and writes once, last in the frame (order 32010). Anything that asks runs before 32010. The copies are gone from `ConcussionProof`, `ShockWave` and `GunfireHearing`. `Fixes/GameRing.cs` (6.9u, "Ear ringing - mod plays the game ring") takes over `BetterAudio.StartTinnitusEffect`: it plays the ring itself and asks for the deafening through the owner, stopped at the 6.9t floors. Bring Back Concussion's own cut, when it runs instead of ours, is shown the game's values first (`MixerOwner.ShowNormal`), because it keeps what it reads and puts it back later. Gunfire's hold on a blast's ring is capped at 10 s past the ring's own end.
 
+**Settled (13 Nov 2026).** After a day of clean raids the old hold (`GunfireHearing.HoldGameRing`, which pushed the game's ring end later) and the `Ear ringing - mod plays the game ring` switch were removed. The mod always runs the game's ring; only if that fails does the game's own coroutine run it, unheld. Guns' normal level falls back to the last good headset level, or is left alone, if the headset template can't be read (it used to fall back to 0 dB, +55 dB with a headset on). The headset check moved to `Fixes/Gear.cs`.
+
 **Check.** mixer.csv: each column with who asked for what. Summary MIXER OWNER: "ring extensions capped" small; after a grenade, every value back to normal within the ring's length.
 
 ## 6.7c: Fragment hits by route (0.6.55)

@@ -14,8 +14,8 @@ Each area ends in one **final test**: a raid that covers the whole area, instead
 - [ ] Run the route once on the current build: that raid becomes the reference
 - [ ] After one more test raid (user, 11 Nov 2026), in order, one test raid after each:
   1. [x] Mixer owner (built 13 Nov 2026, 0.7.22; test raid still to run: close grenade with no headset, fire for a minute with gunfire ear ringing on, then the same with a headset): every feature submits an offset per mixer key; one place reads the game's value, sums the offsets and writes once per frame (today: ConcussionProof, ShockWave dip, GunfireHearing, AmbienceMix, DoorwayBlend snapshots). Fixes PutBack restoring blast-time values after a headset change.
-  2. Voice pool: a budget per feature and a per-feature count in voices.csv (nine features share EchoVoices); no rewrite.
-  3. One read-only review of those two areas only.
+  2. [x] Voice pool (13 Nov 2026: own file, per-play output, blast reserve of 8): a budget per feature and a per-feature count in voices.csv (nine features share EchoVoices); no rewrite.
+  3. [x] Code review (13 Nov 2026, docs/dev/CODE-REVIEW-2026-11-13.md); its steps 1-5 done: comment headers, body sounds to a branch, Raid class, voice pool, BorrowGunVoice
   4. Settings clean-up: delete settled A/B switches; body sounds behind a developer build; about 25 settings in the public build.
 - [ ] Release build: no diagnostics work while logs are off, load-in spikes gone (see Release build)
 - [ ] Settings clean-up: remove settled test switches, defaults = the tested setup (see S)

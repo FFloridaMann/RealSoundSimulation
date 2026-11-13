@@ -31,7 +31,8 @@ namespace RealSoundSimulation.Fixes
     //            already running here when something fails is handed to the game's coroutine, which carries on from the same point.
     internal static class GameRing
     {
-        private const float MinLengthS = 15f, HoldWhenLeftS = 2.5f, MaxHeldS = 10f;
+        private const float MinLengthS = 15f, HoldWhenLeftS = 2.5f;
+        internal const float MaxHeldS = 10f;
 
         private static AccessTools.FieldRef<BetterAudio, float> _ringEnd, _ringLength;
         private static MethodInfo _gameRoutine;
@@ -68,7 +69,7 @@ namespace RealSoundSimulation.Fixes
         // The game is about to start, or lengthen, its ring. False = the mod runs it instead.
         private static bool StartPrefix(BetterAudio __instance, float time, AudioClip clip)
         {
-            if (Failed || _ringEnd == null || !Plugin.RingTakeoverOn.Value || !MixerOwner.Running) return true;
+            if (Failed || _ringEnd == null || !MixerOwner.Running) return true;
             bool wasOurs = _ours, set = false;
             float wasEnd = 0f, wasLength = 0f;
             try

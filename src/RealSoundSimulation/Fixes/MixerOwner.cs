@@ -125,6 +125,7 @@ namespace RealSoundSimulation.Fixes
                 {
                     ref Line l = ref Lines[k];
                     if (!l.Held || string.IsNullOrEmpty(l.Name)) continue;
+                    if (k == Guns && float.IsNaN(dry)) continue; // its normal level is unknown: left alone
                     if (!m.GetFloat(l.Name, out float cur) || Mathf.Abs(cur - l.Last) > MovedByOther) continue; // someone else's value is already there
                     float plain = l.Foreign ? l.Theirs : NormalOf(k, dry, ref l);
                     if (Follows(k) && plain <= TooQuietDb) continue;
@@ -202,10 +203,19 @@ namespace RealSoundSimulation.Fixes
             _mainIdle = float.NaN;
         }
 
+        // Guns' normal level is the headset template's DryVolume (0 without a headset, about -55 dB with one). If it can't be read,
+        // the last good value; if it never was, NaN and Guns is left alone. Never 0 dB by default: with a headset on that is +55 dB.
+        private static float _lastDry = float.NaN;
         private static float Dry(BetterAudio ba)
         {
-            try { return ba.CurrentHeadphonesTemplate.DryVolume; }
-            catch { return 0f; }
+            try
+            {
+                var tpl = ba.CurrentHeadphonesTemplate;
+                if (tpl != null) return _lastDry = tpl.DryVolume;
+                DiagRunner.ReportOnce("mixer owner (no headset template)", new InvalidOperationException("CurrentHeadphonesTemplate is null"));
+            }
+            catch (Exception e) { DiagRunner.ReportOnce("mixer owner (headset level)", e); }
+            return _lastDry;
         }
 
         // Main and the ambience volumes are moved by the game itself (fades, mutes), so a muted one is left alone.
@@ -255,6 +265,7 @@ namespace RealSoundSimulation.Fixes
 
                 ref Line l = ref Lines[k];
                 if (string.IsNullOrEmpty(l.Name)) { l.Held = false; continue; }
+                if (k == Guns && float.IsNaN(dry)) { l.Held = false; continue; } // its normal level is unknown: left alone
                 if (!any)
                 {
                     if (l.Held)
@@ -314,6 +325,7 @@ namespace RealSoundSimulation.Fixes
             {
                 ref Line l = ref Lines[k];
                 if (!l.Held || string.IsNullOrEmpty(l.Name)) continue;
+                if (k == Guns && float.IsNaN(dry)) continue;
                 if (m.GetFloat(l.Name, out float at) && Mathf.Abs(at - l.Last) <= MovedByOther)
                     m.SetFloat(l.Name, (Follows(k) || k == Lowpass) && l.Foreign ? l.Theirs : NormalOf(k, dry, ref l));
             }
@@ -358,7 +370,7 @@ namespace RealSoundSimulation.Fixes
             Sb.Clear();
             Sb.Append(DiagLog.F(Time.time - DiagRunner.RaidStartTime, "0.0")).Append(',')
               .Append(GameRing.Ours ? "mod" : GameRing.GameRuns(ba) ? "game" : "").Append(',')
-              .Append(GunfireHearing.WearsHeadset(player) ? '1' : '0').Append(',')
+              .Append(Gear.WearsHeadset(player) ? '1' : '0').Append(',')
               .Append(DiagLog.F(Dry(ba), "0.0"));
             foreach (int k in LogOrder)
             {
@@ -374,10 +386,10 @@ namespace RealSoundSimulation.Fixes
         {
             var asks = new StringBuilder();
             for (int o = 0; o < OwnerCount; o++) asks.Append(o > 0 ? ", " : "").Append(OwnerName[o]).Append(' ').Append(Started[o]);
-            return $"MIXER OWNER ({(_broken ? "STOPPED after an error, see errors.txt" : "on")}; the game's ring run by the mod, 6.9u {(Plugin.RingTakeoverOn.Value ? "ON" : "off")}{(GameRing.Failed ? ", stopped after an error" : "")}): " +
+            return $"MIXER OWNER ({(_broken ? "STOPPED after an error, see errors.txt" : "on")}; the game's ring run by the mod{(GameRing.Failed ? ": stopped after an error, the game runs it" : "")}): " +
                    $"asks started by owner: {asks}; frames written {FramesWritten}; frames on top of another writer {FramesFollowed}; " +
                    $"rings taken over {GameRing.TakenOver} (started again by a new blast {GameRing.Restarted}, left to the game {GameRing.LeftToGame}, handed back after an error {GameRing.HandedBack}); " +
-                   $"ring held by gunfire {GameRing.HeldFrames + GunfireHearing.Holds} frames, ring extensions capped {GameRing.Capped + GunfireHearing.HoldsCapped}  (mixer.csv)\n";
+                   $"ring held by gunfire {GameRing.HeldFrames} frames, ring extensions capped {GameRing.Capped}  (mixer.csv)\n";
         }
     }
 
