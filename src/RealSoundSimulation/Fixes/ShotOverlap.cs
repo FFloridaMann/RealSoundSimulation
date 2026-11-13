@@ -34,7 +34,7 @@ namespace RealSoundSimulation.Fixes
 
         private const double ReleaseMargin = 1.0;
         private const double MinLeftS = 0.15, FreeAfterS = 0.1;
-        private const int MaxRingingOut = 8, MaxOwnRinging = 12;
+        private const int MaxRingingOut = 12, MaxOwnRinging = 12;
         private const double CutFadeS = 0.06;
         private struct Fading { public SuperSource Src; public double Start; public float Base1, Base2; }
         private static readonly List<Fading> FadingOut = new List<Fading>();

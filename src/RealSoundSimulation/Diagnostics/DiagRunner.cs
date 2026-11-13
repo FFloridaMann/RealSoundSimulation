@@ -59,6 +59,9 @@ namespace RealSoundSimulation.Diagnostics
 
         private string _fixStateAtStart = "";
         internal static float RaidStartTime => Raid.StartTime;
+        // Bug report logs on for this raid (read at raid start). Timing and the audio-thread probe only run then, so a player
+        // with logs off pays for none of the diagnostics. The container sample still runs: the echo headroom needs its count.
+        internal static bool LogsThisRaid;
         private Action _onStart, _onEnd;
 
         private void Awake()
@@ -153,6 +156,7 @@ namespace RealSoundSimulation.Diagnostics
         private void RaidStart()
         {
             _raidStart = Raid.StartTime;
+            LogsThisRaid = Plugin.LogsOn.Value;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
             _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0; LastPlayingInContainers = 0;
             _lastBots = -1; _maxBots = 0; _spawned = 0; LastSpawnChange = float.NegativeInfinity; _backoffFrames = 0;
@@ -212,7 +216,7 @@ namespace RealSoundSimulation.Diagnostics
         // listener can change mid-raid (camera swaps), so it is re-attached if it goes missing, at most every 5 s.
         private void AttachAudioProbe()
         {
-            if (!Plugin.AudioThreadTimingOn.Value) return;
+            if (!Plugin.AudioThreadTimingOn.Value || !LogsThisRaid) return;
             if (_audioProbe != null) return;
             AudioListener l = FindObjectOfType<AudioListener>();
             if (l == null) return;
@@ -291,7 +295,7 @@ namespace RealSoundSimulation.Diagnostics
                         DiagLog.F((float)BatchWait.WinAvg, "0.000"), DiagLog.F((float)BatchWait.WinMax, "0.00"), BatchWait.WinWaited.ToString())); // 0.6.20 (6.0b)
                 }
                 else if (_audioProbe != null) _audioProbe.Snapshot(); // keep the window at 5 s for the overlay
-                if (_audioProbe == null && Plugin.AudioThreadTimingOn.Value && now >= _nextAudioProbeTry) { _nextAudioProbeTry = now + 5f; Plugin.Safe("audio thread probe", AttachAudioProbe); }
+                if (_audioProbe == null && Plugin.AudioThreadTimingOn.Value && LogsThisRaid && now >= _nextAudioProbeTry) { _nextAudioProbeTry = now + 5f; Plugin.Safe("audio thread probe", AttachAudioProbe); }
                 TimingPatches.SpatialUpdate.ResetWindow(); TimingPatches.SpatialLate.ResetWindow(); TimingPatches.BetterAudioUpdate.ResetWindow();
                 AudioCounters.WriteWindow(now - _raidStart); BatchWait.ResetWindow(); // 0.6.20
                 _framesInWindow = 0;

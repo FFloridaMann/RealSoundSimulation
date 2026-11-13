@@ -359,15 +359,15 @@ namespace RealSoundSimulation
             GlassLossDb2 = Bind(s06, "Breaking glass - loss per opening dB", 4f, "How much quieter breaking glass gets for each opening on its way to you. Was 6.7b.", R(0f, 12f), adv);
 
             // 07 | RAIN AND OUTDOORS
-            ExposureMixOn = Bind(p01, "Outdoors - sound heard indoors", true, "Outdoor sound follows how open the space around you is and comes from the open directions, so nothing switches at the doorway. Was 8.", pub: 12);
-            AmbienceV2On = Bind(s07, "Outdoors - traced ambience", true, "Rain, wind and the outdoor background are set by the sound tracer: how much reaches you, from where, and how muffled. Needs Outdoors - sound heard indoors and Doors and walls > Doorways - smooth on. Was 9.");
+            ExposureMixOn = Bind(p01, "Outdoors - rain and outdoor sound indoors", true, "Rain, roof rain, wind and the outdoor background follow how open the space around you is and come from the open directions, so nothing switches at the doorway. Off = the game's own rain and outdoor sound. Was 8.", pub: 12);
+            AmbienceV2On = Bind(s07, "Outdoors - traced ambience", true, "Rain, wind and the outdoor background are set by the sound tracer: how much reaches you, from where, and how muffled. Needs Outdoors - rain and outdoor sound indoors and Doors and walls > Doorways - smooth on. Was 9.");
             DirectionCueStrength = Bind(s07, "Outdoors - direction cue", 0.6f, "How strongly outdoor sound is panned toward the open side, and duller when it's behind you. 0 = off. Was 8a.", R(0f, 1f), adv);
             ThroughGlass = Bind(s07, "Outdoors - through glass", 0.45f, "How much outdoor sound an intact window lets through compared with an opening. Was 8c.", R(0f, 1f), adv);
             IndoorFadeNearOpenings = Bind(s07, "Outdoors - indoor sound fade near openings", 0.6f, "How early room tone, indoor wind and roof rain fade as the space opens up. 0 = only when you're almost outside. Was 8d.", R(0f, 1f), adv);
             OpeningShare = Bind(s07, "Outdoors - sound from openings", 0.7f, "Indoors, this share of the outdoor sound plays from the open directions instead of from everywhere. Was 8e.", R(0f, 1f), adv);
             OpeningHrtf = Bind(s07, "Outdoors - 3D on opening sounds", true, "Run the sound from openings through the game's 3D audio for front/back and up/down. Off = plain left/right. Was 8f.", null, adv);
             IndoorWindFollowsOpenings = Bind(s07, "Outdoors - indoor wind follows openings", true, "A room's draught sound follows how much of the outside reaches you, so it fades deep in a stairwell. Was 8g.", null, adv);
-            RoofRainLevel = Bind(p07, "Roof rain - volume", 0.3f, "How loud rain on the roof is, before the roof, floors and material are applied. Was 9t.", R(0f, 1f), pub: 30);
+            RoofRainLevel = Bind(p07, "Roof rain - volume", 0.3f, "How loud rain on the roof is, before the roof, floors and material are applied. 0 = no roof rain. Was 9t.", R(0f, 1f), pub: 30);
             RoofRainByMaterial = Bind(s07, "Roof rain - roof material matters", 1.5f, "Rain is louder on a thin metal roof and quieter on a soft one. 0 = every roof the same. Was 9r.", R(0f, 1.5f));
             RainFixOn = Bind(s07, "Roof rain - fix cutting out", true, "Fixes a game bug where rain on the roof fades to silence when you move between some rooms. Was 7.", null, adv);
             RoofRainFromProbe = Bind(s07, "Roof rain - traced from the roof", true, "Rain on the roof is traced from the roof itself: full right under it, partly under a mezzanine, down the stairwell from below. Off = a simple count of floors above. Was 9i.", null, adv);
@@ -415,7 +415,7 @@ namespace RealSoundSimulation
             // 11 | DIAGNOSTICS
             AcousticProbeOn = Bind(s11, "Sound tracer", true, "The tracer behind rain, ambience and room readings: 128 rays bouncing off surfaces until they reach open sky. Off turns those features off too.", null, adv);
             ProbeOn = Bind(s11, "Enclosure probe", true, "Measures how enclosed you are with 32 short rays, ten times a second. Your shot's indoor/outdoor blend uses it.", null, adv);
-            ExposureProbeOn = Bind(s11, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what. Outdoors - sound heard indoors needs it.", null, adv);
+            ExposureProbeOn = Bind(s11, "Outdoor exposure probe", true, "Measures how much of the outside reaches you and through what. Outdoors - rain and outdoor sound indoors needs it.", null, adv);
             OverlayOn = Bind(s11, "Overlay", false, "Show the live sound overlay (top left) in raid.", null, adv);
             OverlayKey = Bind(s11, "Overlay key", new KeyboardShortcut(KeyCode.F9), "Show or hide the overlay.", null, adv);
             OverlayRows = Bind(s11, "Overlay rows", 14, "How many of the nearest sounds the overlay lists.", N(4, 40), adv);

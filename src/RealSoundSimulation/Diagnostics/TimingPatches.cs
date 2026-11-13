@@ -52,10 +52,10 @@ namespace RealSoundSimulation.Diagnostics
         }
 
         private static void PreSpatialUpdate(out long __state) => __state = Stopwatch.GetTimestamp();
-        private static void PostSpatialUpdate(long __state) { if (Plugin.TimingOn.Value) SpatialUpdate.Add(Stopwatch.GetTimestamp() - __state); }
+        private static void PostSpatialUpdate(long __state) { if (Plugin.TimingOn.Value && DiagRunner.LogsThisRaid) SpatialUpdate.Add(Stopwatch.GetTimestamp() - __state); }
         private static void PreSpatialLate(out long __state) => __state = Stopwatch.GetTimestamp();
-        private static void PostSpatialLate(long __state) { if (Plugin.TimingOn.Value) SpatialLate.Add(Stopwatch.GetTimestamp() - __state); }
+        private static void PostSpatialLate(long __state) { if (Plugin.TimingOn.Value && DiagRunner.LogsThisRaid) SpatialLate.Add(Stopwatch.GetTimestamp() - __state); }
         private static void PreBetterAudio(out long __state) => __state = Stopwatch.GetTimestamp();
-        private static void PostBetterAudio(long __state) { if (Plugin.TimingOn.Value) BetterAudioUpdate.Add(Stopwatch.GetTimestamp() - __state); }
+        private static void PostBetterAudio(long __state) { if (Plugin.TimingOn.Value && DiagRunner.LogsThisRaid) BetterAudioUpdate.Add(Stopwatch.GetTimestamp() - __state); }
     }
 }

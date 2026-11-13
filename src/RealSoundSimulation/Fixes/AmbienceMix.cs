@@ -180,7 +180,7 @@ namespace RealSoundSimulation.Fixes
             // 0.6.34: and 1 in others, so "at least 0.3" still jumped between rooms (raid 43 tag 4: 0.74 and 0.225 with the roof unchanged).
             // While it rains and the probe traces the roof, the room's value no longer counts: one level, times the game's own factor for how
             // hard it rains. The game's volumes only say how the level is shared between the two sources while they crossfade.
-            bool ownLevel = Plugin.RoofRainLevel.Value > 0f && Plugin.AmbienceV2On.Value && Plugin.RoofRainFromProbe.Value && AcousticProbe.Valid && RainController.IntensityType != RainController.ERainIntensity.None;
+            bool ownLevel = Plugin.AmbienceV2On.Value && Plugin.RoofRainFromProbe.Value && AcousticProbe.Valid && RainController.IntensityType != RainController.ERainIntensity.None;
             float sum = 0f, level = 0f; int playing = 0;
             if (ownLevel)
             {
