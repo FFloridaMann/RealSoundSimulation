@@ -2,6 +2,8 @@
 
 A simulated audio overhaul for SPT. The game picks a recording and a volume; this mod works out how each sound would actually travel through the map to reach you, and plays what would arrive.
 
+**This is a beta (0.9).** It's been played and tuned over many raids, but by one player on one PC, and not yet in Fika. Version 1.0 comes after your feedback, so please report anything that sounds wrong (see **Found a bug?** below).
+
 ## Why I made it
 
 I couldn't stand walking into a room, or back out of one, and having the indoor and outdoor audio cut straight over the moment I crossed the doorway. It broke the immersion every time. And I couldn't stand hearing a fight and not being able to tell where it was really coming from.
@@ -24,6 +26,7 @@ From that it works out, for each sound that matters, which paths reach you, how 
 - **Grenades.** The blast comes from the opening it travels through. A blast behind a wall you still feel, as a deep thump through the wall that arrives before the sound around the doorway. A grenade that goes off in a small closed room hits harder than one in a big hall, and fragments whizz past along their real flight path.
 - **Rain and weather.** Rain is traced down from the real roof. You hear how many floors are above you and what the roof is made of, and it fades as you go deeper inside or down a stairwell.
 - **Everything else.** Closed doors muffle by material, glass breaking in another room comes from the right place, and footsteps and handling sound like EFT 1.0.
+- **Adrenaline.** A blast close enough to shake you sets your heart racing, and it settles within about 20 seconds; after a big one your character is out of breath, in their own voice. The heartbeat is made by the mod, not a recording.
 
 ## Concussed or just deafened: decided by the blast that reaches you
 
@@ -44,9 +47,9 @@ When your hearing cuts, the world goes quiet at once, but the blast itself fades
 
 **Headsets protect your hearing.** With any headset on, your ears don't ring, and most of the hearing cut is taken away: the closest blast only dulls the world for a moment, and lighter blasts don't cut it at all. You still get concussed. How much a headset protects can be set (**Concussion - headset protection %**). For now every headset protects the same; the headsets revamp will make each one different.
 
-**Your ears ring from gunfire without a headset.** Every loud shot near you adds up: yours, and anyone's close by, less through walls. How much depends on the calibre, the muzzle device, the ammo and the room: a small closed room rings you far sooner than open ground, and subsonic shots don't count. A long string of fire slowly brings in a ring and dulls the world a little, and both fade once you stop. A headset takes off half and stops the ring. Its own switch at the top of F12 (**Ear ringing - from gunfire without a headset**).
+**Your ears ring from gunfire without a headset.** Every loud shot near you adds up: yours, and anyone's close by, less through walls. How much depends on the calibre, the muzzle device, the ammo and the room: a small closed room rings you far sooner than open ground, and subsonic shots don't count. A long string of fire slowly brings in a ring and dulls the world a little, and both fade once you stop. A headset takes off half and stops the ring. It's off by default; turn it on at the top of F12 (**Hearing - ear ringing from gunfire**).
 
-Both parts have their own switch at the top of F12 (**Concussion - by blast pressure** and **Concussion - soft hearing cut**), and how strong blasts count can be set too. The concussion effect itself, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, which is needed for this part.
+The soft hearing cut has its own switch at the top of F12 (**Hearing - concussion soft cut**), and how strongly blasts count can be set (**Concussion - strength dB**, 06 HEARING). The concussion effect itself comes from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) by harmony, used with their permission, so install it for this part. Without it, everything else works as normal.
 
 ## Performance
 
@@ -60,9 +63,8 @@ Measured on my PC (Ryzen 7 9800X3D, 8 cores and 16 threads, RTX 5070 Ti) in a 20
 
 It hasn't been measured on lower-end CPUs yet. If you have fewer cores:
 
-- Set **Sound quality** (F12, 01 GENERAL) to Medium or Low.
-- Lower **Echoes - per shooter** (03 OTHER GUNS) and **Most voices for other gun echoes** (10 PERFORMANCE).
-- Turn off **Echoes - far (buildings and hills)** (02 YOUR GUN, under Advanced settings).
+- Set **Sound quality** (F12, 02 GENERAL) to Medium or Low.
+- Turn off **Other guns - echoes** (F12, 01 FEATURES). Big fights cost the most.
 
 If it still sounds off or costs too much on your PC, [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox with [True Acoustics](LINK-HERE) by Kaan is a lighter way to get better audio, and they sound great. Use them instead of this mod, not alongside it.
 
@@ -73,11 +75,12 @@ If it still sounds off or costs too much on your PC, [Sound Engine Backport](htt
 
 ## Coming next
 
+- **Version 1.0**, after feedback on this beta.
+- **Fika** support, including hearing each other's echoes.
+- **Weather.** How rain, wet surfaces and wind change what you hear.
 - **Headsets revamp.** Each headset will shape what you hear and protect you by how it's really built, instead of all headsets protecting the same. Its own switch at the top of F12.
-- **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling will travel through the map like gunfire does: from the doorway they come through, muffled by their route and by walls.
+- **Footsteps and everyday sounds.** Footsteps, healing, eating, drinking and gear handling will travel through the map like gunfire does: from the doorway they come through, muffled by their route and by walls. Built, but held back until it sounds right.
 - **Bots feel blasts too.** The same blast pressure that concusses or deafens you will do the same to bots, through SAIN where it's installed. Its own switch at the top of F12.
-- **The room you're in.** Today only the blast's room counts; a blast getting into a small room you're standing in should build up too.
-- **Fika** support.
 
 ## Good to know
 
@@ -85,14 +88,26 @@ If it still sounds off or costs too much on your PC, [Sound Engine Backport](htt
 - **Grenades: Real Grenade Simulation (coming soon).** My next mod gives each grenade its real number of fragments (vanilla throws 30, mostly overhead) and the natural randomness of a real explosion; this mod makes you hear them whizz past and hit things in other rooms. Vanilla grenades work too, with fewer fragments to hear.
 - **Works with weapon mods.** It changes how sound travels, not the guns, so modded weapons get the same treatment. I play it with a large set of weapon packs.
 - **Rain is still being tuned.** Everything here has had extensive testing and tuning in raids, and rain has been the hardest to get right. Many surfaces in the game's maps carry no material, some upper floors and roofs have no collision for the rays to find, and buildings are put together from pieces that don't always match the rooms you see. Rain sounds right in most places, but some buildings still have odd spots.
-- Work in progress: built and tested by one player, so expect rough edges.
+- **Beta.** Built and tested by one player, solo, so expect rough edges. Not tested in Fika yet.
+
+## Install
+
+1. You need SPT 4.1.
+2. Optional, for the concussion part: install [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion).
+3. If you use [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) or [True Acoustics](LINK-HERE), remove them first. This mod already includes Sound Engine Backport's routes between rooms.
+4. Download the zip and extract it into your SPT folder (the one with `EscapeFromTarkov.exe`). It adds one folder: `BepInEx/plugins/FFloridaMann-RealSoundSimulation`.
+5. Start the game. The settings are in F12 → **Real Sound Simulation**. Everything is on and tuned by default, apart from ear ringing from gunfire.
+
+**To uninstall,** delete `BepInEx/plugins/FFloridaMann-RealSoundSimulation` and the files starting with `com.ffloridamann.realsoundsimulation` in `BepInEx/config`.
 
 ## Found a bug?
 
-1. In F12 → Real Sound Simulation → **01 GENERAL**, turn on **Bug report - logs**.
+1. In F12 → Real Sound Simulation → **02 GENERAL**, turn on **Bug report - logs**.
 2. Play one raid. Wherever something sounds wrong, press **F10** on the spot. You can change the key right below the switch (**Bug report - mark key**).
 3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`), then the **RealSoundSimulation Logs** folder.
 4. Send me the newest **Bug report** zip, and say roughly when and where it happened.
+
+The zip holds the mod's logs from that raid, your list of installed mods and your BepInEx log. Nothing is sent anywhere; it stays on your PC until you send it.
 
 Expect slightly lower FPS during that raid. When it ends, stay on the raid results screen for a few seconds before closing the game, so the zip can finish. Then turn Bug report logs off again; it writes several MB per raid.
 
@@ -100,15 +115,17 @@ I'm a solo developer with a full-time job, so please be patient with requests an
 
 ## Credits
 
-- **Concussion and ear ringing:** the concussion effect, the ear ringing and their sounds come from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) V1.2.1 by harmony. This mod decides who gets concussed or deafened, and how the sound fades.
-- **Improved paths between rooms and EFT 1.0 audio:** the routes sound takes between rooms, the footstep and handling settings, and the optional EFT 1.0 gun recordings come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox, used with his permission. Thank you.
+- **Concussion:** the concussion effect comes from [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) V1.2.1 by harmony, and the soft hearing cut is adapted from it, both used with their permission. This mod decides who gets concussed or deafened, and how the sound fades.
+- **Improved paths between rooms and EFT 1.0 audio:** the routes sound takes between rooms (included in the download) and the footstep and handling settings come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox, used with his permission.
+
+Thank you both.
 
 ## How it was made
 
 This mod has been in the works for a while. It grew out of smaller audio mods I made first, each one teaching me what the next needed.
 
-**Development: 70 hours**, 84 versions and 90 test raids.
+**Development: 90 hours**, over 100 versions and 130 test raids.
 
 ## Enjoying it?
 
-If this mod makes your raids sound better, consider [buying me a coffee](LINK-HERE). It helps keep the updates coming: weather, the headsets revamp and footsteps are next.
+If this mod makes your raids sound better and you'd like to, you can [buy me a coffee](LINK-HERE). It's entirely optional: everything in the mod stays free for everyone.

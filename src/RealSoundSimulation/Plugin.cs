@@ -12,11 +12,12 @@ namespace RealSoundSimulation
 {
     // Real Sound Simulation. Diagnostics (section 1) watch the game's audio systems and log what they decided to
     // RealSoundSimulation Logs. Fixes (section 2) change sound; every one is switchable live in F12 (defaults = the tested setup).
-    [BepInPlugin(Guid, "Real Sound Simulation", Version)]
+    [BepInPlugin(Guid, "FFloridaMann-RealSoundSimulation", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "ffloridamann.realsoundsimulation";
-        public const string Version = "0.7.22";
+        public const string Guid = "com.ffloridamann.realsoundsimulation";
+        public const string OldGuid = "ffloridamann.realsoundsimulation"; // before 0.9.0
+        public const string Version = "0.9.0";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -183,6 +184,7 @@ namespace RealSoundSimulation
 
         private void Load()
         {
+            CarryOverOldSettings();
             // F12 shows these in the order they're bound; Advanced ones only show with "Advanced settings" ticked.
             // 0.7.9: 11 sections with stand-out headers; settings grouped by a shared prefix ("Thump - ..."), each group's
             // Advanced settings right under its main ones. Each description ends with the setting's old code.
@@ -436,7 +438,7 @@ namespace RealSoundSimulation
             Safe("timing patches", () => TimingPatches.Apply(Harmony));
             Safe("shot probe", () => ShotProbe.Apply(Harmony));
             Safe("env probe", () => EnvProbe.Apply(Harmony));
-            Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony));
+            if (DevBuild) Safe("setting 0 gun sounds", () => GunSoundSource.Apply(Harmony)); // needs seb_sounds, built by hand; not in the public build
             Safe("fix 1 gun mixer", () => GunMixerFix.Apply(Harmony));
             Safe("1d first burst", () => FirstBurstOcclusion.Apply(Harmony)); // 0.6.21
             Safe("1e shot overlap", () => ShotOverlap.Apply(Harmony)); // 0.6.23
@@ -500,6 +502,20 @@ namespace RealSoundSimulation
                 foreach (MonoBehaviour c in Instance.GetComponents<MonoBehaviour>())
                     if (c != Instance && c.GetType().Assembly == typeof(Plugin).Assembly) Destroy(c);
             Log.LogInfo($"Real Sound Simulation turned itself off: {why}");
+        }
+
+        // 0.9.0: the plugin ID changed to the Forge's format. Bring the settings file from the old ID across once.
+        private void CarryOverOldSettings()
+        {
+            try
+            {
+                string old = System.IO.Path.Combine(BepInEx.Paths.ConfigPath, OldGuid + ".cfg");
+                if (!System.IO.File.Exists(old) || System.IO.File.Exists(Config.ConfigFilePath)) return;
+                System.IO.File.Copy(old, Config.ConfigFilePath);
+                Config.Reload();
+                Log.LogInfo("Settings carried over from " + OldGuid + ".cfg");
+            }
+            catch (Exception e) { Log.LogWarning("Settings from " + OldGuid + ".cfg not carried over: " + e.Message); }
         }
 
         private int _order = 1000;

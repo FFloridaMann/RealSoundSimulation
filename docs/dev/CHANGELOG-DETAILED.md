@@ -2,6 +2,14 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.9.0 — 13 Nov 2026 (beta release)
+**Run in game:** not yet on this exact build.
+- Plugin ID `com.ffloridamann.realsoundsimulation`, name `FFloridaMann-RealSoundSimulation` (the Forge's format). `CarryOverOldSettings` copies `ffloridamann.realsoundsimulation.cfg` to the new file once, before anything binds, and reloads it.
+- Public build (31 settings) and developer build (`-p:DevBuild=true`), from b2961ca. Setting 0 (SEB gun recordings) is only applied in the developer build, so the public build doesn't warn about a missing `seb_sounds` index.
+- Timing patches and audio thread counters only with Bug report logs on (`DiagRunner.LogsThisRaid`).
+- `tools/package.ps1`: public build, LICENSE, THIRD_PARTY_NOTICES and `seb_routes` into `dist/RealSoundSimulation-<version>.zip`, laid out for the SPT folder.
+- LICENSE (MIT) added. Version in the csproj set to match.
+
 ## 0.7.22 — 11 Nov 2026 (Fi, Fj, Fk, Fm, Fn, Fo: above or below)
 **Run in game:** two raids on the first version (raid_20261111_004027, raid_20261111_171930); the rework not yet.
 - First version: Fi thud from above (80->42 Hz), Fj height layer (off, -15 dB after occlusion, high-pass 2 kHz, 60 degrees), Fk F8 test (3.5 m), Fl above/below contrast x2 / x0.5, then for voices, gear and hands too. User after raid_20261111_171930: "It seems like it makes no difference its really hard to tell hieght", "Most of the time in this game they will only ever be about 1-2 floors up or down", "when sounds were heard it was very hard to tell if it was above or below".

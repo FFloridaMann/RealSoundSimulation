@@ -36,6 +36,10 @@ The detailed checklist is [docs/TRACKER.md](docs/TRACKER.md). The small codes in
 - **Headsets protect your hearing.** With any headset on, no ear ringing and most of a blast's hearing cut taken away. Each headset will differ after the revamp. `(0.7.10)`
 - **A crack before the cut.** A close blast is heard sharp for a split second before your hearing goes, and the pressure hit starts with a crack. `(0.7.22)`
 
+## 0.9 beta: the first public release
+
+Out on 13 Nov 2026 so players on other PCs and maps can report what sounds wrong. Version 1.0 follows their feedback.
+
 ## Before v1.0, in order
 
 Feature work is frozen until v1.0: only fixes for what sounds wrong. Each area gets one final test raid instead of a test per change (the list is in the tracker).
@@ -44,7 +48,7 @@ Feature work is frozen until v1.0: only fixes for what sounds wrong. Each area g
 2. **Release build.** Logging off by default with one diagnostics switch, and the load-in spikes gone.
 3. **Settings clean-up.** Remove the test switches that are settled, so nobody's settings are reset by an update later; defaults are the tested setup. `(S)`
 4. **Fika.** Commit the co-op echoes and play one raid as a Fika host. A two-player raid when a second player is available. `(CO)`
-5. **Publish v1.0.** Forge fixes (plugin folder and ID, licence, install steps, credits), Forge page, repo public. Bring Back Concussion's author has given permission.
+5. **Publish v1.0.** The Forge fixes (plugin ID, licence, install steps, credits) were done for the 0.9 beta. Bring Back Concussion's author has given permission.
 
 ## Updates after v1.0, in order
 

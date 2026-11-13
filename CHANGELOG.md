@@ -2,6 +2,15 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.9.0 beta: first public release
+
+- **A simpler F12 page.** 31 settings: one switch per feature at the top, then a few volumes. Everything else keeps its tested value.
+- **Diagnostics only when you ask.** The timing measurements run only with **Bug report - logs** on, so normal raids don't pay for them.
+- **Rain and outdoor sound** has one clear switch: **Outdoors - rain and outdoor sound indoors**. Off gives you the game's own rain and outdoor sound.
+- **Sound Engine Backport's routes between rooms are in the download**, with red_the_fox's permission, so you don't need his mod for them.
+- **New plugin ID for the Forge** (`com.ffloridamann.realsoundsimulation`). Your settings carry over once.
+- Footsteps and body sounds from 0.7.15-0.7.22 are held back for after 1.0; EFT 1.0 gun recordings are in the developer build only.
+
 ## 0.7.22 (not released yet): above or below
 
 With **Footsteps and body sounds - simulated** on, sounds from another floor now say which way they are, not just that they're muffled:

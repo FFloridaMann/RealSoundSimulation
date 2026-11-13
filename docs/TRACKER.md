@@ -20,9 +20,9 @@ Each area ends in one **final test**: a raid that covers the whole area, instead
 - [ ] **Release as 0.9 beta first** (user, 13 Nov 2026), then 1.0 after feedback. For the beta, in order:
   1. [ ] Test raid on the public build, commit the settings split
   2. [ ] Diagnostics off for players: the hidden timing switches (Time the audio systems, Time the audio thread) default on, so the public build runs them for everyone; only with Bug report logs on. One raid
-  3. [x] SEB room routes (10b): decided 13 Nov 2026, ship red_the_fox's route files (seb_routes, 18 files, 508 MB, about 300 MB zipped) in the download; the user has his permission and shouts out his mod on the page. Still to do: package them in the release zip; without the folder the game's own routes are used
-  4. [ ] Licences and credits: THIRD_PARTY_NOTICES covers SEB (permission, MIT) and Bring Back Concussion (MIT, permission 11 Nov 2026); check the Forge page credits match
-  5. [ ] Forge page (FORGE-PAGE.md, DESCRIPTION-DRAFT.md): install steps, Bring Back Concussion optional, known issues, "solo tested, Fika not yet"
+  3. [x] SEB room routes (10b): decided 13 Nov 2026, ship red_the_fox's route files (seb_routes, 18 files, 508 MB) in the download; the user has his permission and shouts out his mod on the page. `tools/package.ps1` packs them; without the folder the game's own routes are used
+  4. [x] Licences and credits (LICENSE MIT added, 0.9.0): THIRD_PARTY_NOTICES covers SEB (permission, MIT) and Bring Back Concussion (MIT, permission 11 Nov 2026); check the Forge page credits match
+  5. [x] Forge page (FORGE-PAGE.md): install and uninstall steps, Bring Back Concussion optional, beta note, "solo tested, Fika not yet"; plugin ID and name in the Forge's format (0.9.0). Still to fill: the LINK-HERE links
   6. [ ] One raid on another map (Customs or Factory) on the public build
   7. [ ] Publish 0.9 beta: repo public, Forge page live
 - [ ] After the beta: delete settled test switches (7b, one area per raid); Fika co-op echoes (branch fika-echoes, one raid as host); then 1.0

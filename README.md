@@ -7,36 +7,36 @@ A simulated audio overhaul for SPT. Instead of playing a recording at a volume, 
 ## Requirements
 
 - SPT 4.1.
-- Optional: [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) for the concussion features.
-- Optional: [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport)'s files for EFT 1.0 gun recordings and EFT 1.0 routes between rooms. Its own plugin and server mod should not be installed alongside this one.
+- Optional: [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) for the concussion part.
+- Don't run it alongside [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) or True Acoustics. Sound Engine Backport's routes between rooms are already in the download.
 
 ## Install
 
-Copy the `FFloridaMann-RealSoundSimulation` folder (`RealSoundSimulation.dll` and `RealSoundSimulation.Dsp.dll`) into `BepInEx/plugins/`. To remove it, delete that folder.
+1. Download the zip from the Forge or the GitHub releases.
+2. Extract it into your SPT folder (the one with `EscapeFromTarkov.exe`). It adds `BepInEx/plugins/FFloridaMann-RealSoundSimulation`.
+3. Start the game and open F12 → **Real Sound Simulation**.
+
+To remove it, delete that folder and the `com.ffloridamann.realsoundsimulation` files in `BepInEx/config`. Settings from before 0.9.0 (`ffloridamann.realsoundsimulation.cfg`) are carried over once.
 
 ## Settings
 
-Press F12 and open **Real Sound Simulation**. The settings are grouped by what you hear:
+The public build shows 31 settings, everything else keeps its tested value:
 
 | Section | What's in it |
 |---|---|
-| 01 GENERAL | The big switches: concussion, shot variation, gun recordings, sound quality, footsteps, bug report |
-| 02 YOUR GUN | Mix (indoor/outdoor), echoes, room tail, the game's reverb |
-| 03 OTHER GUNS | Direction, muffling, echoes, distant gunfire |
-| 04 EXPLOSIONS: SOUND | Direction, the thump (volumes and all its depths together), echoes, recording |
-| 05 EXPLOSIONS: SHOCK AND CONCUSSION | Shock wave, concussion strength and ears |
-| 06 FRAGMENTS AND GLASS | Fragment pass-bys and hits, breaking glass |
-| 07 RAIN AND OUTDOORS | Outside sound indoors, roof rain |
-| 08 DOORS AND WALLS | Gunshots through walls, walls that stop sound, closed doors, doorways |
-| 09 SOUND TRACER | Fine-tuning for the tracer (Advanced only) |
-| 10 PERFORMANCE | How many echo voices other guns may use |
-| 11 DIAGNOSTICS | The overlay and the probes |
+| 01 FEATURES (on or off) | One switch per feature: your gun, other guns, explosions, hearing, outdoors, walls, footsteps and handling |
+| 02 GENERAL | Sound quality, bug report logs and mark key |
+| 03 YOUR GUN | Echo and room tail volume |
+| 04 OTHER GUNS | Echo volume |
+| 05 EXPLOSIONS | Thump and echo volume |
+| 06 HEARING | Concussion strength, headset protection, adrenaline, ear ringing |
+| 07 OUTDOORS AND WALLS | Roof rain volume |
 
-Settings that belong together share a name, like **Thump - volume dB** and **Thump - depth through walls Hz**, and stay next to each other. The everyday settings show by default. Tick **Advanced settings** at the top of F12 for the fine-tuning ones. Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does.
+Almost everything applies straight away, so you can switch a feature off and on in a raid to hear what it does. The developer build (`.\deploy.ps1 -Dev`) shows every setting, about 200, in sections 11 to 21.
 
 ## Reporting a bug
 
-1. In F12 → Real Sound Simulation → **01 GENERAL**, turn on **Bug report - logs**.
+1. In F12 → Real Sound Simulation → **02 GENERAL**, turn on **Bug report - logs**.
 2. Play one raid. Wherever something sounds wrong, press **F10**: the spot is saved with what the mod measured there. If F10 clashes with another mod, change **Bug report - mark key** right below the switch.
 3. After the raid, open your SPT folder (the one with `EscapeFromTarkov.exe`) and then the **RealSoundSimulation Logs** folder.
 4. Send the newest **Bug report** zip, and say roughly when and where in the raid it happened.
@@ -56,13 +56,15 @@ See [FORGE-PAGE.md](FORGE-PAGE.md#performance) for measured numbers and settings
 
 ```powershell
 dotnet build RealSoundSimulation.sln -c Release
-.\deploy.ps1                          # builds and installs into G:\SPT
+.\deploy.ps1                          # builds the public version and installs it into G:\SPT
+.\deploy.ps1 -Dev                     # the developer version, every setting in F12
 .\deploy.ps1 -SptDir "D:\Games\SPT"   # or anywhere else
+.\tools\package.ps1                   # the release zip in dist\, with the route files
 ```
 
 The build references the game's DLLs from your SPT folder, set in `Directory.Build.props` (`SptDir`). `tools/HeadsetBench` renders and measures the headset model offline: `dotnet run -c Release --project tools/HeadsetBench -- bench_out`.
 
-EFT 1.0 gun recordings are built once from the Sound Engine Backport download. They're the game's audio, so they never go into this repository:
+Developer build only: EFT 1.0 gun recordings are built once from the Sound Engine Backport download. They're the game's audio, so they never go into this repository:
 
 ```powershell
 python -m venv .venv; .venv\Scripts\pip install UnityPy
@@ -84,7 +86,7 @@ Rules the code follows:
 
 ## Credits
 
-- The routes between rooms, the footstep and handling settings, and the optional EFT 1.0 gun recordings come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox (MIT), used with his permission.
-- The soft concussion cut adapts [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) V1.2.1 by harmony (MIT).
+- The routes between rooms (shipped in the release download) and the footstep and handling settings come from [Sound Engine Backport](https://sp-mod.com/mod/3314/sound-engine-backport) by red_the_fox (MIT), used with his permission.
+- The soft concussion cut adapts [Bring Back Concussion](https://forge.sp-tarkov.com/mod/2550/bring-back-concussion) V1.2.1 by harmony (MIT), used with their permission.
 
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Real Sound Simulation itself is MIT licensed: see [LICENSE](LICENSE).
