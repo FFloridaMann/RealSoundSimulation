@@ -538,7 +538,8 @@ namespace RealSoundSimulation.Fixes
             string echoes = $"bot sounds {Samples}, sets {Sets}, echoes played {Played}" + (Played > 0 ? $", mean level {_levelSum / Played:0.0} dB" : "") + $", most bot voices at once {EchoVoices.MaxBot}" +
                             $"; not played: limit {Dropped}, too quiet {Gated}, one set per 0.25 s {Throttled}, out of range {OutOfRange}, no usable walls {NoWalls}, search busy {SearchBusy}, one-round loops {LoopsSkipped}; searches {Searches}, answers reused {Reused}  (botechoes.csv)\n";
             string prio = $"ECHO VOICE PRIORITY (6.3n your gun keeps {Plugin.OwnEchoShare.Value}, 6.3p replace quietest {(Plugin.EchoReplaceOn.Value ? "ON" : "off")}): bot echoes replaced for your gun {EchoVoices.ReplacedForOwn}, for other sounds {EchoVoices.ReplacedForOther}, by a louder bot echo {EchoVoices.ReplacedForBot}; " +
-                          $"your echoes not started {EchoVoices.OwnDropped}, of those while a bot echo held a voice {EchoVoices.OwnDroppedWithBots}  (voices.csv every 0.5 s)\n";
+                          $"your echoes not started {EchoVoices.OwnDropped}, of those while a bot echo held a voice {EchoVoices.OwnDroppedWithBots}; " +
+                          $"blast layers past the cap {EchoVoices.BlastOverCap} (up to {EchoVoices.BlastReserve} at once), not played {EchoVoices.BlastDropped}  (voices.csv every 0.5 s)\n";
             return head + echoes + prio;
         }
     }

@@ -181,10 +181,10 @@ namespace RealSoundSimulation.Fixes
             if (felt) cutoff = Plugin.FeltThumpCutoffHz.Value; // 0.7.7: its own depth while concussed ("6.9p"); thump.csv logs the cutoff used
             var output = ConcussionProof.FeltGroup(felt);
             float outTrim = ConcussionProof.FeltTrim;
-            EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, fadeS: kind == "explosion" ? (float)length * ExplosionFadeShare : 0f, output: output, trim: outTrim);
+            EchoVoices.Play(owner, clip, pos, start, length, false, vol, 1f, cutoff, delay, minCutoff: 20f, cls: EchoClass.Blast, fadeS: kind == "explosion" ? (float)length * ExplosionFadeShare : 0f, output: output, trim: outTrim);
             // 0.6.53: a voice can't go over full volume, so a second one exactly in step takes a close explosion up to +6 dB ("6.9").
             float second = kind == "explosion" ? ShockWave.ThumpExtra(db, fade) : 0f;
-            if (second > 0f) EchoVoices.Play(owner, clip, pos, start, length, false, second, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, fadeS: (float)length * ExplosionFadeShare, output: output, trim: outTrim);
+            if (second > 0f) EchoVoices.Play(owner, clip, pos, start, length, false, second, 1f, cutoff, delay, minCutoff: 20f, cls: EchoClass.Blast, fadeS: (float)length * ExplosionFadeShare, output: output, trim: outTrim);
             Ends[free] = start + length;
             if (busy + 1 > AtOnceMax) AtOnceMax = busy + 1;
             if (kind == "gun") PlayedGun++; else PlayedExplosion++;

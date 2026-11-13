@@ -13,8 +13,9 @@ namespace RealSoundSimulation.Acoustics
     // the game's gunshot group by default, or another group (the felt layers of a blast go to Master, past the concussion cut).
     // Turning one feature off must only stop that feature's class of voices (StopClass), never the pool.
 
-    // 0.6.61 (6.3): who owns a voice. Only bot echoes can ever lose one.
-    internal enum EchoClass : byte { Other, Own, Bot }
+    // Who owns a voice. Only bot echoes can ever lose one. Blast is a close blast's shock wave and the through-wall thump:
+    // they may go up to BlastReserve voices past the cap (still well inside its margin), so a blast is never silent in a full pool.
+    internal enum EchoClass : byte { Other, Own, Bot, Blast }
 
     // The echo voice pool: plain AudioSources (2D panning by position, no distance roll-off; level and filter are set per
     // echo) routed to the game's gunshot mixer group.
@@ -92,8 +93,9 @@ namespace RealSoundSimulation.Acoustics
 
         // Returns true if a busy voice had to be stopped to make room.
         public static bool LastDropped, LastReplaced; public static int CapDropped;
-        public static int ReplacedForOwn, ReplacedForOther, ReplacedForBot, OwnDropped, OwnDroppedWithBots, MaxBot;
-        public static void ResetStats() { CapDropped = ReplacedForOwn = ReplacedForOther = ReplacedForBot = OwnDropped = OwnDroppedWithBots = MaxBot = 0; }
+        public static int ReplacedForOwn, ReplacedForOther, ReplacedForBot, OwnDropped, OwnDroppedWithBots, MaxBot, BlastOverCap, BlastDropped;
+        public static void ResetStats() { CapDropped = ReplacedForOwn = ReplacedForOther = ReplacedForBot = OwnDropped = OwnDroppedWithBots = MaxBot = BlastOverCap = BlastDropped = 0; }
+        public const int BlastReserve = 8; // a close blast uses up to 5 (hit, crack, push, thump and its second voice)
         private static int _realVoices = -1;
         private const int ReserveVoices = 32; // 0.6.37 (voice budget for step 6, was 16); the mod's own opening sounds are counted too
         public static int Allowed()
@@ -104,7 +106,7 @@ namespace RealSoundSimulation.Acoustics
         }
 
         public static bool Play(object owner, AudioClip clip, Vector3 pos, double start, double duration, bool loop, float volume, float pitch, float cutoff, float delay,
-                                float clipOffset = 0f, double loopStart = 0.0, float minCutoff = 400f, bool ignoreCap = false, float fadeS = 0f, EchoClass cls = EchoClass.Other, int tier = 0,
+                                float clipOffset = 0f, double loopStart = 0.0, float minCutoff = 400f, float fadeS = 0f, EchoClass cls = EchoClass.Other, int tier = 0,
                                 AudioMixerGroup output = null, float trim = 1f)
         {
             Build();
@@ -115,18 +117,23 @@ namespace RealSoundSimulation.Acoustics
             LastDropped = false; LastReplaced = false;
             float startDb = volume > 1e-5f ? 20f * Mathf.Log10(volume) : -100f;
             Count(now, out int busy, out int own, out int bot);
-            if (!ignoreCap && !HasRoom(cls, busy, own, bot)) // 0.6.37: the through-wall layer (at most 4) goes first
+            if (!HasRoom(cls, busy, own, bot))
             {
                 Voice victim = Plugin.EchoReplaceOn.Value ? Victim(now, cls, tier, startDb) : null;
-                if (victim == null)
+                if (victim != null)
+                {
+                    Release(victim, now);
+                    LastReplaced = true; bot--;
+                    if (cls == EchoClass.Own) ReplacedForOwn++; else if (cls == EchoClass.Bot) ReplacedForBot++; else ReplacedForOther++;
+                }
+                else if (cls == EchoClass.Blast && CountOf(EchoClass.Blast, now) < BlastReserve) BlastOverCap++;
+                else
                 {
                     LastDropped = true; CapDropped++;
                     if (cls == EchoClass.Own) { OwnDropped++; if (bot > 0) OwnDroppedWithBots++; }
+                    if (cls == EchoClass.Blast) BlastDropped++;
                     return false;
                 }
-                Release(victim, now);
-                LastReplaced = true; bot--;
-                if (cls == EchoClass.Own) ReplacedForOwn++; else if (cls == EchoClass.Bot) ReplacedForBot++; else ReplacedForOther++;
             }
             if (cls == EchoClass.Bot && bot + 1 > MaxBot) MaxBot = bot + 1;
             Voice pick = null; bool stole = false;
@@ -172,6 +179,13 @@ namespace RealSoundSimulation.Acoustics
                 pick.BusyUntil = end + 0.02;
             }
             return stole;
+        }
+
+        private static int CountOf(EchoClass cls, double now)
+        {
+            int n = 0;
+            foreach (Voice v in Pool) if (v.Cls == cls && v.BusyUntil > now && !v.Releasing) n++;
+            return n;
         }
 
         private static void Count(double now, out int busy, out int own, out int bot)

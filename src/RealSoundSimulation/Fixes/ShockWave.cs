@@ -319,7 +319,7 @@ namespace RealSoundSimulation.Fixes
             lean = lean.sqrMagnitude > 0.001f ? lean.normalized : fwd;
             float delay = usesWay && w.Kind == WayKind.Route ? Mathf.Max(path - HeadStartM, 0f) / OwnEchoes.SpeedOfSound : h.Delay;
             double now = AudioSettings.dspTime, start = Math.Max(h.Played + delay, now);
-            EchoVoices.Play(_hit, _hit, l + lean, start, _hit.length, false, vol, 1f, cutoff, delay, minCutoff: 20f, ignoreCap: true, output: output, trim: outTrim);
+            EchoVoices.Play(_hit, _hit, l + lean, start, _hit.length, false, vol, 1f, cutoff, delay, minCutoff: 20f, cls: EchoClass.Blast, output: output, trim: outTrim);
             // 0.7.22 "6.9s": the front's crack, little muffled by an opening or corner (a wall still takes it); not raised by the felt trim
             if (Plugin.ShockCrackOn.Value && usesWay)
             {
@@ -327,7 +327,7 @@ namespace RealSoundSimulation.Fixes
                 float cv = Mathf.Clamp01(vol * Mathf.Pow(10f, Plugin.ShockCrackDb.Value / 20f) / trim);
                 if (cv >= MinVolume)
                 {
-                    EchoVoices.Play(_crack, _crack, l + lean, start, _crack.length, false, cv, 1f, open ? OpenHz : Mathf.Max(cutoff * CrackOpenUp, CrackMinHz), delay, minCutoff: 20f, ignoreCap: true, output: output, trim: outTrim);
+                    EchoVoices.Play(_crack, _crack, l + lean, start, _crack.length, false, cv, 1f, open ? OpenHz : Mathf.Max(cutoff * CrackOpenUp, CrackMinHz), delay, minCutoff: 20f, cls: EchoClass.Blast, output: output, trim: outTrim);
                     Cracked++;
                 }
             }
@@ -357,7 +357,7 @@ namespace RealSoundSimulation.Fixes
                     float len = Mathf.Clamp(Mathf.Lerp(0.25f, 0.7f, small) + 0.15f * shut, 0.2f, 1.1f);
                     if (v >= MinVolume)
                     {
-                        EchoVoices.Play(_push, _push, l + lean, start + 0.02, len, false, v, 1f, OpenHz, delay, minCutoff: 20f, ignoreCap: true, fadeS: len * 0.5f, output: output, trim: outTrim);
+                        EchoVoices.Play(_push, _push, l + lean, start + 0.02, len, false, v, 1f, OpenHz, delay, minCutoff: 20f, cls: EchoClass.Blast, fadeS: len * 0.5f, output: output, trim: outTrim);
                         Pushes++;
                     }
                 }
