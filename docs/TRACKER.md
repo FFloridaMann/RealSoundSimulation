@@ -82,6 +82,7 @@ Built: works alongside Fika (review, 10 Nov 2026); off on a headless host (0.7.1
 - [ ] **A** · Adrenaline after close calls: a built heartbeat, your character's own hard breathing, mask breathing from your own breaths (no outside recordings)
 - [ ] **W** · Weather: rain, wet surfaces and wind in the echoes and the outside mix
 - [ ] **5** · Headsets revamp: each headset's own protection and sound, its own switch
+- [ ] Grenades through a headset (user, 13 Nov 2026): "grenades with headsets are two quiet. and far to quiet with high tier headsets ... we want to recreate the feeling of the blast": keep the thump and pressure while the clamp takes the sting off the bang
 - [ ] **F** · Footsteps and body sounds: tuning by ear, if not finished for 1.0
 - [ ] **B** · Bots feel blasts too (SAIN where installed; its own switch)
 - [ ] **C** · Supersonic crack by calibre and speed

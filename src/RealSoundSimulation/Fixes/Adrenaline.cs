@@ -103,9 +103,11 @@ namespace RealSoundSimulation.Fixes
         {
             if (!Plugin.AdrenalineOn.Value || float.IsNaN(doseDb) || float.IsInfinity(doseDb)) return;
             float s = Mathf.Clamp01(Mathf.InverseLerp(DoseLowDb, DoseHighDb, doseDb));
-            if (IsOwn(pos)) { s *= Mathf.Clamp01(Plugin.OwnGrenadeShare.Value); OwnGrenades++; }
+            bool own = IsOwn(pos);
+            if (own) s *= Mathf.Clamp01(Plugin.OwnGrenadeShare.Value);
             if (s <= StartAt) return;
             Blasts++;
+            if (own) OwnGrenades++;
             _stress = _peakNow = Mathf.Clamp01(Mathf.Max(_stress, s) + StackShare * Mathf.Min(_stress, s));
             _since = 0f;
             if (_stress > Peak) Peak = _stress;

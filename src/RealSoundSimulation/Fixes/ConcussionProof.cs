@@ -66,6 +66,7 @@ namespace RealSoundSimulation.Fixes
         private const int CrackKeys = 4; // Main, Guns, Main tinnitus send, Guns tinnitus send
         private static readonly float[] Calm = { 0f, 0f }, Forced = new float[CrackKeys], Theirs = new float[CrackKeys];
         private static readonly bool[] Had = new bool[CrackKeys];
+        private static readonly float[] Normal = new float[CrackKeys]; // 13 Nov 2026: what each key goes back to when nobody else wrote it
         private static readonly string[] CrackKey = new string[CrackKeys];
         private static readonly string[] HeadsetKeys = { "MainVolume", "GunsVolume", "AmbientVolume", "AmbientOccluded", "EnvironmentVolume", "OcclusionVolume", "OutEnvironmentVolume", "HeadphonesMixerVolume", "AmbientCompressorSendLevel" };
         public const string HeadsetHeader = "t,headset,tplDryDb,tplAmbientDb,mainDb,gunsDb,ambientDb,ambientOccludedDb,environmentDb,occlusionDb,outEnvironmentDb,headphonesDb,ambientCompressorSendDb";
@@ -87,6 +88,7 @@ namespace RealSoundSimulation.Fixes
             Forced[0] = (Calm[0] < -20f ? 0f : Calm[0]) + trim; // Main as it was (the game's normal is 0)
             Forced[1] = dry + trim;                                // Guns: the game's normal for this headset (0 without one)
             Forced[2] = Forced[3] = -80f;                          // no tinnitus low-pass yet
+            Normal[0] = Forced[0] - trim; Normal[1] = Forced[1] - trim; Normal[2] = Normal[3] = -80f;
             for (int i = 0; i < CrackKeys; i++) Had[i] = false;
             _crackUntil = Time.unscaledTime + Mathf.Max(len - late, MinCrackS);
             Cracks++;
@@ -118,8 +120,10 @@ namespace RealSoundSimulation.Fixes
                 }
                 else if (_crackUntil > 0f)
                 {
-                    // the game's ring (or another cut) gets its values back; ours, if it runs, handles Main and Guns itself
-                    for (int i = 0; i < CrackKeys; i++) { if (Had[i] && !string.IsNullOrEmpty(CrackKey[i]) && (i >= 2 || !_active)) m.SetFloat(CrackKey[i], Theirs[i]); Had[i] = false; }
+                    // 13 Nov 2026: always put every key back: the game's ring (or another cut) gets its values, and a key nobody else wrote
+                    // goes back to normal. The headset trim (-6 dB) used to stay on Main and Guns until the end of our cut, about 10 s,
+                    // because a light cut never writes them (raid_20261113_111558: Main -6, Guns -66 with a ComTac on).
+                    for (int i = 0; i < CrackKeys; i++) { if (!string.IsNullOrEmpty(CrackKey[i])) m.SetFloat(CrackKey[i], Had[i] ? Theirs[i] : Normal[i]); Had[i] = false; }
                     _crackUntil = -1f;
                 }
                 else if (now - _blastAt > CalmAfterS && !_active && !Tinnitus(ba))
