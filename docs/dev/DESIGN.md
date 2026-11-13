@@ -166,7 +166,7 @@ Up to 4 echoes per shot (`6b`; up to 3 more in hard rooms), each a delayed, quie
 ---
 
 ## 6. Known limits (now)
-Things this design does not do yet. Each has a place in [ROADMAP.md](ROADMAP-DETAILED.md).
+Things this design does not do yet. Each has a place in [ROADMAP-DETAILED.md](ROADMAP-DETAILED.md).
 - **Roof holes:** a bombed-out patch of roof isn't found; "floors above" only looks straight up (AMBIENCE.md §9).
 - **Roof material:** roof rain sounds the same under concrete, metal or glass (step 4b phase 3).
 - **Only two elevations** (0° and 15°) for exposure; openings well above or below you count less than they should.

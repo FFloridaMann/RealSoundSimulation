@@ -314,7 +314,7 @@ Logged twice a second to `probe.csv`. Cost: 32 short raycasts per 0.1 s.
 
 **Glass facades and window bars (0.4.2).** The aim cone also casts against the glass and bar layers, which the sound-blocking rays pass through. Intact glass gives glass reflections and bars give weak, dull ones (grate). Shards and other obstructions are ignored.
 
-**Check.** Steps are in [ROADMAP.md](ROADMAP-DETAILED.md#testing-step-4-next-raid-no-ai-needed). Logs:
+**Check.** Steps are in [HISTORY.md](HISTORY.md#testing-step-4-raid-7). Logs:
 - `echoes.csv`: one row per echo played, with kind, surface, path, delay, level, directivity, filter, and direction relative to where you face.
 - `summary.txt`, OWN GUN ECHOES section: echoes per sample, by kind, mean level and path, voices used and stolen, and which surfaces were hit. "None" means no bullet material tag was found on that collider.
 
@@ -871,7 +871,7 @@ Only your own ears, so it's the same with Fika.
 
 ## Planned (not built)
 
-Order and status: [ROADMAP.md](ROADMAP-DETAILED.md).
+Order and status: [ROADMAP-DETAILED.md](ROADMAP-DETAILED.md) and [TRACKER.md](../TRACKER.md).
 
 - **Remote gunshots at your threshold:** smooth the switch between the "same room" and "different room" occlusion calculations when you cross a doorway.
 
