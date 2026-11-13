@@ -461,6 +461,7 @@ namespace RealSoundSimulation
             Safe("A adrenaline", () => Adrenaline.Apply(Harmony)); // 13 Nov 2026: own grenades, hits, near misses
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
+            gameObject.AddComponent<Raid>(); // first: raid start, resets and per-frame housekeeping
             gameObject.AddComponent<DiagRunner>();
             gameObject.AddComponent<DoorwayBlend>();
             gameObject.AddComponent<EnclosureProbe>();

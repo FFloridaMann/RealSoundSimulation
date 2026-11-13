@@ -137,14 +137,11 @@ namespace RealSoundSimulation.Fixes
 
         // ---------------- every frame, last ----------------
 
-        // The same checks as the features use: a raid's sound system is up, the world isn't the menu's or the hideout's, and you exist.
+        // In a raid (Raid.IsOn: not the menu or the hideout) with the game's audio up.
         private static bool InRaid(out BetterAudio ba)
         {
             ba = null;
-            if (!MonoBehaviourSingleton<BetterAudio>.Instantiated || !SpatialAudioSystem.Initialized) return false;
-            if (!Singleton<GameWorld>.Instantiated) return false;
-            GameWorld world = Singleton<GameWorld>.Instance;
-            if (world == null || world is HideoutGameWorld || world.MainPlayer == null) return false;
+            if (!Raid.IsOn || !MonoBehaviourSingleton<BetterAudio>.Instantiated) return false;
             ba = MonoBehaviourSingleton<BetterAudio>.Instance;
             return ba != null && ba.Master != null && ba.AudioMixerData != null;
         }

@@ -371,8 +371,7 @@ namespace RealSoundSimulation.Fixes
             catch (Exception e) { DiagRunner.ReportOnce("fix 8 ambience mix", e); }
         }
 
-        private static bool SpatialAudioSystem_InRaid() =>
-            Audio.SpatialSystem.SpatialAudioSystem.Initialized && MonoBehaviourSingleton<Audio.SpatialSystem.SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
+        private static bool SpatialAudioSystem_InRaid() => Raid.IsOn;
 
         private static void Find()
         {

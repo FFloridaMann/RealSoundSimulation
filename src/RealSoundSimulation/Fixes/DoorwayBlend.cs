@@ -83,8 +83,7 @@ namespace RealSoundSimulation.Fixes
 
         private void LateUpdate()
         {
-            bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated
-                          && MonoBehaviourSingleton<BetterAudio>.Instantiated && GamePlayerOwner.MyPlayer != null;
+            bool inRaid = Raid.IsOn && MonoBehaviourSingleton<BetterAudio>.Instantiated;
             if (!inRaid)
             {
                 if (Active) Deactivate(false);

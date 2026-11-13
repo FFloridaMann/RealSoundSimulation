@@ -28,7 +28,6 @@ namespace RealSoundSimulation.Diagnostics
 
         private static readonly HashSet<string> Reported = new HashSet<string>();
 
-        private bool _inRaid;
         private float _raidStart, _nextContainerLog, _nextScan, _nextTiming, _nextOverlay;
         private int _lastBots = -1, _maxBots, _spawned; // 0.6.18
         internal static float LastSpawnChange = float.NegativeInfinity; // 0.6.19: Time.time the alive-bot count last changed
@@ -59,7 +58,18 @@ namespace RealSoundSimulation.Diagnostics
         private readonly List<Row> _rows = new List<Row>(256);
 
         private string _fixStateAtStart = "";
-        internal static float RaidStartTime;
+        internal static float RaidStartTime => Raid.StartTime;
+        private Action _onStart, _onEnd;
+
+        private void Awake()
+        {
+            _onStart = () => Plugin.Safe("raid start (logs)", RaidStart);
+            _onEnd = () => Plugin.Safe("raid end (logs)", RaidEnd);
+        }
+
+        // Raid decides when a raid starts and ends; this only opens and closes the logs.
+        private void OnEnable() { Raid.Started += _onStart; Raid.Ended += _onEnd; }
+        private void OnDisable() { Raid.Started -= _onStart; Raid.Ended -= _onEnd; }
 
         private struct Row
         {
@@ -78,11 +88,7 @@ namespace RealSoundSimulation.Diagnostics
         {
             if (Plugin.OverlayKey.Value.IsDown()) Plugin.OverlayOn.Value = !Plugin.OverlayOn.Value;
 
-            bool raid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
-            if (raid && !_inRaid) Plugin.Safe("raid start", RaidStart);
-            if (!raid && _inRaid) Plugin.Safe("raid end", RaidEnd);
-            _inRaid = raid;
-            if (!raid) return;
+            if (!Raid.IsOn) return;
             if (Plugin.MarkKey.Value.IsDown()) Plugin.Safe("mark", Mark);
 
             float now = Time.time;
@@ -95,10 +101,6 @@ namespace RealSoundSimulation.Diagnostics
             finally { Perf.End(Perf.Part.DiagTick); }
             try { AudioCounters.Sample(); } // 0.6.20: one read per counter, also during the back-off (spawn frames are the ones to see)
             catch (Exception e) { ReportOnce("audio counters", e); }
-            try { RoomTail.Tick(); } // 0.7.4: not a diagnostic; lets the tail voice go after quiet seconds
-            catch (Exception e) { ReportOnce("room tail (tick)", e); }
-            try { ShotOverlap.Tick(); } // 0.7.12: not a diagnostic; gives rung-out tail voices back (1f)
-            catch (Exception e) { ReportOnce("1f tail hand-off (tick)", e); }
             if (backoff) return;
             Perf.Begin();
             try { EnvProbe.Tick(now); }
@@ -146,18 +148,11 @@ namespace RealSoundSimulation.Diagnostics
             Plugin.Log.LogInfo($"Mark {_marks} at {p} (room {Acoustics.EnclosureProbe.Room:0.00}, surfaces {surfaces})");
         }
 
-        private void OnApplicationQuit()
-        {
-            if (_inRaid) Plugin.Safe("raid end (quit)", RaidEnd);
-        }
-
         // ---------------- raid lifecycle ----------------
 
         private void RaidStart()
         {
-            if (Fika.IsHeadless()) { Plugin.TurnOff("this game is a Fika headless host, so no one hears it"); return; } // 0.7.11
-            _raidStart = Time.time;
-            RaidStartTime = _raidStart;
+            _raidStart = Raid.StartTime;
             _nextContainerLog = _nextScan = _nextTiming = _nextOverlay = 0f;
             _framesInWindow = _maxActive = _maxContainers = _maxPlaying = _maxBetterSources = _maxContainerPlaying = 0; LastPlayingInContainers = 0;
             _lastBots = -1; _maxBots = 0; _spawned = 0; LastSpawnChange = float.NegativeInfinity; _backoffFrames = 0;
@@ -167,7 +162,6 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
-            BotShots.Reset(); ThroughWall.Reset(); ExplosionEchoes.Reset(); BotEchoes.Reset(); BlastFromOpening.Reset(); BlastRecording.Reset(); MixerOwner.Reset(); GameRing.Reset(); ShockWave.Reset(); ConcussionProof.Reset(); GunfireHearing.Reset(); Adrenaline.Reset(); FragmentPassBy.Reset(); ClosedDoors.Reset(); OwnShotTurn.Reset(); RouteLog.Reset(); PortalPositioning.Reset(); FirstBurstOcclusion.Reset(); ShotOverlap.Reset(); ShotVariation.Reset(); RoomTail.Reset(); GunSoundSource.Reset(); OutdoorTail.Reset(); GunMixerFix.Reset(); ObstructionScoreFix.Reset(); OffMapFix.Reset(); DistantThroughOpenings.Reset(); GunEnvironmentBlend.Reset(); Acoustics.OwnEchoes.Reset(); Acoustics.OutdoorExposure.Reset(); Acoustics.AcousticProbe.Reset(); RainDropoutFix.Reset(); AmbienceMix.Reset(); DoorwayBlend.ClearReport(); RoomTone.ClearReport();
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -473,7 +467,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private void OnGUI()
         {
-            if (!_inRaid || !Plugin.OverlayOn.Value || string.IsNullOrEmpty(_overlayText)) return;
+            if (!Raid.IsOn || !Plugin.OverlayOn.Value || string.IsNullOrEmpty(_overlayText)) return;
             if (_style == null)
             {
                 _style = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12, wordWrap = false };
@@ -497,6 +491,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine($"CPU logical cores {SystemInfo.processorCount} -> audio tier {AudioUtils.GetQualityByLogicCores()}");
             sb.AppendLine("Fixes at start: " + _fixStateAtStart);
             sb.AppendLine("Fixes at end:   " + Plugin.FixState());
+            if (Raid.ResetsFailed > 0) sb.AppendLine($"  !! {Raid.ResetsFailed} feature resets failed at raid start (errors.txt); the others still ran");
             sb.AppendLine($"  fix 1 held back {GunMixerFix.HeldBack} contrary readings | fix 2 changed {ObstructionScoreFix.Changed} scores by >0.05 | fix 3c blended {GunEnvironmentBlend.Blended} own shots/tails | fix 4 applied {OffMapFix.Applied} times");
             sb.AppendLine();
             sb.AppendLine("PERFORMANCE (main thread, per call)");

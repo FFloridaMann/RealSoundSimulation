@@ -108,7 +108,7 @@ namespace RealSoundSimulation.Acoustics
 
         private void Update()
         {
-            bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
+            bool inRaid = Raid.IsOn;
             if (!inRaid || !Plugin.ExposureProbeOn.Value) { Valid = false; AboveValid = false; return; }
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try { Measure(MonoBehaviourSingleton<SpatialAudioSystem>.Instance); }

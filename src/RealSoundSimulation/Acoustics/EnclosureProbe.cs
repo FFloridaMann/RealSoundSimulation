@@ -91,7 +91,7 @@ namespace RealSoundSimulation.Acoustics
 
         private void Update()
         {
-            bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
+            bool inRaid = Raid.IsOn;
             if (!inRaid) { Valid = false; Enclosure = Horizontal = Overhead = MeanHit = HorizClosure = OverClosure = Room = SizeFactor = ThinShare = ZenithClosure = RoofClosure = HardShare = GlassShare = HardRoom = float.NaN; return; }
             if (!Plugin.ProbeOn.Value) { Valid = false; return; }
             if (Time.time < _next) return;

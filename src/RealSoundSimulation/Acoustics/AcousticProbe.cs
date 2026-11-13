@@ -283,7 +283,7 @@ namespace RealSoundSimulation.Acoustics
 
         private void Update()
         {
-            bool inRaid = SpatialAudioSystem.Initialized && MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && GamePlayerOwner.MyPlayer != null;
+            bool inRaid = Raid.IsOn;
             if (inRaid && Plugin.RayViewKey.Value.IsDown()) RayView.Toggle();
             if (!inRaid || !Plugin.AcousticProbeOn.Value) { DropPending(); Valid = false; RayView.Hide(); return; }
             _ranFrame = Time.frameCount;
