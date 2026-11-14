@@ -89,10 +89,11 @@ namespace RealSoundSimulation.Diagnostics
 
         private void Update()
         {
-            if (Plugin.OverlayKey.Value.IsDown()) Plugin.OverlayOn.Value = !Plugin.OverlayOn.Value;
+            // 0.9.1: the overlay (F9) is a developer tool; F9 clashed with Fika in the public build.
+            if (Plugin.DevBuild && Plugin.OverlayKey.Value.IsDown()) Plugin.OverlayOn.Value = !Plugin.OverlayOn.Value;
 
             if (!Raid.IsOn) return;
-            if (Plugin.MarkKey.Value.IsDown()) Plugin.Safe("mark", Mark);
+            if (LogsThisRaid && Plugin.MarkKey.Value.IsDown()) Plugin.Safe("mark", Mark); // 0.9.1: only with bug report logs on, so F10 is free otherwise
 
             float now = Time.time;
             _framesInWindow++;
@@ -471,7 +472,7 @@ namespace RealSoundSimulation.Diagnostics
 
         private void OnGUI()
         {
-            if (!Raid.IsOn || !Plugin.OverlayOn.Value || string.IsNullOrEmpty(_overlayText)) return;
+            if (!Plugin.DevBuild || !Raid.IsOn || !Plugin.OverlayOn.Value || string.IsNullOrEmpty(_overlayText)) return;
             if (_style == null)
             {
                 _style = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12, wordWrap = false };

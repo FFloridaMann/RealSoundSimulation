@@ -43,7 +43,7 @@ The user, 9 Nov 2026: the final mod logs nothing it doesn't need to work. Measur
 
 ## After 1.0
 
-In order: weather, the headsets revamp, footsteps and body sounds, bots feel blasts, the supersonic crack, their room rings, echo tuning for big fights. The rest any time.
+In order: weather, the headsets revamp, footsteps and body sounds, bots feel blasts, the supersonic crack, room reverb for other guns, echo tuning for big fights. The rest any time.
 
 ### Hearing
 
@@ -83,7 +83,7 @@ In order: weather, the headsets revamp, footsteps and body sounds, bots feel bla
 
 **Bots feel blasts too `(B)`.** The same blast pressure that concusses or deafens you does the same to bots, through SAIN where it's installed. In Fika it runs only where the bots are controlled. Its own switch, since it changes how fights play.
 
-**Their room rings too `(RT)`** (user, 11 Nov 2026). Today the room tail (0.7.4) measures only your room, so a bot firing in a big hall next door brings no hall ring.
+**Room reverb for other guns `(RT)`** (was "their room rings too"; user, 11 Nov 2026). Today the room tail (0.7.4) measures only your room, so a bot firing in a big hall next door brings no hall ring.
 - Measure the shooter's room with a small sweep (like the muzzle room, 37 rays) the first time they fire from a spot, cached by position for a few seconds; the nearest few shooters only.
 - No extra voices if the ring is an `AudioReverbFilter` on the shot's own tail voice (the spare voice it rings out on), sized from their Rt60 and brightness and heard through the route like the shot. That moves the cost to the audio thread, so cap it (about 3 shooters) and drop it first when the echo voices are busy. Fallback: one voice per shot from the room-tail pool.
 - Muffled by the way it reaches you; shooters outdoors get none.

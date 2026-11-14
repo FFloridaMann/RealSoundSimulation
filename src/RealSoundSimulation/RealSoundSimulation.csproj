@@ -5,7 +5,7 @@
     <AssemblyName>RealSoundSimulation</AssemblyName>
     <RootNamespace>RealSoundSimulation</RootNamespace>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
-    <Version>0.9.0</Version>
+    <Version>0.9.1</Version>
   </PropertyGroup>
 
   <!-- The developer build (every setting in F12): dotnet build -p:DevBuild=true. Without it, the public build. -->

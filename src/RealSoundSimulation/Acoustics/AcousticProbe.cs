@@ -284,7 +284,7 @@ namespace RealSoundSimulation.Acoustics
         private void Update()
         {
             bool inRaid = Raid.IsOn;
-            if (inRaid && Plugin.RayViewKey.Value.IsDown()) RayView.Toggle();
+            if (inRaid && Plugin.DevBuild && Plugin.RayViewKey.Value.IsDown()) RayView.Toggle(); // 0.9.1: developer tool only (F11)
             if (!inRaid || !Plugin.AcousticProbeOn.Value) { DropPending(); Valid = false; RayView.Hide(); return; }
             _ranFrame = Time.frameCount;
             Perf.Begin();

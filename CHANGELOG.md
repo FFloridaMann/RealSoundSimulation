@@ -2,6 +2,11 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.9.1 beta
+
+- **No more hotkey clashes.** The debug overlay (F9) and the ray view (F11) are developer tools and are gone from the public build; F9 clashed with Fika. The bug report mark key (F10) only does anything while **Bug report - logs** is on.
+- Footsteps and everyday sounds are still not simulated in this version; they come after 1.0 (see the roadmap). **General - footsteps and handling like EFT 1.0** only switches between Sound Engine Backport's backported EFT 1.0 footstep settings (on) and vanilla SPT (off).
+
 ## 0.9.0 beta: first public release
 
 - **A simpler F12 page.** 31 settings: one switch per feature at the top, then a few volumes. Everything else keeps its tested value.

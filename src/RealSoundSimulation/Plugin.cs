@@ -17,7 +17,7 @@ namespace RealSoundSimulation
     {
         public const string Guid = "com.ffloridamann.realsoundsimulation";
         public const string OldGuid = "ffloridamann.realsoundsimulation"; // before 0.9.0
-        public const string Version = "0.9.0";
+        public const string Version = "0.9.1";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -220,9 +220,9 @@ namespace RealSoundSimulation
             GunSounds = Bind(s01, "Gun recordings", GunSoundSet.SPT, "Which recordings guns use. SPT = the game's own. SEB = Sound Engine Backport's EFT 1.0 recordings, once built into the seb_sounds folder with tools/build_seb_sounds.py. Changes at the next trigger pull. Was 0.");
             SebOnFullAuto = Bind(s01, "Gun recordings - SEB on full-auto guns", false, "Also use SEB's recordings on guns that can fire full auto. Off because the game loops one recording while the trigger is held and SEB's are single shots, so bursts sound wrong. Was 0a.", null, adv);
             RayQualityCfg = Bind(p02, "Sound quality", AcousticProbe.RayQuality.High, "How many sound paths are traced through the map each second. Higher = steadier, more accurate sound deep inside buildings, for more CPU. Low costs about half of Medium, High twice, Ultra four times. Was 9g.", pub: 16);
-            FoleyPresetsOn = Bind(p01, "General - footsteps and handling like EFT 1.0", true, "Footsteps, gear and weapon handling use EFT 1.0's distance curves, stereo spread and 3D processing, from Sound Engine Backport by red_the_fox. Volumes stay the same. Restart the game to switch. Was 10a.", pub: 15);
+            FoleyPresetsOn = Bind(p01, "General - footsteps and handling like EFT 1.0", true, "Footsteps, gear and weapon handling use EFT 1.0's distance curves, stereo spread and 3D processing, from Sound Engine Backport by red_the_fox. Off = vanilla SPT footsteps. Volumes stay the same. Restart the game to switch. Was 10a.", pub: 15);
             LogsOn = Bind(p02, "Bug report - logs", false, "Found a bug? Turn this on, play one raid, and press the Bug report - mark key (F10) wherever something sounds wrong. After the raid, send the newest Bug report zip from the RealSoundSimulation Logs folder in your SPT folder (next to EscapeFromTarkov.exe). Off for normal play. Starts at the next raid. Was Write logs.", pub: 17);
-            MarkKey = Bind(p02, "Bug report - mark key", new KeyboardShortcut(KeyCode.F10), "With Bug report logs on, press this in raid wherever something sounds wrong. The spot is saved in the bug report with what the mod measured there. Change it here if F10 clashes with another mod. Was Mark key.", pub: 18);
+            MarkKey = Bind(p02, "Bug report - mark key", new KeyboardShortcut(KeyCode.F10), "Only works in raids that started with Bug report - logs on. With logs off this key does nothing, so F10 stays free for other mods. With logs on, press it in raid wherever something sounds wrong: the spot is saved in the bug report with what the mod measured there. Change it here if F10 clashes with another mod while you collect a bug report. Was Mark key.", pub: 18);
 
             // 02 | YOUR GUN
             GunEnvBlendOn = Bind(p01, "Your gun - indoor/outdoor blend", true, "Your shot mixes the game's indoor and outdoor recordings by how enclosed the space really is, instead of switching from one to the other. Was 3c.", pub: 0);

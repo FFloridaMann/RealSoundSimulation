@@ -68,7 +68,7 @@ Fix only what sounds wrong; no new features. Route: [TEST-ROUTE.md](TEST-ROUTE.m
 
 ## After 1.0
 
-In order: weather, the headsets revamp, footsteps and body sounds, bots feel blasts, the supersonic crack, their room rings, echo tuning for big fights. The rest any time.
+In order: weather, the headsets revamp, footsteps and body sounds, bots feel blasts, the supersonic crack, room reverb for other guns, echo tuning for big fights. The rest any time.
 
 ### Hearing
 - [ ] **Headsets revamp** `(5)`: each headset's own protection and sound, its own switch
@@ -90,7 +90,7 @@ In order: weather, the headsets revamp, footsteps and body sounds, bots feel bla
 ### Other people
 - [ ] **Footsteps and body sounds** `(F)`: bring back from the `body-sounds` branch, re-check against the shared echo voices, tune by ear
 - [ ] **Bots feel blasts too** `(B)`: through SAIN where installed; its own switch
-- [ ] **Their room rings too** `(RT)`: the nearest few shooters' rooms, no extra voices if possible
+- [ ] **Room reverb for other guns** `(RT)`: the nearest few shooters' rooms, no extra voices if possible
 
 ### Guns
 - [ ] **Supersonic crack** `(C)` by calibre and speed
