@@ -5,7 +5,8 @@ What changed, as you'd notice it in game. The full technical log is [docs/dev/CH
 ## 0.9.2 beta
 
 - **No more stutter on Icebreaker** (Manimal's custom map). The mod kept searching the whole map for one of the game's sound parts that Icebreaker doesn't have: a hitch every 2 seconds for everyone, and about 60 ms every tenth of a second with **Bug report - logs** on. Now it looks once per raid. In testing, Icebreaker went from 42 to 79 FPS with logs on, and the mod's share of the CPU went from 40% of one core to 2%, the same as on other maps. Any other custom map without that part is fixed the same way.
-- On those maps, outdoor ambience doesn't fade smoothly at doorways; the map's own sound handles it (see Known issues).
+- **No hitch every 5 seconds on maps with no outdoor sound,** such as Labs. The mod kept searching the whole map for outdoor ambience and rain sounds that aren't there. Now it searches the whole map once per raid.
+- On maps without that ambience part (Icebreaker), outdoor ambience doesn't fade smoothly at doorways; the map's own sound handles it (see Known issues).
 
 ## 0.9.1 beta
 

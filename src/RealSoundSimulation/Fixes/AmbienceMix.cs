@@ -59,7 +59,7 @@ namespace RealSoundSimulation.Fixes
             Took.Clear(); V2Active = false; V2Level = float.NaN;
             Beds.Clear(); IndoorRain.Clear();
             RestoreRain(); RainSrc.Clear();
-            _found = false; _nextFind = 0f; _expSm = -1f; RoofRainApplied = 1f;
+            _found = false; _nextFind = 0f; _sceneSearched = false; _expSm = -1f; RoofRainApplied = 1f;
             _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; _roofMatGain = 1f; _noRainGate = 1f; DoorwayBlend.ResetIndoorParams();
             RoomTone.Reset();
             ExposureApplied = float.NaN; BedPan = 0f; BedCutoff = 22000f; RoofRainFactor = 1f;
@@ -377,17 +377,16 @@ namespace RealSoundSimulation.Fixes
         {
             _nextFind = Time.time + 5f;
             var seen = new HashSet<AudioSource>();
-            foreach (WindAmbientBlender w in FindObjectsOfType<WindAmbientBlender>()) { AddBed(w._windSource, seen); AddBed(w._windMixSource, seen); }
-            foreach (DayTimeAmbientBlender d in FindObjectsOfType<DayTimeAmbientBlender>()) { AddBed(d._outdoorAmbientDaySource, seen); AddBed(d._outdoorAmbientNightSource, seen); }
-            foreach (PrecipitationAmbientBlender p in FindObjectsOfType<PrecipitationAmbientBlender>())
+            // 0.9.2: the game only sets up the ambience blenders under its AmbientAudioSystem, so look there every 5 s and search
+            // the whole scene at most once per raid. Before, a map with no ambience at all got three whole-scene searches every 5 s.
+            Collect(false, seen);
+            if (Beds.Count == 0 && IndoorRain.Count == 0 && !_sceneSearched)
             {
-                if (p._environment == EnvironmentType.Outdoor) { AddBed(p._precipitationSource, seen); AddBed(p._precipitationMixSource, seen); }
-                else
-                {
-                    IndoorRain.Add(p);
-                    if (p._precipitationSource != null) RainSrc.Add(p._precipitationSource);
-                    if (p._precipitationMixSource != null) RainSrc.Add(p._precipitationMixSource);
-                }
+                _sceneSearched = true;
+                Collect(true, seen);
+                Plugin.Log.LogInfo(Beds.Count > 0 || IndoorRain.Count > 0
+                    ? "fix 8: ambience sounds found by a scene search (not under the ambient audio system)"
+                    : "fix 8: no ambience sounds found under the ambient audio system or in the scene; looking under it every 5 s");
             }
             _found = Beds.Count > 0 || IndoorRain.Count > 0;
             BedsFound = Beds.Count; IndoorRainFound = IndoorRain.Count;
@@ -410,6 +409,31 @@ namespace RealSoundSimulation.Fixes
         }
 
         public static int BedsFound, IndoorRainFound;
+        private static bool _sceneSearched;
+
+        private static void Collect(bool scene, HashSet<AudioSource> seen)
+        {
+            foreach (WindAmbientBlender w in Search<WindAmbientBlender>(scene)) { AddBed(w._windSource, seen); AddBed(w._windMixSource, seen); }
+            foreach (DayTimeAmbientBlender d in Search<DayTimeAmbientBlender>(scene)) { AddBed(d._outdoorAmbientDaySource, seen); AddBed(d._outdoorAmbientNightSource, seen); }
+            foreach (PrecipitationAmbientBlender p in Search<PrecipitationAmbientBlender>(scene))
+            {
+                if (p._environment == EnvironmentType.Outdoor) { AddBed(p._precipitationSource, seen); AddBed(p._precipitationMixSource, seen); }
+                else if (!IndoorRain.Contains(p))
+                {
+                    IndoorRain.Add(p);
+                    if (p._precipitationSource != null) RainSrc.Add(p._precipitationSource);
+                    if (p._precipitationMixSource != null) RainSrc.Add(p._precipitationMixSource);
+                }
+            }
+        }
+
+        private static T[] Search<T>(bool scene) where T : Component
+        {
+            if (scene) return FindObjectsOfType<T>();
+            if (!MonoBehaviourSingleton<AmbientAudioSystem>.Instantiated) return Array.Empty<T>();
+            AmbientAudioSystem a = MonoBehaviourSingleton<AmbientAudioSystem>.Instance;
+            return a != null ? a.GetComponentsInChildren<T>() : Array.Empty<T>();
+        }
 
         private static void AddBed(AudioSource s, HashSet<AudioSource> seen)
         {
