@@ -2,6 +2,13 @@
 
 Newest first. Each version: what changed, and whether it has been run in game.
 
+## 0.9.2 — 14 Nov 2026 (Icebreaker stutter)
+**Run in game:** two Icebreaker raids, before (raid_20261114_102346) and after (raid_20261114_105344).
+- Icebreaker (ManimalIcebreaker 1.1.3) rebuilds the retail sound scene from sidecars but has no `EnvironmentSoundBlendSystem`. `EnvProbe.Tick` (logs on) and `DoorwayBlend.ApplyAmbience` (always) called `FindObjectOfType<EnvironmentSoundBlendSystem>` until it was found: every 0.1 s and every 2 s. On the ship a whole-scene search took ~40-60 ms. Before: 2,732 frames of ~62 ms spaced 0.1 s apart, `EnvLog` 9.6 ms per call, total 396 ms/s, 42.5 FPS. After: `EnvLog` 0.006 ms, total 21.6 ms/s, 78.6 FPS; remaining spikes are Icebreaker's start-of-raid squad spawns and bot spawns.
+- New `Fixes/BlendSystem.cs`, shared by both: looks under `MonoBehaviourSingleton<AmbientAudioSystem>` (`AmbientAudioSystem.Awake` only collects and `Init`s blenders among its children), retries that cheap lookup every 2 s, and falls back to one whole-scene search per raid. Logs whether it was found under the ambient system, by the scene search, or not at all. Reset at raid start (`Raid.Resets`).
+- Without a blender, fix 3's outdoor-ambience fade is skipped and the map's own switcher handles it; the mixer snapshot part of fix 3 is unchanged.
+- Checked: every logged raid on Ground Zero, Factory, Woods, Streets and Interchange (Manimal's rework) found the blender. `AmbienceMix.Find` has the same retry-until-found shape (three `FindObjectsOfType` every 5 s), but every logged map, Icebreaker included, has its ambience beds, so it isn't hit; left as is.
+
 ## 0.9.0 — 13 Nov 2026 (beta release)
 **Run in game:** not yet on this exact build.
 - Plugin ID `com.ffloridamann.realsoundsimulation`, name `FFloridaMann-RealSoundSimulation` (the Forge's format). `CarryOverOldSettings` copies `ffloridamann.realsoundsimulation.cfg` to the new file once, before anything binds, and reloads it.

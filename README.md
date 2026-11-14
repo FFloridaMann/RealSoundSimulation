@@ -4,7 +4,7 @@ A simulated audio overhaul for SPT. Instead of playing a recording at a volume, 
 
 **The full description, with what you'll hear in a raid, the concussion system, performance and credits, is in [FORGE-PAGE.md](FORGE-PAGE.md).** This README covers installing, settings, bug reports and building from source.
 
-**Status: 0.9.1 beta.** Feature-complete and tested in solo raids on SPT 4.1.6. Not yet tested with Fika or co-op. Bug reports are very welcome (see [Reporting a bug](#reporting-a-bug)); 1.0 follows once players have tried it on other maps and PCs.
+**Status: 0.9.2 beta.** Feature-complete and tested in solo raids on SPT 4.1.6. Not yet tested with Fika or co-op. Bug reports are very welcome (see [Reporting a bug](#reporting-a-bug)); 1.0 follows once players have tried it on other maps and PCs.
 
 ## Requirements
 
@@ -43,6 +43,7 @@ The developer build (`.\deploy.ps1 -Dev`) shows every setting, about 200, in sec
 - Some semi-auto guns (the ADAR 2-15 most clearly): a slight static at the end of tails after quick single shots. It isn't from cut sounds; it may be in the game's own recording.
 - G36: never blends its indoor and outdoor recordings (it seems to have only one).
 - With Bring Back Concussion: crossing a doorway while its hearing cut fades back can leave the indoor ambience at the old level until it next changes.
+- Icebreaker (the custom map from Manimal's Icebreaker mod): the smooth fade of outdoor ambience at doorways doesn't work there, because the map has no ambience blender for it. That map's own sound handles the change instead. Everything else works. Before 0.9.2 this map also stuttered with the mod.
 - Not tested with Fika or co-op yet.
 - Heavy maps such as Woods with many bots stutter in places; in testing that was the game itself (the mod costs about 2% of one CPU core). If you suspect the mod, try **02 GENERAL → Sound quality** at Medium.
 

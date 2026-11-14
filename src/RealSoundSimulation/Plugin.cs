@@ -17,7 +17,7 @@ namespace RealSoundSimulation
     {
         public const string Guid = "com.ffloridamann.realsoundsimulation";
         public const string OldGuid = "ffloridamann.realsoundsimulation"; // before 0.9.0
-        public const string Version = "0.9.1";
+        public const string Version = "0.9.2";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;

@@ -21,6 +21,8 @@ It's been tested solo by one player on one PC, and not yet in Fika.
 
 **0.9.1:** fixes only: the debug overlay (F9, it clashed with Fika) and ray view (F11) are developer tools now, and the bug report key (F10) only works with bug report logs on.
 
+**0.9.2:** fixes the stutter on custom maps that don't have the game's ambience blender (Icebreaker).
+
 ## The road to 1.0
 
 No new features until 1.0, only fixes:

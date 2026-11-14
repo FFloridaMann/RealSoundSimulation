@@ -28,7 +28,7 @@ namespace RealSoundSimulation
 
         private static readonly (string Name, Action Run)[] Resets =
         {
-            ("bot shots", BotShots.Reset), ("6.2 through-wall thump", ThroughWall.Reset), ("6.3 explosion echoes", ExplosionEchoes.Reset),
+            ("ambience blender lookup", BlendSystem.Reset), ("bot shots", BotShots.Reset),("6.2 through-wall thump", ThroughWall.Reset), ("6.3 explosion echoes", ExplosionEchoes.Reset),
             ("6.3h bot echoes", BotEchoes.Reset), ("6.4 blast from the opening", BlastFromOpening.Reset), ("6.6 blast recording", BlastRecording.Reset),
             ("mixer owner", MixerOwner.Reset), ("6.9u game ring", GameRing.Reset), ("6.9 shock wave", ShockWave.Reset),
             ("6.9h concussion", ConcussionProof.Reset), ("5r gunfire hearing", GunfireHearing.Reset), ("A adrenaline", Adrenaline.Reset),

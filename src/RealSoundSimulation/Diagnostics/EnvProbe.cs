@@ -93,7 +93,7 @@ namespace RealSoundSimulation.Diagnostics
         {
             if (!DiagLog.IsOpen || now < _nextSample) return;
             _nextSample = now + 0.1f;
-            if (_blend == null) _blend = Object.FindObjectOfType<EnvironmentSoundBlendSystem>();
+            if (_blend == null) _blend = Fixes.BlendSystem.Get(); // 0.9.2: was a whole-scene search 10 times a second until found
             float outdoor = float.NaN;
             if (_blend != null && _blend._ambientSoundBlenders != null && _blend._ambientSoundBlenders.Length > 0 && _blend._ambientSoundBlenders[0] != null)
                 outdoor = OutdoorValueRef(_blend._ambientSoundBlenders[0]);

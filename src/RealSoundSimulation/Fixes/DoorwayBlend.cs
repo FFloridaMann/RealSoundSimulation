@@ -66,7 +66,6 @@ namespace RealSoundSimulation.Fixes
         public static string IndoorParamNames = "";
         private static bool _paramsRead;
         private EnvironmentSoundBlendSystem _blend;
-        private float _nextBlendSearch;
 
         public static void Apply(Harmony h)
         {
@@ -228,9 +227,7 @@ namespace RealSoundSimulation.Fixes
         {
             if (_blend == null)
             {
-                if (Time.unscaledTime < _nextBlendSearch) return;
-                _nextBlendSearch = Time.unscaledTime + 2f;
-                _blend = FindObjectOfType<EnvironmentSoundBlendSystem>();
+                _blend = BlendSystem.Get(); // 0.9.2: no whole-scene search every 2 s (Icebreaker has no blender)
                 if (_blend == null) return;
             }
             AmbientSoundBlender[] blenders = _blend._ambientSoundBlenders;
