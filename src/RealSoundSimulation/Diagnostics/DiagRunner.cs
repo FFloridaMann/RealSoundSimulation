@@ -109,6 +109,8 @@ namespace RealSoundSimulation.Diagnostics
             Perf.Begin();
             try { EnvProbe.Tick(now); }
             catch (Exception e) { ReportOnce("env probe (tick)", e); }
+            try { MixerNames.Tick(now); }
+            catch (Exception e) { ReportOnce("ambience mixer controls (tick)", e); }
             finally { Perf.End(Perf.Part.EnvLog); }
             Perf.Begin();
             try { DiagLog.MaybeFlush(Time.realtimeSinceStartup); }
@@ -130,6 +132,7 @@ namespace RealSoundSimulation.Diagnostics
                 counts.TryGetValue(m, out int c); counts[m] = c + 1;
             }
             string surfaces = string.Join(" ", counts.Select(kv => $"{kv.Key}:{kv.Value}"));
+            bool sweep = !Acoustics.OutdoorExposure.SweepSkipped;
             DiagLog.Row("marks.csv", string.Join(",",
                 DiagLog.F(Time.time - _raidStart, "0.00"), _marks.ToString(), DiagLog.F(p.x, "0.00"), DiagLog.F(p.y, "0.00"), DiagLog.F(p.z, "0.00"),
                 DoorwayBlend.TargetOutdoorness < 0.5f ? "1" : "0", DiagLog.F(DoorwayBlend.TargetOutdoorness),
@@ -138,10 +141,13 @@ namespace RealSoundSimulation.Diagnostics
                 DiagLog.F(Acoustics.EnclosureProbe.MeanHit, "0.0"),
                 float.IsNaN(GunEnvironmentBlend.LastShotTime) ? "" : DiagLog.F(GunEnvironmentBlend.LastShotTime - _raidStart, "0.00"),
                 DiagLog.F(GunEnvironmentBlend.LastIndoorWeight), surfaces,
-                DiagLog.F(Acoustics.OutdoorExposure.ExposureOpen), DiagLog.F(Acoustics.OutdoorExposure.ExposureGlass), DiagLog.F(Acoustics.OutdoorExposure.ExposureOther),
-                Acoustics.OutdoorExposure.OpenN.ToString(), Acoustics.OutdoorExposure.GlassN.ToString(), Acoustics.OutdoorExposure.BlockedN.ToString(),
-                DiagLog.F(Acoustics.OutdoorExposure.NearestOpenM, "0.0"), DiagLog.F(Acoustics.OutdoorExposure.NearestGlassM, "0.0"),
-                DiagLog.F(Acoustics.OutdoorExposure.RoomFloor), DiagLog.F(Acoustics.OutdoorExposure.Value),
+                // 0.9.3: the old sweep stops while probe v2 runs; its last values were repeated at every mark, so leave them blank
+                sweep ? DiagLog.F(Acoustics.OutdoorExposure.ExposureOpen) : "", sweep ? DiagLog.F(Acoustics.OutdoorExposure.ExposureGlass) : "",
+                sweep ? DiagLog.F(Acoustics.OutdoorExposure.ExposureOther) : "",
+                sweep ? Acoustics.OutdoorExposure.OpenN.ToString() : "", sweep ? Acoustics.OutdoorExposure.GlassN.ToString() : "",
+                sweep ? Acoustics.OutdoorExposure.BlockedN.ToString() : "",
+                sweep ? DiagLog.F(Acoustics.OutdoorExposure.NearestOpenM, "0.0") : "", sweep ? DiagLog.F(Acoustics.OutdoorExposure.NearestGlassM, "0.0") : "",
+                sweep ? DiagLog.F(Acoustics.OutdoorExposure.RoomFloor) : "", sweep ? DiagLog.F(Acoustics.OutdoorExposure.Value) : "",
                 DiagLog.F(Acoustics.OutdoorExposure.CeilingM, "0.0"), Acoustics.OutdoorExposure.CeilingMat.ToString(),
                 Acoustics.OutdoorExposure.FloorsAbove.ToString(), Acoustics.OutdoorExposure.RoofMat.ToString(),
                 DiagLog.F(Acoustics.AcousticProbe.Level), DiagLog.F(Acoustics.AcousticProbe.CutoffHz, "0"), DiagLog.F(Acoustics.AcousticProbe.Focus),
@@ -167,6 +173,7 @@ namespace RealSoundSimulation.Diagnostics
             _maxDistByGroup.Clear();
             ShotProbe.Reset();
             EnvProbe.Reset(_raidStart);
+            MixerNames.Reset(_raidStart);
             _fixStateAtStart = Plugin.FixState();
             Perf.Reset(Time.realtimeSinceStartup);
             TimingPatches.SpatialUpdate.ResetAll(); TimingPatches.SpatialLate.ResetAll(); TimingPatches.BetterAudioUpdate.ResetAll();
@@ -531,6 +538,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine("  gunshot bank rolloff (audible range m, 50 m buckets): " + string.Join("  ", ShotProbe.RolloffHistogram.Select(kv => $"{kv.Key}:{kv.Value}")));
             sb.AppendLine();
             sb.Append(EnvProbe.Summary());
+            sb.Append(MixerNames.Summary());
             sb.Append(Acoustics.OwnEchoes.Summary());
             sb.Append(Perf.Summary(Time.realtimeSinceStartup));
             sb.Append(Acoustics.OutdoorExposure.Summary());

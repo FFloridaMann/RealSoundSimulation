@@ -123,7 +123,11 @@ namespace RealSoundSimulation.Fixes
             if (Took.Add(b)) b.SetOutdoorMixerParams(1f, 0f, true);
             SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.Volume, volDb);
             SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.LowPassFreq, Mathf.Clamp(cutoff, b._minLowpassFreq, b._maxLowpassFreq));
-            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.HighPassFreq, b._minHighPassFreq);
+            // 0.9.3: no high-pass. The maps' blenders store min 1000 Hz / max 10 Hz (the game goes from 1000 Hz deep inside to
+            // 10 Hz outside), so "_minHighPassFreq" cut everything below 1 kHz from outdoor wind, rain and ambience for the
+            // whole raid, outdoors too (Streets raid_20261114_120507: AmbientOutHighpass 10 -> 1000 Hz at 20 s, never back).
+            // Walls let the low end through, so the lower of the two (no cut) is used; the muffling is the low-pass above.
+            SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.HighPassFreq, Mathf.Min(b._minHighPassFreq, b._maxHighPassFreq));
             SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.ReverbSend, Mathf.Min(volDb, b._maxOutdoorReverbSendDb));
             SetP(b, mixer, Audio.AmbientSubsystem.Data.EMixerParameterType.DelaySend, Mathf.Min(volDb, b._maxOutdoorDelaySendDb));
         }

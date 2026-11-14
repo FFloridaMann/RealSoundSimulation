@@ -968,12 +968,13 @@ namespace RealSoundSimulation.Acoustics
         private static void Kind(Collider c, MaterialType m, bool blocking, out float t, out float tg, out float cut, ref bool glass)
         {
             int id = c.GetInstanceID();
-            if (!KindCache.TryGetValue(id, out Cat cat))
+            bool window = Surfaces.IsWindow(c); // 0.9.3: a window can break mid-raid, so its verdict isn't kept
+            if (window || !KindCache.TryGetValue(id, out Cat cat))
             {
                 KindRaw(c, m, blocking, out float t0, out float tg0, out float cut0, out bool g0);
                 cat = g0 ? Cat.Glass : t0 >= 1f ? (m == MaterialType.GlassShattered ? Cat.Shattered : Cat.Open) : Mathf.Approximately(t0, 0.9f) ? Cat.Bars
                     : Mathf.Approximately(t0, 0.1f) ? Cat.Thin : Mathf.Approximately(t0, 0.05f) ? Cat.Solid : Cat.Reflect;
-                KindCache[id] = cat;
+                if (!window) KindCache[id] = cat;
             }
             float thinGun = 1f - Mathf.Clamp01(Plugin.ThinSurfaceCount.Value);
             switch (cat)

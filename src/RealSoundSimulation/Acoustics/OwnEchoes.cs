@@ -564,7 +564,7 @@ namespace RealSoundSimulation.Acoustics
             var mats = new List<string>();
             foreach (var kv in TapsByMaterial) mats.Add($"{kv.Key}:{kv.Value}");
             sb.AppendLine("  surfaces: " + string.Join("  ", mats) + "   (None = no bullet material tag found)");
-            sb.AppendLine($"  windows registered as glass: {Surfaces.WindowsFound}   glass-facade/bar candidates (0.4.2): {GlassBarsTaps}");
+            sb.AppendLine($"  windows registered as glass: {Surfaces.WindowsFound} (broken at the start {(Surfaces.WindowsBrokenAtStart < 0 ? "-" : Surfaces.WindowsBrokenAtStart.ToString())}, at the end {Surfaces.WindowsBroken()}; broken ones count as open); building windows' walk-blocking colliders passed as open: {Surfaces.WindowFillers}   glass-facade/bar candidates (0.4.2): {GlassBarsTaps}");
             sb.Append(Loudness.Summary());
             return sb.ToString();
         }

@@ -2,6 +2,11 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
+## 0.9.3 (not released yet)
+
+- **Outdoor wind and rain have their low end back.** About 20 seconds into every raid, the mod cut everything below 1 kHz from the outdoor ambience (wind, rain, the day and night outdoor sound and distant vehicles), outdoors too. Now nothing is cut; walls still muffle the high end.
+- **Broken windows let sound through.** Windows broken from the start (Streets has many), windows you break during the raid, and broken windows built into buildings no longer sound like closed glass: outdoor sound and rain come in through them.
+
 ## 0.9.2 beta
 
 - **No more stutter on Icebreaker** (Manimal's custom map). The mod kept searching the whole map for one of the game's sound parts that Icebreaker doesn't have: a hitch every 2 seconds for everyone, and about 60 ms every tenth of a second with **Bug report - logs** on. Now it looks once per raid. In testing, Icebreaker went from 42 to 79 FPS with logs on, and the mod's share of the CPU went from 40% of one core to 2%, the same as on other maps. Any other custom map without that part is fixed the same way.

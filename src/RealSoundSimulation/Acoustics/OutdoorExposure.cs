@@ -327,7 +327,7 @@ namespace RealSoundSimulation.Acoustics
         // F10: every direction, for diagnosing a spot (rays.csv).
         public static void DumpRays(int mark, float t)
         {
-            if (!DiagLog.IsOpen || !Valid) return;
+            if (!DiagLog.IsOpen || !Valid || SweepSkipped) return; // 0.9.3: no stale sweep while probe v2 runs (paths.csv has v2's rays)
             Vector3 f = Vector3.forward;
             if (MonoBehaviourSingleton<SpatialAudioSystem>.Instantiated && MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform != null)
             { f = MonoBehaviourSingleton<SpatialAudioSystem>.Instance.ListenerTransform.forward; f.y = 0f; }
@@ -399,7 +399,8 @@ namespace RealSoundSimulation.Acoustics
             // Only a box larger than a shard (would cover the opening) counts as Broken.
             if (Has(self, "stuckpiece")) return c is MeshCollider || MaxExtent(c) <= 0.6f ? Path.Glass : Path.Broken;
             MaterialType m = Surfaces.Material(c);
-            if (m == MaterialType.Glass || m == MaterialType.GlassShattered || m == MaterialType.GlassVisor) return Path.Glass;
+            if (m == MaterialType.GlassShattered) return Path.Broken; // 0.9.3: a broken window's frame (Surfaces), and shattered glass is see-through
+            if (m == MaterialType.Glass || m == MaterialType.GlassVisor) return Path.Glass;
             if (m == MaterialType.Chainfence || m == MaterialType.Grate) return Path.Bars;
             Transform t = c.transform;
             for (int i = 0; i < 3 && t != null; i++, t = t.parent)
