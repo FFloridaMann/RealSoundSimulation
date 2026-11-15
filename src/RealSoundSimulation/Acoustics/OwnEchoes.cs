@@ -125,8 +125,7 @@ namespace RealSoundSimulation.Acoustics
             SamplesEchoed = TapsPlayed = Stolen = MaxBusy = 0;
             Array.Clear(TapsByKind, 0, TapsByKind.Length);
             TapsByMaterial.Clear();
-            Surfaces.Reset();
-            Loudness.Reset();
+            Loudness.Reset(); // Surfaces has its own reset in Raid (0.9.3: it can run on the loading screen)
             GlassBarsTaps = 0; _glassMask = -1;
             _levelSum = _pathSum = 0f;
             _farTime = -100f;

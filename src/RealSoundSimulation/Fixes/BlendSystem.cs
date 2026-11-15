@@ -17,6 +17,20 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset() { _found = null; _nextTry = 0f; _sceneSearched = false; }
 
+        // 0.9.3: the one whole-scene search runs on the loading screen (Raid.Prepare); it cost ~44 ms on Icebreaker 33 s into
+        // play before (raid_20261115_114507). Its answer is used where the search used to run: after the cheap look under the
+        // ambient audio system finds nothing, so a blender set up later under that system is still found as before.
+        private static bool _loadingSearched;
+        private static EnvironmentSoundBlendSystem _loadingFound;
+
+        internal static void SearchOnLoading()
+        {
+            _loadingFound = Object.FindObjectOfType<EnvironmentSoundBlendSystem>();
+            _loadingSearched = true;
+        }
+
+        internal static void ForgetLoadingSearch() { _loadingSearched = false; _loadingFound = null; }
+
         // The one scene search ran and found nothing: this map has no blender (Icebreaker).
         public static bool Missing => _sceneSearched && _found == null;
 
@@ -36,9 +50,15 @@ namespace RealSoundSimulation.Fixes
             }
             if (_sceneSearched) return null;
             _sceneSearched = true;
-            _found = Object.FindObjectOfType<EnvironmentSoundBlendSystem>();
+            if (_loadingSearched) _found = _loadingFound; // searched on the loading screen (null if it found none)
+            else
+            {
+                long t0 = StartupTiming.Now();
+                _found = Object.FindObjectOfType<EnvironmentSoundBlendSystem>();
+                StartupTiming.Add("first use", "ambience blender scene search", StartupTiming.Now() - t0); // 0.9.3
+            }
             Plugin.Log.LogInfo(_found != null
-                ? "fix 3: ambience blender found by a scene search (not under the ambient audio system)"
+                ? "fix 3: ambience blender found by a scene search (not under the ambient audio system)" + (_loadingSearched ? " on the loading screen" : "")
                 : "fix 3: this map has no indoor/outdoor ambience blender; the doorway ambience fade is left to the map");
             return _found;
         }

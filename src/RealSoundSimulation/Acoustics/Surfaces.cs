@@ -42,7 +42,7 @@ namespace RealSoundSimulation.Acoustics
         public static MaterialType Material(Collider c)
         {
             if (c == null) return MaterialType.None;
-            if (!_windowsRegistered) RegisterWindows();
+            if (!_windowsRegistered) StartupTiming.Run("first use", "windows", RegisterWindows);
             int id = c.GetInstanceID();
             if (WindowOf.TryGetValue(id, out WindowBreaker w)) return WindowMaterial(c, w);
             if (Cache.TryGetValue(id, out MaterialType m)) return m;
@@ -91,6 +91,9 @@ namespace RealSoundSimulation.Acoustics
             foreach (WindowBreaker w in Windows) if (w != null && w.IsDamaged) n++;
             return n;
         }
+
+        // 0.9.3: Raid.Prepare registers them on the loading screen, so the first probe ray after you spawn doesn't pay for it.
+        internal static void RegisterWindowsNow() { if (!_windowsRegistered) RegisterWindows(); }
 
         private static void RegisterWindows()
         {

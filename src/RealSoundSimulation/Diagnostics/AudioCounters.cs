@@ -159,7 +159,7 @@ namespace RealSoundSimulation.Diagnostics
 
         public static string Summary()
         {
-            if (!Ran) return "UNITY AUDIO COUNTERS: not read (Time the audio thread off)\n";
+            if (!Ran) return "UNITY AUDIO COUNTERS: not read (bug report logs off, or they failed to start)\n";
             var sb = new StringBuilder();
             sb.AppendLine($"UNITY AUDIO COUNTERS ({_recs.Length} recorded of {Available} counters offered; list in audio-counters.txt)");
             if (_recs.Length == 0) sb.AppendLine("  none available in this build: only the late-block count above");

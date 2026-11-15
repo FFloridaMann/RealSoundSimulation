@@ -106,6 +106,7 @@ namespace RealSoundSimulation.Diagnostics
             try { AudioCounters.Sample(); } // 0.6.20: one read per counter, also during the back-off (spawn frames are the ones to see)
             catch (Exception e) { ReportOnce("audio counters", e); }
             if (backoff) return;
+            if (now >= _startDumpsAt) WriteStartDumps(); // 0.9.3
             Perf.Begin();
             try { EnvProbe.Tick(now); }
             catch (Exception e) { ReportOnce("env probe (tick)", e); }
@@ -182,20 +183,38 @@ namespace RealSoundSimulation.Diagnostics
             if (!Plugin.LogsOn.Value) return;
 
             DiagLog.Open();
-            if (Plugin.AudioThreadTimingOn.Value) Plugin.Safe("audio counters", AudioCounters.RaidStart); // 0.6.20: after Open (writes into the raid folder)
+            Plugin.Safe("audio counters", AudioCounters.RaidStart); // 0.6.20: after Open (writes into the raid folder). 0.9.3: Unity's counters can't hold the sound up, so they run whenever logs are on
+            _startDumpsAt = Time.time + StartDumpsAfterS;
+            Plugin.Log.LogInfo("Diagnostics: logging raid to " + DiagLog.RaidDir);
+        }
+
+        // 0.9.3: patches.txt and settings.txt were written in the frame you spawned. Nothing in them changes in the first
+        // half minute, so they're written 30 s in, or at raid end if the raid is shorter.
+        private const float StartDumpsAfterS = 30f;
+        private float _startDumpsAt = float.PositiveInfinity;
+
+        private void WriteStartDumps()
+        {
+            _startDumpsAt = float.PositiveInfinity;
+            if (!DiagLog.IsOpen) return;
             Plugin.Safe("shared patches", () => // 0.6.20: once every plugin has loaded (other mods patch after our Awake)
             {
                 string report = SharedPatches.Describe();
                 DiagLog.Text("patches.txt", report);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(DiagLog.RootDir, "patches.txt"), report);
             });
+            Plugin.Safe("settings dump", WriteSettings);
+        }
+
+        private void WriteSettings()
+        {
             SpatialAudioSystem sas = MonoBehaviourSingleton<SpatialAudioSystem>.Instance;
             var cfg = AudioSettings.GetConfiguration();
             var sb = new StringBuilder();
             sb.AppendLine($"Raid start {DateTime.Now:yyyy-MM-dd HH:mm:ss}  Unity {Application.unityVersion}  game {Application.version}");
             sb.AppendLine($"CPU logical cores: {SystemInfo.processorCount}  -> BSG audio quality tier: {AudioUtils.GetQualityByLogicCores()}");
             sb.AppendLine($"Audio: {cfg.sampleRate} Hz, dspBuffer {cfg.dspBufferSize}, speakers {cfg.speakerMode}, realVoices {cfg.numRealVoices}, virtualVoices {cfg.numVirtualVoices}");
-            sb.AppendLine("Fixes at raid start: " + Plugin.FixState());
+            sb.AppendLine("Fixes at raid start: " + _fixStateAtStart);
             sb.AppendLine($"Spatializer plugin: '{AudioSettings.GetSpatializerPluginName()}'");
             if (sas.LocationInfo != null)
             {
@@ -206,12 +225,13 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine("Effective occlusion settings (after the server's values were applied):");
             sb.AppendLine(sas.OcclusionSettings != null ? JsonUtility.ToJson(sas.OcclusionSettings, true) : "(none)");
             DiagLog.Text("settings.txt", sb.ToString());
-            Plugin.Log.LogInfo("Diagnostics: logging raid to " + DiagLog.RaidDir);
         }
 
         private void RaidEnd()
         {
             string raidDir = DiagLog.RaidDir;
+            if (_startDumpsAt < float.PositiveInfinity) WriteStartDumps(); // a raid shorter than 30 s
+            if (DiagLog.IsOpen) DiagLog.Text("startup.csv", StartupTiming.Csv()); // 0.9.3
             if (DiagLog.HasRaidDir) DiagLog.Text("summary.txt", BuildSummary());
             DiagLog.Close();
             if (raidDir != null && Plugin.LogsOn.Value) DiagLog.ZipForBugReport(raidDir); // 0.7.0
@@ -519,7 +539,8 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine($"  others alive (bots, and other players in co-op): max {_maxBots}, {_spawned} spawned during the raid (each change in spawns.csv, with clock time to line up with FrameDiag)");
             sb.AppendLine($"  diagnostics backed off for {_backoffFrames} frames after spawns (Diagnostics back off after a spawn s = {Plugin.SpawnBackoffS.Value:0.0})"); // 0.6.19
             sb.AppendLine();
-            sb.Append(_audioProbe != null ? _audioProbe.Summary() : "AUDIO THREAD: probe off or not attached (Time the audio thread)\n"); // 0.6.20
+            sb.AppendLine(StartupTiming.Line() + " (startup.csv)"); // 0.9.3
+            sb.Append(_audioProbe != null ? _audioProbe.Summary() : "AUDIO THREAD: probe off or not attached (Time the audio thread - probe, off by default since 0.9.3)\n"); // 0.6.20
             sb.Append(SharedPatches.Summary());
             sb.Append(AudioCounters.Summary()); // 0.6.20 (6.0a)
             sb.Append(BatchWait.Summary()); // 0.6.20 (6.0b)
@@ -572,7 +593,7 @@ namespace RealSoundSimulation.Diagnostics
             foreach (var g in _maxDistByGroup.OrderBy(x => x.Key))
                 sb.AppendLine($"  {g.Key,-22} " + string.Join("  ", g.Value.Select(kv => $"{kv.Key}:{kv.Value}")));
             sb.AppendLine();
-            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, patches.txt, audio-counters.txt, audiocounters.csv, slowframes.csv, botshots.csv, routes.csv, errors.txt (if any)");
+            sb.AppendLine("Files: containers.csv (every container every interval), shots.csv, transitions.csv, ambience.csv, probe.csv, ownshots.csv, echoes.csv, exposure.csv, rain.csv, marks.csv, rays.csv, timing.csv, sources.csv, rolloff_dump.txt, settings.txt, patches.txt (30 s in), startup.csv, audio-counters.txt, audiocounters.csv, slowframes.csv, botshots.csv, routes.csv, errors.txt (if any)");
             return sb.ToString();
         }
     }

@@ -55,17 +55,35 @@ namespace RealSoundSimulation.Fixes
         {
             if (_tries >= MaxTries || !SpatialAudioSystem.Initialized || !Singleton<GameWorld>.Instantiated || Time.time < _next) return;
             _next = Time.time + RetryS;
-            try { if (ReadDoors() == 0 && ++_emptyReads < MaxEmptyReads) return; } // none in the scene yet: this doesn't use up a try
+            // 0.9.3: the doors are read once (on the loading screen when Raid.Prepare ran) and read again only if there are none
+            // or one has gone; each read is a whole-scene search (~45 ms on Icebreaker), and five of them landed in the first 40 s
+            // of play (raid_20261115_114507), always finding the same 185. The route data is still re-applied five times.
+            try { if (NeedRead() && ReadDoors() == 0 && ++_emptyReads < MaxEmptyReads) return; } // none in the scene yet: this doesn't use up a try
             catch (Exception e) { DiagRunner.ReportOnce("6.5 closed doors (read doors)", e); }
             _tries++;
             ApplyAll();
         }
 
-        private static int ReadDoors()
+        private static bool NeedRead()
         {
+            if (Doors.Count == 0) return true;
+            foreach (WorldInteractiveObject d in Doors.Values) if (d == null) return true;
+            return false;
+        }
+
+        // Raid.Prepare, on the loading screen: a fresh read for the new raid.
+        internal static void PrepareDoors() { Reset(); ReadDoors(false); } // Raid.Prepare times it as its "doors" step
+
+        // At spawn after Prepare: keep the doors, start the five re-applies over (they used to follow the spawn reset).
+        internal static void RestartTries() { _tries = _emptyReads = 0; _next = 0f; }
+
+        private static int ReadDoors(bool timed = true)
+        {
+            long t0 = StartupTiming.Now();
             Doors.Clear();
             foreach (WorldInteractiveObject d in UnityEngine.Object.FindObjectsOfType<WorldInteractiveObject>())
                 if (d != null && !string.IsNullOrEmpty(d.Id)) Doors[d.Id] = d;
+            if (timed) StartupTiming.Add("first use", $"doors read {_tries + 1} ({Doors.Count} doors)", StartupTiming.Now() - t0); // 0.9.3
             return Doors.Count;
         }
 

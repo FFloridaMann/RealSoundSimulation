@@ -63,9 +63,14 @@ namespace RealSoundSimulation.Acoustics
             }
         }
 
+        // 0.9.3: built on the loading screen of the first raid (Raid.Prepare), not by the first echo after you spawn.
+        private static bool _prebuilding;
+        internal static void Prebuild() { _prebuilding = true; try { Build(); } finally { _prebuilding = false; } }
+
         private static void Build()
         {
             if (_built) return;
+            long t0 = StartupTiming.Now();
             _flat = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 1f));
             for (int i = 0; i < Pool.Length; i++)
             {
@@ -89,6 +94,7 @@ namespace RealSoundSimulation.Acoustics
                 Pool[i] = new Voice { Go = go, Src = src, Lp = lp };
             }
             _built = true;
+            if (!_prebuilding) StartupTiming.Add("first use", "echo voices", StartupTiming.Now() - t0); // missed the loading screen
         }
 
         // Returns true if a busy voice had to be stopped to make room.

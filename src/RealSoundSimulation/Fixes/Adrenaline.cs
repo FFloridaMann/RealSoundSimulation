@@ -199,6 +199,8 @@ namespace RealSoundSimulation.Fixes
             catch { return null; }
         }
 
+        internal static void Prebuild() => Build(); // 0.9.3: the heartbeat clips and voices, on the loading screen (Raid.Prepare)
+
         private static void Build()
         {
             string key = $"{Plugin.HeartLowCutHz.Value:0}|{Plugin.HeartBodyHz.Value:0}|{Plugin.HeartDubPitch.Value:0.00}|{Plugin.HeartLength.Value:0.00}|{Plugin.HeartTexture.Value:0.00}";

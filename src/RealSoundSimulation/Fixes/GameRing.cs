@@ -212,6 +212,8 @@ namespace RealSoundSimulation.Fixes
             DiagRunner.ReportOnce(what, e);
         }
 
+        internal static void Prebuild() => Source(); // 0.9.3: on the loading screen (Raid.Prepare)
+
         private static AudioSource Source()
         {
             if (_source != null) return _source;

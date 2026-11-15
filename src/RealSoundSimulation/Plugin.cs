@@ -425,7 +425,8 @@ namespace RealSoundSimulation
             OverlayRows = Bind(s11, "Overlay rows", 14, "How many of the nearest sounds the overlay lists.", N(4, 40), adv);
             RayViewKey = Bind(s11, "Ray view key", new KeyboardShortcut(KeyCode.F11), "In raid: show or hide the sound tracer's rays. Green reached the sky, cyan after bouncing, yellow through glass, red trapped.", null, adv);
             TimingOn = Bind(s11, "Time the audio systems", true, "Measure the time the game's audio systems take each frame.", null, adv);
-            AudioThreadTimingOn = Bind(s11, "Time the audio thread", true, "Measure whether the audio thread keeps up (late blocks crackle). Attached at raid start.", null, adv);
+            // 0.9.3: renamed so it starts off; the old "Time the audio thread" was on and is left behind in the cfg, unread
+            AudioThreadTimingOn = Bind(s11, "Time the audio thread - probe", false, "Measure whether the audio thread keeps up (late blocks crackle) with a probe on the audio thread itself. Off by default: while the game clears memory the probe can hold the sound up for a moment. Unity's own audio counters run with bug report logs on either way.", null, adv);
             RouteLogOn = Bind(s11, "Log portal routes", false, "Log which opening each shot's route goes through to routes.csv. Moves no sound.", null, adv);
             ContainerLogInterval = Bind(s11, "Container log interval s", 0.5f, "How often every sound's blocked state is logged.", R(0.1f, 5f), adv);
             SourceScanInterval = Bind(s11, "Source scan interval s", 0f, "How often every playing sound in the scene is counted. Causes a visible hitch each time. 0 = off.", R(0f, 60f), adv);
@@ -473,6 +474,7 @@ namespace RealSoundSimulation
             Safe("A adrenaline", () => Adrenaline.Apply(Harmony)); // 13 Nov 2026: own grenades, hits, near misses
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
+            Safe("raid start loading", () => Raid.Apply(Harmony)); // 0.9.3: voices and windows on the loading screen
             gameObject.AddComponent<Raid>(); // first: raid start, resets and per-frame housekeeping
             gameObject.AddComponent<DiagRunner>();
             gameObject.AddComponent<DoorwayBlend>();

@@ -132,6 +132,8 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        internal static void Prebuild() => Build(); // 0.9.3: on the loading screen (Raid.Prepare)
+
         private static bool Build()
         {
             if (_built) return true;

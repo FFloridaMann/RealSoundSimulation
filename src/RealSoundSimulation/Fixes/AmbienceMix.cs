@@ -382,6 +382,13 @@ namespace RealSoundSimulation.Fixes
 
         private static void Find()
         {
+            long t0 = StartupTiming.Now();
+            try { FindInner(); }
+            finally { StartupTiming.Add("first use", _sceneSearched ? "ambience sounds search (+ scene)" : "ambience sounds search", StartupTiming.Now() - t0); } // 0.9.3
+        }
+
+        private static void FindInner()
+        {
             _nextFind = Time.time + 5f;
             var seen = new HashSet<AudioSource>();
             // 0.9.2: the game only sets up the ambience blenders under its AmbientAudioSystem, so look there every 5 s and search

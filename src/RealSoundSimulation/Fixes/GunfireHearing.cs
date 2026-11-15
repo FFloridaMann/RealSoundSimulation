@@ -236,6 +236,8 @@ namespace RealSoundSimulation.Fixes
             }
         }
 
+        internal static void Prebuild() => RingSource(); // 0.9.3: on the loading screen (Raid.Prepare)
+
         private static AudioSource RingSource()
         {
             if (_ring != null) return _ring;

@@ -120,6 +120,14 @@ namespace RealSoundSimulation.Acoustics
             {
                 if (dataContainer == null || dataContainer.IsDisposed || !States.TryGetValue(__instance, out LoadState st)) return;
                 st.Watch.Stop();
+                string whose = st.Using ? "EFT 1.0 routes" : "the game's routes";
+                // 0.9.3: counting every route (5 million on Streets) only with bug report logs on; the load time is always logged
+                if (!Plugin.LogsOn.Value)
+                {
+                    Say($"{st.Map}: {whose} in {st.Watch.Elapsed.TotalSeconds:0.0} s, {dataContainer.RoomPairsByID.Count} room pairs");
+                    return;
+                }
+                long t0 = StartupTiming.Now();
                 int routes = 0, badSteps = 0;
                 foreach (RoomPair p in dataContainer.RoomPairsByID.Values)
                     foreach (RoomPair.Route r in p.Routes)
@@ -127,8 +135,8 @@ namespace RealSoundSimulation.Acoustics
                         routes++;
                         foreach (short id in r.PortalIDs) if (id == 0) badSteps++;
                     }
-                string whose = st.Using ? "EFT 1.0 routes" : "the game's routes";
-                Say($"{st.Map}: {whose} in {st.Watch.Elapsed.TotalSeconds:0.0} s, {dataContainer.RoomPairsByID.Count} room pairs, {routes} routes, {badSteps} bad steps");
+                double countMs = (StartupTiming.Now() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                Say($"{st.Map}: {whose} in {st.Watch.Elapsed.TotalSeconds:0.0} s, {dataContainer.RoomPairsByID.Count} room pairs, {routes} routes, {badSteps} bad steps (counted in {countMs:0} ms, logs on only)");
             }
             catch (Exception e) { DiagRunnerReport(e); }
         }

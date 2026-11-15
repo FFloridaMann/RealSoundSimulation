@@ -27,14 +27,17 @@ Only appears if something failed. It's appended to, never cleared, and each line
 
 ## Files written per raid
 
-### patches.txt (raid start, 0.6.20)
+### startup.csv (raid end, 0.9.3)
+The mod's own raid-start work: `phase` (`loading` = on the loading screen, from `Raid.Prepare`; `spawn` = the resets in the frame you spawn, and `diagnostics start`; `first use` = the first time a feature needed a scene search or a voice pool later on), `step`, `ms` and `atS` (seconds from spawn, negative on the loading screen). The same totals and the slowest step of each phase are one line in the BepInEx log at spawn and at raid end, and in summary.txt. If the loading phase is missing, the log line says the loading-screen step didn't run for that raid.
+
+### patches.txt (30 s in, 0.6.20; at raid start before 0.9.3)
 Which other mods touch the same game methods, written once every plugin has loaded (at launch, other plugins may not have patched yet). Read it before a raid with another audio mod installed (Sound Engine Backport, the old Real Sound Simulation mods).
 - **Plugins loaded:** every BepInEx plugin, GUID, name and version, and whether Sound Engine Backport's client (`red.soundenginebackport.client`) is present.
 - **Mixer:** the master mixer's name, its snapshots in order (fix 3 expects `[0]=Outdoor [1]=Indoor`; SEB's 1.0 mixer adds `Bunker`), the gunshot mixer groups and the spatializer plugin. If another mod replaced the mixer, this is where it shows.
 - **Methods another mod patches:** `SHARED` = a method this plugin patches too, so Harmony run order decides the result; `FOREIGN` = a method only in the self-check as a planned target (the fix number follows). Under each: every patch, ours and theirs, with kind (prefix, postfix, transpiler, finalizer), priority (higher runs first; the last postfix wins), owner GUID and the patch method. A foreign prefix that can return false (SEB's `FireBullet`) skips the game's method, not our prefix.
 - The summary's SHARED PATCHES line repeats the counts and the shared method names.
 
-### settings.txt (raid start)
+### settings.txt (30 s in; at raid start before 0.9.3)
 - CPU logical cores and the game's audio quality tier (12 or more logical cores → High, 8–11 → Medium, fewer → Low; `AudioUtils.GetQualityByLogicCores`).
 - Sample rate, DSP buffer, voice limits, spatializer plugin.
 - Which fixes were on at raid start.
@@ -248,7 +251,7 @@ One row per echo. A sample with no echo found writes one row with kind `none`.
 
 ### timing.csv (every 5 s)
 Frames in the window (÷5 = fps), plus the average and max ms of `SpatialAudioSystem.Update`, `SpatialAudioSystem.LateUpdate` and `BetterAudio.Update`, the active occlusion processors and the container count.
-0.6.20 adds the audio thread (`Time the audio thread`, on): `audioBlocks` in the window, `audioBlockMs` (one DSP block: dspBuffer samples ÷ sample rate, ~21.3 ms for 1024 at 48 kHz), `audioGapAvgMs` / `audioGapMaxMs` (time between consecutive blocks), `audioLate15` (gaps over 1.5× a block), `audioLate2x` (over 2×), `audioStalls` (over 100 ms: alt-tab, loading freezes). Voices cost the audio thread, not the frame; a steady share of late blocks is the crackle condition and the ceiling the voice budget (ROADMAP) is set against. Unity double-buffers, so one late block is not always audible. 0.6.20 also ends timing.csv with `batchWaitAvgMs` / `batchWaitMaxMs` (probe v2's ray batch: how long the main thread waited per frame, muzzle measures included) and `batchWaitedFrames` (frames where the batch was not finished yet).
+0.6.20 adds the audio thread (`Time the audio thread`, on; 0.9.3: renamed `Time the audio thread - probe` and off by default, because the probe runs on the audio thread and a game GC pause then stalls the sound too): `audioBlocks` in the window, `audioBlockMs` (one DSP block: dspBuffer samples ÷ sample rate, ~21.3 ms for 1024 at 48 kHz), `audioGapAvgMs` / `audioGapMaxMs` (time between consecutive blocks), `audioLate15` (gaps over 1.5× a block), `audioLate2x` (over 2×), `audioStalls` (over 100 ms: alt-tab, loading freezes). Voices cost the audio thread, not the frame; a steady share of late blocks is the crackle condition and the ceiling the voice budget (ROADMAP) is set against. Unity double-buffers, so one late block is not always audible. 0.6.20 also ends timing.csv with `batchWaitAvgMs` / `batchWaitMaxMs` (probe v2's ray batch: how long the main thread waited per frame, muzzle measures included) and `batchWaitedFrames` (frames where the batch was not finished yet).
 
 ### audiocounters.csv (0.6.20, every 5 s; only if the game offers audio counters)
 `t`, then for each recorded counter `<name>_avg` and `<name>_max` over the window, in the counter's own unit (listed in audio-counters.txt). Sampled every frame, including during the spawn back-off.
