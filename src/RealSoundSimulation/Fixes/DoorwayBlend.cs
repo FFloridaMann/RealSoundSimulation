@@ -228,7 +228,11 @@ namespace RealSoundSimulation.Fixes
             if (_blend == null)
             {
                 _blend = BlendSystem.Get(); // 0.9.2: no whole-scene search every 2 s (Icebreaker has no blender)
-                if (_blend == null) return;
+                if (_blend == null)
+                {
+                    if (BlendSystem.Missing) { NoBlenderAmbience.Apply(); IcebreakerBeds.Apply(); } // 0.9.3: maps without a blender (Icebreaker)
+                    return;
+                }
             }
             AmbientSoundBlender[] blenders = _blend._ambientSoundBlenders;
             if (blenders == null) return;
@@ -323,6 +327,8 @@ namespace RealSoundSimulation.Fixes
         // system re-apply its own state for the current room.
         private void Deactivate(bool stillInRaid)
         {
+            NoBlenderAmbience.Restore(); // 0.9.3
+            IcebreakerBeds.Release();
             Active = false;
             _o = -1f;
             if (!stillInRaid) return;

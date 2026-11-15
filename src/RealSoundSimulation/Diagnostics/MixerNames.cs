@@ -82,6 +82,10 @@ namespace RealSoundSimulation.Diagnostics
             AudioMixerParametersData[] assets = Resources.FindObjectsOfTypeAll<AudioMixerParametersData>();
             sb.AppendLine($"loaded mixer-name files (AudioMixerParametersData): {assets.Length}");
             foreach (AudioMixerParametersData d in assets) Describe("  '" + (d != null ? d.name : "?") + "'", d, sb, names);
+            // 0.9.3: without a blender, the controls fix 3 drives itself (NoBlenderAmbience), so their changes are logged too
+            var fix3 = new List<string>(Fixes.NoBlenderAmbience.ControlNames);
+            sb.AppendLine($"driven by fix 3 without a blender ({fix3.Count}): {string.Join(" ", fix3)}");
+            foreach (string n in fix3) names.Add(n);
 
             AudioMixer m = MonoBehaviourSingleton<BetterAudio>.Instantiated ? MonoBehaviourSingleton<BetterAudio>.Instance.Master : null;
             var onMaster = new List<string>(); var missing = new List<string>();

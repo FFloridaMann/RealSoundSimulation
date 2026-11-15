@@ -279,6 +279,7 @@ namespace RealSoundSimulation.Fixes
                     OpeningSounds.Restore();
                     BedDirection.RestoreAll();
                     RestoreRain();
+                    RoomToneBlend.Off();
                     RoomTone.Off();
                     RoofRainFactor = 1f;
                     V2Active = false; Took.Clear(); V2Level = float.NaN;
@@ -323,6 +324,8 @@ namespace RealSoundSimulation.Fixes
                 }
                 RoofRain(dt);
                 LogRain();
+                try { RoomToneBlend.Tick(dt); } // 0.9.3 "8h"
+                catch (Exception e) { DiagRunner.ReportOnce("8h room tone blend", e); }
                 RoomTone.Tick(dt);
 
                 if (v2)

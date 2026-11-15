@@ -17,6 +17,9 @@ namespace RealSoundSimulation.Fixes
 
         public static void Reset() { _found = null; _nextTry = 0f; _sceneSearched = false; }
 
+        // The one scene search ran and found nothing: this map has no blender (Icebreaker).
+        public static bool Missing => _sceneSearched && _found == null;
+
         public static EnvironmentSoundBlendSystem Get()
         {
             if (_found != null) return _found;

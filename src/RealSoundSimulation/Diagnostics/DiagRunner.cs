@@ -539,6 +539,7 @@ namespace RealSoundSimulation.Diagnostics
             sb.AppendLine();
             sb.Append(EnvProbe.Summary());
             sb.Append(MixerNames.Summary());
+            sb.Append(IcebreakerBeds.Summary());
             sb.Append(Acoustics.OwnEchoes.Summary());
             sb.Append(Perf.Summary(Time.realtimeSinceStartup));
             sb.Append(Acoustics.OutdoorExposure.Summary());

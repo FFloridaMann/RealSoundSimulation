@@ -99,6 +99,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<bool> EchoMeasuredSurfaces; // 0.6.25
         internal static ConfigEntry<float> EarlyEchoTrimDb;    // 0.6.9 "6f"
         internal static ConfigEntry<bool> IndoorWindFollowsOpenings; // 0.6.9 "8g"
+        internal static ConfigEntry<bool> RoomToneBlendOn; // 0.9.3 "8h"
         internal static ConfigEntry<float> RainThroughBuildingDb;   // 0.6.9 "9l"
         internal static ConfigEntry<BedDirection.Mode> RoofBedMode; // 0.6.10 "9m"
         internal static ConfigEntry<float> MuzzleLobe;     // 0.6.11 "3k"
@@ -369,6 +370,7 @@ namespace RealSoundSimulation
             OpeningShare = Bind(s07, "Outdoors - sound from openings", 0.7f, "Indoors, this share of the outdoor sound plays from the open directions instead of from everywhere. Was 8e.", R(0f, 1f), adv);
             OpeningHrtf = Bind(s07, "Outdoors - 3D on opening sounds", true, "Run the sound from openings through the game's 3D audio for front/back and up/down. Off = plain left/right. Was 8f.", null, adv);
             IndoorWindFollowsOpenings = Bind(s07, "Outdoors - indoor wind follows openings", true, "A room's draught sound follows how much of the outside reaches you, so it fades deep in a stairwell. Was 8g.", null, adv);
+            RoomToneBlendOn = Bind(s07, "Outdoors - room tones blend at room borders", true, "At the border between two rooms with a different background hum you hear both, the other room fading out over 1.5 m into yours, by where you stand. Crossing back and forth no longer swaps the hum, and it keeps playing in gaps between rooms. Off = the game swaps it as you cross. 8h.", null, adv);
             RoofRainLevel = Bind(p07, "Roof rain - volume", 0.3f, "How loud rain on the roof is, before the roof, floors and material are applied. 0 = no roof rain. Was 9t.", R(0f, 1f), pub: 30);
             RoofRainByMaterial = Bind(s07, "Roof rain - roof material matters", 1.5f, "Rain is louder on a thin metal roof and quieter on a soft one. 0 = every roof the same. Was 9r.", R(0f, 1.5f));
             RainFixOn = Bind(s07, "Roof rain - fix cutting out", true, "Fixes a game bug where rain on the roof fades to silence when you move between some rooms. Was 7.", null, adv);
@@ -449,6 +451,7 @@ namespace RealSoundSimulation
             Safe("route log", () => RouteLog.Apply(Harmony)); // 0.6.22
             Safe("6.1 portal positioning", () => PortalPositioning.Apply(Harmony)); // 0.6.24
             Safe("8g room tone", () => RoomTone.Apply(Harmony));
+            Safe("8h room tone blend", () => RoomToneBlend.Apply(Harmony));
             Safe("3m outdoor tail", () => OutdoorTail.Apply(Harmony));
             Safe("fix 2 obstruction score", () => ObstructionScoreFix.Apply(Harmony));
             Safe("fix 3 doorway blend", () => DoorwayBlend.Apply(Harmony));

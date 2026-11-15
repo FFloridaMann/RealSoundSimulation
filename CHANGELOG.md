@@ -6,6 +6,8 @@ What changed, as you'd notice it in game. The full technical log is [docs/dev/CH
 
 - **Outdoor wind and rain have their low end back.** About 20 seconds into every raid, the mod cut everything below 1 kHz from the outdoor ambience (wind, rain, the day and night outdoor sound and distant vehicles), outdoors too. Now nothing is cut; walls still muffle the high end.
 - **Broken windows let sound through.** Windows broken from the start (Streets has many), windows you break during the raid, and broken windows built into buildings no longer sound like closed glass: outdoor sound and rain come in through them.
+- **Icebreaker's doorways fade smoothly.** On Icebreaker (and any map without the game's ambience blender), outdoor wind and the indoor layers now fade with where you stand, as on other maps, instead of switching between full and almost silent the moment you cross a door. With Icebreaker 1.2.4 this covers its own wind bed and indoor/outdoor beds; Icebreaker's **WindIndoorFraction** setting has no effect while this is on.
+- **Room hums blend at room borders.** Between two rooms with a different background hum you hear both, the other room's fading out over 1.5 m, so crossing back and forth no longer swaps the hum, and it keeps playing in gaps between rooms. New setting **Outdoors - room tones blend at room borders** (on).
 
 ## 0.9.2 beta
 
