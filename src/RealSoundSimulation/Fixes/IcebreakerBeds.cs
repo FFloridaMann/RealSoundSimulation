@@ -21,6 +21,8 @@ namespace RealSoundSimulation.Fixes
     // mixer while fix 3 drives that mixer (NoBlenderAmbience) gets its full level here, so it isn't lowered twice. Beds that
     // skip the mixer get a low-pass filter for the muffling. Icebreaker's fields are read by name; if a later version renames
     // them, this logs once and leaves Icebreaker's switch as it is.
+    // The wind and the outdoor 2D beds also join the directional outdoor beds (BedDirection.Outdoor, setting 9b): inside,
+    // they come from the open directions instead of flat stereo (user, raid_20261115_112652: "near doors it's a bit quiet").
     internal static class IcebreakerBeds
     {
         public const string Header = "t,icebreakerWind,windVolume,windBase,outGain,cutoffHz,indoorGain,beds,bedsOnMixer";
@@ -69,6 +71,7 @@ namespace RealSoundSimulation.Fixes
                 bool viaMixer = mixer && _windOnMixer;
                 _wind.volume = windBase * (viaMixer ? 1f : outGain);
                 if (!viaMixer) _windLp = Lowpass(_wind, _windLp, cut);
+                BedDirection.Outdoor.Ensure(_wind); // from the open directions, as the game's own outdoor beds
             }
             for (int i = 0; i < Beds.Count; i++)
             {
@@ -77,6 +80,7 @@ namespace RealSoundSimulation.Fixes
                 bool viaMixer = mixer && b.OnMixer;
                 b.Src.volume = b.Base * (viaMixer ? 1f : b.Indoor ? inGain : outGain);
                 if (!b.Indoor && !viaMixer) { b.Lp = Lowpass(b.Src, b.Lp, cut); Beds[i] = b; }
+                if (!b.Indoor) BedDirection.Outdoor.Ensure(b.Src);
             }
             _driving = true;
             _frames++;

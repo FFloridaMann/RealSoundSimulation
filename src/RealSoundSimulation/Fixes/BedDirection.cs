@@ -15,7 +15,9 @@ namespace RealSoundSimulation.Fixes
     //   blend    spatialBlend = how enclosed you are x "9b" (0 in open air: the game's own flat stereo bed; up to fully
     //            positioned deep inside). Changes smoothly, one source, so the 2D and 3D parts can't flam.
     //   place    3 m from you in the direction the sound arrives from (smoothed).
-    //   width    Unity panner: spread 180 deg (all round) .. 20 deg (one direction), from the probe's focus x "9h".
+    //   width    Unity panner: spread 0 (both channels at the direction); the positioned share follows the probe's focus x
+    //            "9h" (all of it from 0.5, little with several openings), the rest stays flat stereo (0.9.3; was spread
+    //            180 .. 20 deg, which swapped a stereo bed's channels whenever it passed behind you).
     //            Meta HRTF ("9c"): spatialized, volumetric radius 3 m .. 0.3 m instead.
     //   distance no distance loss (min distance 50 m): the probe already decided the level.
     //   behind   Unity panner only: duller from behind (ear shadow), on the source's own low-pass filter.
@@ -33,6 +35,7 @@ namespace RealSoundSimulation.Fixes
         public static readonly BedDirection Roof = new BedDirection("roof rain", () => Plugin.RoofBedMode.Value);
         private readonly System.Func<Mode> _mode;
         private float _cut = 22000f; // 0.6.10: path muffling from the probe (roof rain), smoothed
+        private const float FullFocus = 0.5f; // 0.9.3: focus (x 9h) at which a bed is fully positioned on the Unity panner
 
         private class S
         {
@@ -56,6 +59,16 @@ namespace RealSoundSimulation.Fixes
                 if (srcs[i] != null) _beds.Add(new S { Src = srcs[i], Lp = lps != null ? lps[i] : null, OwnLp = own != null && own[i] });
         }
 
+        // 0.9.3: an outdoor bed a map plays itself instead of through the game's blenders (Icebreaker's wind and gusts,
+        // IcebreakerBeds), so it comes from the open directions like the game's own beds. Called every frame (Init clears
+        // the list); the source's filter stays with its owner (IcebreakerBeds' muffling), so no ear shadow here.
+        public void Ensure(AudioSource src)
+        {
+            if (src == null) return;
+            for (int i = 0; i < _beds.Count; i++) if (_beds[i].Src == src) return;
+            _beds.Add(new S { Src = src });
+        }
+
         public static void RestoreAll() { Outdoor.Restore(); Roof.Restore(); }
 
         // arrival/focus: from the probe; enclosed: how far to blend from flat to positioned; pathCutoff: how muffled the
@@ -65,10 +78,17 @@ namespace RealSoundSimulation.Fixes
             if (lt == null) return;
             float smooth = Mathf.Max(AmbienceMix.Smooth, AcousticProbe.SmoothS); // 0.6.4: by confidence
             float a = 1f - Mathf.Exp(-dt / smooth);
-            float target = on && AcousticProbe.Valid ? Mathf.Clamp01(Plugin.BedDirectional.Value) * enclosed : 0f;
-            Blend += (target - Blend) * a;
+            bool meta = _mode() == Mode.MetaHrtf;
             // 0.6.7: "9h Direction strength" = how pointed a given focus sounds
             float f = on ? Mathf.Clamp01(focus * Mathf.Max(0f, Plugin.DirectionStrength.Value)) : 0f;
+            // 0.9.3: on the Unity panner the width is the flat share, not spread. With spread, a stereo bed's two channels sat
+            // either side of the arrival direction and swapped ears whenever it passed behind you (the panner has no front
+            // and back): with several openings around you (focus 0.1-0.2) the wind jumped between them as you turned
+            // (Icebreaker raid_20261115_114507 tag 1). Now both channels sit at the arrival direction (spread 0) and only the
+            // share that has a direction is positioned: all of it from focus 0.5 (one clear opening), little with several.
+            float positioned = meta ? 1f : Mathf.Clamp01(f / FullFocus);
+            float target = on && AcousticProbe.Valid ? Mathf.Clamp01(Plugin.BedDirectional.Value) * enclosed * positioned : 0f;
+            Blend += (target - Blend) * a;
             Focus += (f - Focus) * a;
             // 0.6.1: the direction turns over ~1 s or longer (the level still follows in 0.35 s)
             if (on && AcousticProbe.Valid && arrival.sqrMagnitude > 1e-6f)
@@ -77,7 +97,6 @@ namespace RealSoundSimulation.Fixes
             float pc = on ? Mathf.Clamp(pathCutoff, 300f, 22000f) : 22000f;
             _cut = Mathf.Exp(Mathf.Log(_cut) + (Mathf.Log(pc) - Mathf.Log(_cut)) * a);
 
-            bool meta = _mode() == Mode.MetaHrtf;
             Vector3 fw = lt.forward; fw.y = 0f; if (fw.sqrMagnitude > 1e-4f) fw.Normalize();
             Vector3 flat = new Vector3(_dir.x, 0f, _dir.z);
             float behind = flat.sqrMagnitude > 1e-6f ? Mathf.Max(0f, -Vector3.Dot(flat.normalized, fw)) * Focus * Blend : 0f;
@@ -105,7 +124,7 @@ namespace RealSoundSimulation.Fixes
                 else
                 {
                     if (src.spatialize) src.spatialize = false;
-                    src.spread = Mathf.Lerp(180f, 20f, Focus);
+                    src.spread = 0f; // 0.9.3: width comes from the flat share (Blend), see above
                 }
                 if (s.OwnLp && s.Lp != null)
                 {
