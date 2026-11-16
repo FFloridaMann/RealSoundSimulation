@@ -23,6 +23,10 @@ It's been tested solo by one player on one PC, and not yet in Fika.
 
 **0.9.2:** fixes the stutter on custom maps that don't have the game's ambience blender (Icebreaker).
 
+**0.9.3:** less mod work when a raid starts; outdoor wind and rain keep their low end; broken windows let sound through; Icebreaker's doorways fade smoothly; no building hum or indoor drone in small open shacks and containers; roof rain reworked (in train cars, yard containers and under canopies, steady through doorways, by roof material and height, none under concrete overpasses or in basements).
+
+**0.9.4 (next):** gunshots more than about 100 m away muffled through your own building's walls. The game leaves every sound beyond its own range unmuffled (Woods, 15 Nov 2026: a rifle 548 m away came through a cabin's wooden walls at full); the mod's distant gunfire handling, which already lets far battles in only through the openings that face them, will take these shots too.
+
 ## The road to 1.0
 
 No new features until 1.0, only fixes:
@@ -47,7 +51,7 @@ In this order:
 
 Any time: ear ringing from blasts as well as gunfire, the ground between you and a distant shooter (grass versus concrete), distant buildings blocking far fights, and rooms with more character of their own.
 
-Maybe, at the end: EFT 1.0 recordings on full-auto guns, and a pass over every gun's recordings.
+Maybe, at the end: EFT 1.0 recordings on full-auto guns, a pass over every gun's recordings, your gun sounding less like a building when fired from a small open box (a shipping container, a train car), indoor and outdoor ambience moving as one matched pair, and containers inside buildings hearing the building's hum through their opening.
 
 ## Not part of this mod
 

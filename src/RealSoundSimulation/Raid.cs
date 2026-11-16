@@ -88,7 +88,7 @@ namespace RealSoundSimulation
         {
             _preparedWorld = null;
             StartupTiming.Clear();
-            BlendSystem.ForgetLoadingSearch();
+            BlendSystem.ForgetLoadingSearch(); RoomTone.ForgetToneLoops(); RoomTone.ForgetTonePlayers();
             if (Fika.IsHeadless() || !Singleton<GameWorld>.Instantiated || Singleton<GameWorld>.Instance is HideoutGameWorld) return;
             // The mod's own voices. They are kept between raids, so after the first raid these cost nothing.
             Step("echo voices", EchoVoices.Prebuild);
@@ -101,6 +101,7 @@ namespace RealSoundSimulation
             Step("windows", () => { Surfaces.Reset(); Surfaces.RegisterWindowsNow(); windows = true; });
             Step("doors", () => { ClosedDoors.PrepareDoors(); doors = true; });
             Step("ambience blender scene search", BlendSystem.SearchOnLoading);
+            Step("indoor tone loops", RoomTone.FindToneLoops);
             if (windows && doors) _preparedWorld = Singleton<GameWorld>.Instance;
         }
 
@@ -115,7 +116,7 @@ namespace RealSoundSimulation
             if (Fika.IsHeadless()) { Plugin.TurnOff("this game is a Fika headless host, so no one hears it"); return; }
             bool prepared = _preparedWorld != null && Singleton<GameWorld>.Instantiated && ReferenceEquals(Singleton<GameWorld>.Instance, _preparedWorld);
             _preparedWorld = null;
-            if (!prepared) { StartupTiming.Clear(); BlendSystem.ForgetLoadingSearch(); }
+            if (!prepared) { StartupTiming.Clear(); BlendSystem.ForgetLoadingSearch(); RoomTone.ForgetToneLoops(); }
             StartupTiming.Spawned();
             StartTime = Time.time;
             ResetsFailed = 0;

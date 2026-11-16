@@ -80,6 +80,9 @@ namespace RealSoundSimulation.Acoustics
 
         // 0.6.31 "9r": how much louder rain is on this roof than on concrete (a volume factor). Raid 41: rain in a metal trailer sounded
         // quiet. Not measured: thin metal drums loudly, soft roofs damp it. Set by ear.
+        // 0.9.3: a roof too heavy to drum: no roof rain under it where the map calls you outdoors (an overpass)
+        public static bool IsHeavyRoof(MaterialType m) => m == MaterialType.Concrete || m == MaterialType.Stone || m == MaterialType.Asphalt || m == MaterialType.Tile;
+
         public static float RoofRainGain(MaterialType m)
         {
             switch (m)
@@ -88,6 +91,10 @@ namespace RealSoundSimulation.Acoustics
                 case MaterialType.MetalThick: case MaterialType.MetalNoDecal: return 1.6f;
                 case MaterialType.WoodThin: case MaterialType.Plastic: return 1.4f;
                 case MaterialType.Fabric: case MaterialType.GenericSoft: return 0.7f;
+                // 0.9.3: a heavy slab barely radiates the impacts (raid_20261115_165446 tag 8: loud roof rain under a concrete overpass).
+                // Thin metal is now about 19 dB above concrete. Only the rain on the roof above you; the outdoor rain is untouched.
+                // 0.45 -> 0.18 with "roof material matters" at its default 1.5 (about -15 dB): faint under a concrete roof indoors.
+                case MaterialType.Concrete: case MaterialType.Stone: case MaterialType.Asphalt: case MaterialType.Tile: return 0.45f;
                 default: return 1f;
             }
         }

@@ -23,6 +23,7 @@ namespace RealSoundSimulation.Diagnostics
         private static readonly List<Ev> RoomEvents = new List<Ev>();
         private static bool _haveRoomState, _lastRoomIndoor;
         public static bool GameSaysIndoor => _haveRoomState && _lastRoomIndoor; // 0.6.36: read by 9w
+        public static bool GameSaysOutdoor => _haveRoomState && !_lastRoomIndoor; // 0.9.3: read by the small-open-space rule
         private static bool _lastSnapshotIndoor;
         private static float _raidStart, _nextSample, _nextProbe;
         private static EnvironmentSoundBlendSystem _blend;

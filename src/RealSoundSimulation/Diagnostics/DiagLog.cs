@@ -28,6 +28,9 @@ namespace RealSoundSimulation.Diagnostics
             ["rain2.csv"] = Fixes.AmbienceMix.RainHeader,
             ["distant.csv"] = Fixes.DistantThroughOpenings.Header,
             ["roomtone.csv"] = Fixes.RoomTone.Header,
+            ["humshell.csv"] = Fixes.RoomTone.ShellHeader, // 0.9.3
+            ["floors.csv"] = Acoustics.AcousticProbe.FloorsHeader, // 0.9.3
+            ["playing.csv"] = DiagRunner.PlayingHeader, // 0.9.3
             ["spawns.csv"] = "t,clock,aliveBots,delta",
             ["botshots.csv"] = BotShots.Header,
             ["tailcuts.csv"] = Fixes.ShotOverlap.CutsHeader, // 13 Nov 2026: every tail moved off a gun's pair

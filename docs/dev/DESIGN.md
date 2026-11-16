@@ -228,7 +228,7 @@ Main thread, from the raid summary's COST section (raid 20, 0.5.6): about 15.6 m
 | `9p`, `9q` | roof rain counts floors above, and how much each takes off (0.6.29) | on, 1 |
 | `9r` | roof rain louder on metal, quieter on soft roofs (0.6.31) | 1 |
 | `9s` | the probe forgets when the space really changes (0.6.32; retuned 0.6.33) | on |
-| `9t` | roof rain level, replacing the game's per-room value (0.6.33; one level from 0.6.34) | 0.3 |
+| `9t` | roof rain level, replacing the game's per-room value (0.6.33; one level from 0.6.34) | 0.4 (0.3 before 0.9.3) |
 | `9u` | roof rain fades with distance on bounced paths, dB per metre after 6 m (0.6.34) | 1 |
 | `6.2`, `6.2a`-`6.2d` | through-wall thump: on, level, cutoff, explosion cutoff, how much quieter walls make it (0.6.37) | on, 0 dB, 50 Hz, 80 Hz, 0.5 |
 | `6.2e`, `6.2f`, `6.2g` | walls can stop a thump: on, gunshot reach, explosion reach (0.6.38) | on, 60 dB, 80 dB |

@@ -27,6 +27,18 @@ Only appears if something failed. It's appended to, never cleared, and each line
 
 ## Files written per raid
 
+### probe2.csv roof columns (0.9.3, step 2 of the roof rain review)
+At the end of each row: `roofUpLight` / `roofUpHeavy` (roof energy x the roof's material gain squared from upward paths, roofs 0.2 m or more above the ears; heavy = concrete, stone, asphalt, tile), `roofSideLight` / `roofSideHeavy` (the same from other paths at roofs 1 m or more above the ears), `roofSideLevel` (their energy without the material), `roofSideAz` / `roofSideEl` (where that side energy comes from), `roofJunk` (energy at "roofs" below 0.2 m above the ears: undersides of heaps, vehicles, pipes) and `topMat` (the material found just above the last untagged roof hit).
+
+### humshell.csv (0.9.3, each move of 0.1)
+The small-open-space rule for room hums: `outsideDb` (probe v2's outdoor level), `meanFreePathAvgM` (averaged over 2 s), `target` (1 = full hum, 0 = none), the smoothed `shell` gain applied to non-draught room tones, `small` (1 = counted as small: under 3 m for 0.3 s, kept until the 2 s average passes 3.5 m; `big` = a big space near the edge of outside, where the gentler -8 to -2 dB curve applies) and `outdoorZone` (1 = the map's zone says outdoor, where the rule applies at any size).
+
+### floors.csv (0.9.3, at each F10)
+What is straight above your head, up to 60 m: `heightM` above your eyes, collider `name` and `layer`, `widthM`/`depthM` (world bounds), `material` and `lossDb`, `mainLayer` (1 = on the solid layers), and whether it counts as a floor with every solid surface (`countsAll`) and with only 2 m wide ones (`countsWide`). The first row is the ceiling itself. Then rows with `i` = `probe`: the ceilings the rain tracing's own rays reached in the last 3 s (height, collider, horizontal distance, material, the share of rain it let through, the floor counts `all/main/wide` and the count used), and one `summary` row (roof level, floors now, the all-paths level, the share from upward paths, the loss getting here).
+
+### playing.csv (0.9.3, at each F10)
+Every AudioSource playing at that moment: `object`, `clip`, `mixer` group, `volume`, the game's `occlusionFactor` (BetterSource), `spatialBlend`, `distM` from the listener, `loop` and the `parent` object. To name a sound the user hears.
+
 ### startup.csv (raid end, 0.9.3)
 The mod's own raid-start work: `phase` (`loading` = on the loading screen, from `Raid.Prepare`; `spawn` = the resets in the frame you spawn, and `diagnostics start`; `first use` = the first time a feature needed a scene search or a voice pool later on), `step`, `ms` and `atS` (seconds from spawn, negative on the loading screen). The same totals and the slowest step of each phase are one line in the BepInEx log at spawn and at raid end, and in summary.txt. If the loading phase is missing, the log line says the loading-screen step didn't run for that raid.
 

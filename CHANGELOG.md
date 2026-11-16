@@ -2,14 +2,25 @@
 
 What changed, as you'd notice it in game. The full technical log is [docs/dev/CHANGELOG-DETAILED.md](docs/dev/CHANGELOG-DETAILED.md).
 
-## 0.9.3 (not released yet)
+## 0.9.3 beta
 
 - **Outdoor wind and rain have their low end back.** About 20 seconds into every raid, the mod cut everything below 1 kHz from the outdoor ambience (wind, rain, the day and night outdoor sound and distant vehicles), outdoors too. Now nothing is cut; walls still muffle the high end.
 - **Broken windows let sound through.** Windows broken from the start (Streets has many), windows you break during the raid, and broken windows built into buildings no longer sound like closed glass: outdoor sound and rain come in through them.
 - **Icebreaker's doorways fade smoothly.** On Icebreaker (and any map without the game's ambience blender), outdoor wind and the indoor layers now fade with where you stand, as on other maps, instead of switching between full and almost silent the moment you cross a door. With Icebreaker 1.2.4 this covers its own wind bed and indoor/outdoor beds; Icebreaker's **WindIndoorFraction** setting has no effect while this is on.
 - **Less mod work when a raid starts.** The mod's own sound voices, the map's windows and doors, and the search for the game's ambience blender now happen on the loading screen instead of in the first seconds after you spawn. The doors were searched for five times in the first 40 seconds of play (about 45 ms each); now once, while loading. With **Bug report - logs** off, the 5 million routes on Streets are no longer counted after loading. Nothing you hear changes.
 - **No audio stall at raid start with bug report logs on.** The audio-thread timing probe could hold the sound up for a moment while the game cleared memory, 15 to 45 seconds into a raid. It's now off unless you turn it on (developer build). Players with logs off never had it.
+- **Small open shacks and containers have no room hum.** Standing in a thin wood shack with empty windows sounded like being inside a factory: the map gives it a building's hum. Where the space is small and the outside comes in loudly, that hum, and the map's indoor tone drone, now fade out and you hear the rain and the outside. In spots the map counts as outdoors (a gas station canopy) the same applies whatever the size. Buildings, and containers standing inside them, keep their hum.
+- **Roof rain in train cars, yard containers and under canopies.** The game silences its roof rain wherever the map counts you as outdoors, even with a roof right above you. The mod now plays it there at the level the roof tracing gives, and fills in through doorways, so walking in and out it doesn't drop out.
+- **Rain on concrete roofs is much quieter** indoors, and there's none under a concrete overpass: heavy concrete barely passes the drumming; metal, wood and fabric roofs are unchanged. The rain falling around you is unchanged.
+- **Steadier roof rain.** It plays from one source everywhere, so it no longer cuts in and out or sounds doubled in doorways, and its level comes from the roofs around you by their own material: no jump at a canopy's edge, and no roof rain from the undersides of trucks and rubbish heaps.
+- **You hear a roof's rain before you're under it.** Walking up to a metal canopy or overpass in the rain, its drumming comes in from its side over the last few metres, then takes over overhead as you step under.
+- **Roof rain sounds like the roof.** Right under a roof it plays wide and full, from the whole roof around you; it comes from a direction only when the roof is to one side (walking up to it, at its edge, a car partly open to the sky).
+- **No roof rain in basements.** Under a building with a floor above, roof rain could play almost as loudly as under the roof itself, because the floor count from the floor above was reused.
+- **Roof rain is a little louder by default** (volume 0.4, was 0.3). An existing settings file keeps its value: set **07 OUTDOORS AND WALLS → Roof rain - volume** yourself.
+- **Roof rain under a structure inside a hall** is no longer cut by beams, pipes and walkways above you: only something at least 2 m wide both ways counts as a floor.
 - **Room hums blend at room borders.** Between two rooms with a different background hum you hear both, the other room's fading out over 1.5 m, so crossing back and forth no longer swaps the hum, and it keeps playing in gaps between rooms. New setting **Outdoors - room tones blend at room borders** (on).
+
+- **Known issue:** gunshots farther than about 100 m are still heard at full through the walls of the building you're in. The game doesn't muffle sounds beyond its own range (about 80-100 m for gunshots), and the mod's distant gunfire muffling only takes shots placed off the map (the ambient gunfire mod's battles). Fix planned for 0.9.4.
 
 ## 0.9.2 beta
 

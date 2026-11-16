@@ -17,7 +17,7 @@ namespace RealSoundSimulation
     {
         public const string Guid = "com.ffloridamann.realsoundsimulation";
         public const string OldGuid = "ffloridamann.realsoundsimulation"; // before 0.9.0
-        public const string Version = "0.9.2";
+        public const string Version = "0.9.3";
 
         internal static ManualLogSource Log;
         internal static Harmony Harmony;
@@ -100,6 +100,7 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> EarlyEchoTrimDb;    // 0.6.9 "6f"
         internal static ConfigEntry<bool> IndoorWindFollowsOpenings; // 0.6.9 "8g"
         internal static ConfigEntry<bool> RoomToneBlendOn; // 0.9.3 "8h"
+        internal static ConfigEntry<bool> SmallShellNoHum; // 0.9.3: small open shells (a shack, a container) have no room hum
         internal static ConfigEntry<float> RainThroughBuildingDb;   // 0.6.9 "9l"
         internal static ConfigEntry<BedDirection.Mode> RoofBedMode; // 0.6.10 "9m"
         internal static ConfigEntry<float> MuzzleLobe;     // 0.6.11 "3k"
@@ -114,6 +115,12 @@ namespace RealSoundSimulation
         internal static ConfigEntry<float> RoofRainLevel; // 0.6.33 "9t"
         internal static ConfigEntry<float> RoofRainShaftLoss; // 0.6.34 "9u"
         internal static ConfigEntry<bool> RoofCountsLowDetail; // 0.6.36 "9v"
+        internal static ConfigEntry<bool> RoofFloorsWide; // 0.9.3: beams, pipes and sheets aren't floors
+        internal static ConfigEntry<bool> RoofRainOutdoorSpots; // 0.9.3: roof rain under roofs the map calls outdoor
+        internal static ConfigEntry<bool> RoofRainNear; // 0.9.3: roof rain from a roof beside you
+        internal static ConfigEntry<bool> RoofRainWideOverhead; // 0.9.3: overhead roof rain wide and flat, 3D only to one side
+        internal static ConfigEntry<bool> RoofRainOnePlayer; // 0.9.3 step 3: one player, level from the roofs the rays hit
+        internal static ConfigEntry<bool> RoofRainHeight; // 0.9.3: high roofs quieter
         internal static ConfigEntry<bool> RoofRainNoRainRooms; // 0.6.36 "9w"
         internal static ConfigEntry<bool> ThumpOn; // 0.6.37 "6.2"
         internal static ConfigEntry<float> ThumpDb, ThumpCutoffHz, ThumpExplosionCutoffHz, ThumpWallLoss;
@@ -370,8 +377,9 @@ namespace RealSoundSimulation
             OpeningShare = Bind(s07, "Outdoors - sound from openings", 0.7f, "Indoors, this share of the outdoor sound plays from the open directions instead of from everywhere. Was 8e.", R(0f, 1f), adv);
             OpeningHrtf = Bind(s07, "Outdoors - 3D on opening sounds", true, "Run the sound from openings through the game's 3D audio for front/back and up/down. Off = plain left/right. Was 8f.", null, adv);
             IndoorWindFollowsOpenings = Bind(s07, "Outdoors - indoor wind follows openings", true, "A room's draught sound follows how much of the outside reaches you, so it fades deep in a stairwell. Was 8g.", null, adv);
+            SmallShellNoHum = Bind(s07, "Outdoors - small open spaces have no room hum", true, "A small space where the outside comes in loudly (a thin shack with empty windows, an open container) is a shell, not a room: the map's room hum and its indoor tone drone fade out there, full while the outside is 15 dB down or more, gone once it is only 8 dB down. In spots the map calls outdoor (a gas station canopy) this applies at any size; in big rooms only right at the edge of outside (full at 8 dB down, gone at 2 dB down). Roof rain and the outside are unchanged. Off = they play wherever the map sets them.", null, adv);
             RoomToneBlendOn = Bind(s07, "Outdoors - room tones blend at room borders", true, "At the border between two rooms with a different background hum you hear both, the other room fading out over 1.5 m into yours, by where you stand. Crossing back and forth no longer swaps the hum, and it keeps playing in gaps between rooms. Off = the game swaps it as you cross. 8h.", null, adv);
-            RoofRainLevel = Bind(p07, "Roof rain - volume", 0.3f, "How loud rain on the roof is, before the roof, floors and material are applied. 0 = no roof rain. Was 9t.", R(0f, 1f), pub: 30);
+            RoofRainLevel = Bind(p07, "Roof rain - volume", 0.4f, "How loud rain on the roof is, before the roof, floors and material are applied. 0 = no roof rain. Was 9t.", R(0f, 1f), pub: 30);
             RoofRainByMaterial = Bind(s07, "Roof rain - roof material matters", 1.5f, "Rain is louder on a thin metal roof and quieter on a soft one. 0 = every roof the same. Was 9r.", R(0f, 1.5f));
             RainFixOn = Bind(s07, "Roof rain - fix cutting out", true, "Fixes a game bug where rain on the roof fades to silence when you move between some rooms. Was 7.", null, adv);
             RoofRainFromProbe = Bind(s07, "Roof rain - traced from the roof", true, "Rain on the roof is traced from the roof itself: full right under it, partly under a mezzanine, down the stairwell from below. Off = a simple count of floors above. Was 9i.", null, adv);
@@ -379,6 +387,12 @@ namespace RealSoundSimulation
             RoofFloorLossScale = Bind(s07, "Roof rain - loss per floor", 1f, "How much each floor above takes off. 1 = the measured value for its material, 0 = none. Was 9q.", R(0f, 1.5f), adv);
             RoofRainShaftLoss = Bind(s07, "Roof rain - fade down shafts dB per m", 1f, "How much roof rain fades on its way down a stair shaft, after the first 6 m. 0 = off. Was 9u.", R(0f, 3f), adv);
             RoofCountsLowDetail = Bind(s07, "Roof rain - count low-detail floors", true, "Also count large low-detail floors, which much of the Capital is built from. Was 9v.", null, adv);
+            RoofRainHeight = Bind(s07, "Roof rain - high roofs are quieter", true, "A roof more than 3 m above you is further away and more spread out: 3 dB quieter for each doubling of height up to 9 m (about 5 dB at 9 m, a warehouse roof), 6 dB per doubling above that (about 11 dB at 18 m). Off = every roof as loud as one just overhead. Needs Roof rain - one player.", null, adv);
+            RoofRainOnePlayer = Bind(s07, "Roof rain - one player, from the roof it hits", true, "Roof rain plays from one source everywhere, so it never doubles or hands over at a door, and its level comes from the roofs the rays actually reach, each by its own material: no jump at a canopy's edge, silent under a concrete overpass, no roof rain from the undersides of trucks and heaps. Off = the earlier way.", null, adv);
+            RoofRainWideOverhead = Bind(s07, "Roof rain - wide when the roof is overhead", true, "Rain on a roof right over you comes from the whole roof, so it plays wide and at full level; it only comes from a direction when the roof is to one side (walking up to it, near its edge, partly open to the sky). Off = always placed in 3D, which is quieter.", null, adv);
+            RoofRainNear = Bind(s07, "Roof rain - heard from a roof beside you", true, "Walking up to a canopy or overpass in the open, its rain comes in from its side before you are under it, up to half level at the edge. Off = only the roof above you.", null, adv);
+            RoofRainOutdoorSpots = Bind(s07, "Roof rain - also under roofs the map calls outdoor", true, "In a train car, a container in a yard or under a canopy the map counts as outdoors, the game silences its roof rain. This plays it there anyway, at the level the roof tracing gives. Off = no roof rain in those spots.", null, adv);
+            RoofFloorsWide = Bind(s07, "Roof rain - only wide floors count", true, "Something above a ceiling only counts as a floor if it is at least 2 m wide both ways, so beams, pipes, ducts and walkways in a hall don't each take rain away. Off = everything solid above counts.", null, adv);
             RoofRainNoRainRooms = Bind(s07, "Roof rain - respect no-rain rooms", true, "Roof rain fades out in rooms the game gives no rain. Was 9w.", null, adv);
             RoofRainUnderFloors = Bind(s07, "Roof rain - under one floor", 0.3f, "Roof rain volume with one floor above you, when it isn't traced from the roof. Was 8b.", R(0f, 1f), adv);
             RoofBedMode = Bind(s07, "Roof rain - panning", BedDirection.Mode.MetaHrtf, "The same choice for roof rain, where up and down matter most. Was 9m.", null, adv);
@@ -475,6 +489,7 @@ namespace RealSoundSimulation
             Safe("10a footsteps and handling", () => FoleyPresets.Apply(Harmony)); // 0.6.35
             Safe("10b routes", () => ExtraRoutes.Apply(Harmony)); // 0.6.35
             Safe("raid start loading", () => Raid.Apply(Harmony)); // 0.9.3: voices and windows on the loading screen
+            Safe("small open spaces: indoor tone players", () => RoomTone.ApplyToneHook(Harmony)); // 0.9.3
             gameObject.AddComponent<Raid>(); // first: raid start, resets and per-frame housekeeping
             gameObject.AddComponent<DiagRunner>();
             gameObject.AddComponent<DoorwayBlend>();
@@ -577,7 +592,7 @@ namespace RealSoundSimulation
             $"5 own reverb boost {OwnReverbBoostDb.Value:+0.0;-0.0;0} dB (+{HardRoomReverbDb.Value:0} in hard rooms) | probe {(ProbeOn.Value ? "on" : "off")} | " +
             $"fix4 off-map {(OffMapOn.Value ? "ON" : "off")} | fix7 rain dropout {(RainFixOn.Value ? "ON" : "off")} | fix8 openings {(ExposureMixOn.Value ? $"ON (cue {DirectionCueStrength.Value:0.00}, roof rain {RoofRainUnderFloors.Value:0.00}, glass {ThroughGlass.Value:0.00}, indoor fade {IndoorFadeNearOpenings.Value:0.00}, openings {OpeningShare.Value:0.00}{(OpeningHrtf.Value ? " HRTF" : "")})" : "off")} | exposure probe {(ExposureProbeOn.Value ? "on" : "off")} | " +
             $"fix6 echoes {(EchoOn.Value ? $"ON ({EchoLevelDb.Value:+0.0;-0.0;0} dB, max {EchoMaxTaps.Value}, directivity {EchoDirectivityDb.Value:0} dB, far {(EchoFar.Value ? "on" : "off")}, hard rooms +{EchoHardRoomDb.Value:0} dB, surfaces {(EchoMeasuredSurfaces.Value ? "measured" : "hand-set")})" : "off")} | " +
-            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")}, rain from openings {(RainFromOpenings.Value ? "on" : "off")}, surfaces {(ProbeMeasuredSurfaces.Value ? "measured" : "hand-set")}, roof floors {(RoofCountsFloors.Value ? $"counted x{RoofFloorLossScale.Value:0.00}" : "old rule")}, roof material {RoofRainByMaterial.Value:0.00}, reacts to changes {(ProbeChangeDetect.Value ? "on" : "off")}, roof rain level {RoofRainLevel.Value:0.00}, shaft loss {RoofRainShaftLoss.Value:0.0} dB/m, low-detail floors {(RoofCountsLowDetail.Value ? "on" : "off")}, no-rain rooms {(RoofRainNoRainRooms.Value ? "on" : "off")})" : "off")}, 9k distant gunfire through openings {(DistantThroughOpeningsOn.Value ? "ON" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
+            $"probe v2 {(AcousticProbeOn.Value ? "on" : "off")}: fix9 ambience {(AmbienceV2On.Value ? $"ON (directional {BedDirectional.Value:0.00} {BedMode.Value}, glass {GlassLossDb.Value:0} dB, build-up {RoomBuildUp.Value:0.00}, guided {(GuidedRays.Value ? "on" : "off")}, rays {RayQualityCfg.Value}, direction x{DirectionStrength.Value:0.00}, roof rain {(RoofRainFromProbe.Value ? "probe" : "floors")}, rain from openings {(RainFromOpenings.Value ? "on" : "off")}, surfaces {(ProbeMeasuredSurfaces.Value ? "measured" : "hand-set")}, roof floors {(RoofCountsFloors.Value ? $"counted x{RoofFloorLossScale.Value:0.00}" : "old rule")}, roof material {RoofRainByMaterial.Value:0.00}, reacts to changes {(ProbeChangeDetect.Value ? "on" : "off")}, roof rain level {RoofRainLevel.Value:0.00}, shaft loss {RoofRainShaftLoss.Value:0.0} dB/m, low-detail floors {(RoofCountsLowDetail.Value ? "on" : "off")}, wide floors only {(RoofFloorsWide.Value ? "on" : "off")}, roof rain in outdoor spots {(RoofRainOutdoorSpots.Value ? "on" : "off")}, roof rain from a roof beside you {(RoofRainNear.Value ? "on" : "off")}, roof rain wide overhead {(RoofRainWideOverhead.Value ? "on" : "off")}, roof rain one player {(RoofRainOnePlayer.Value ? "on" : "off")}, roof rain height {(RoofRainHeight.Value ? "on" : "off")}, small shells no hum {(SmallShellNoHum.Value ? "on" : "off")}, no-rain rooms {(RoofRainNoRainRooms.Value ? "on" : "off")})" : "off")}, 9k distant gunfire through openings {(DistantThroughOpeningsOn.Value ? "ON" : "off")}, fix9a gunshots {(GunV2On.Value ? "ON" : "off")}";
 
         internal static void Safe(string what, Action a)
         {

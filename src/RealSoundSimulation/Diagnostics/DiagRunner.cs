@@ -156,7 +156,29 @@ namespace RealSoundSimulation.Diagnostics
                 DiagLog.F(Acoustics.AcousticProbe.Rt60, "0.00")));
             Acoustics.OutdoorExposure.DumpRays(_marks, Time.time - _raidStart);
             Acoustics.AcousticProbe.DumpPaths(_marks, Time.time - _raidStart);
+            Acoustics.AcousticProbe.DumpFloors(_marks, Time.time - _raidStart); // 0.9.3
+            Plugin.Safe("playing dump", () => DumpPlaying(_marks, Time.time - _raidStart)); // 0.9.3
             Plugin.Log.LogInfo($"Mark {_marks} at {p} (room {Acoustics.EnclosureProbe.Room:0.00}, surfaces {surfaces})");
+        }
+
+        // 0.9.3: every sound playing at F10 (playing.csv): to name a sound the user hears ("an indoor hum under the gas station
+        // canopy") instead of guessing. One scene search, only on F10 with bug report logs on.
+        public const string PlayingHeader = "t,mark,object,clip,mixer,volume,occlusionFactor,spatialBlend,distM,loop,parent";
+        private static void DumpPlaying(int mark, float t)
+        {
+            if (!DiagLog.IsOpen) return;
+            AudioListener l = FindObjectOfType<AudioListener>();
+            Vector3 at = l != null ? l.transform.position : Vector3.zero;
+            foreach (AudioSource a in FindObjectsOfType<AudioSource>())
+            {
+                if (a == null || !a.isPlaying) continue;
+                BetterSource b = a.GetComponentInParent<BetterSource>();
+                Transform par = a.transform.parent;
+                DiagLog.Row("playing.csv", string.Join(",", DiagLog.F(t, "0.00"), mark.ToString(), DiagLog.Csv(a.gameObject.name),
+                    DiagLog.Csv(a.clip != null ? a.clip.name : ""), DiagLog.Csv(a.outputAudioMixerGroup != null ? a.outputAudioMixerGroup.name : ""),
+                    DiagLog.F(a.volume, "0.000"), b != null ? DiagLog.F(b.OcclusionVolumeFactor, "0.000") : "", DiagLog.F(a.spatialBlend, "0.00"),
+                    DiagLog.F(Vector3.Distance(a.transform.position, at), "0.0"), a.loop ? "1" : "0", DiagLog.Csv(par != null ? par.name : "")));
+            }
         }
 
         // ---------------- raid lifecycle ----------------

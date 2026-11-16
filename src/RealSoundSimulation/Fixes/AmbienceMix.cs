@@ -58,7 +58,7 @@ namespace RealSoundSimulation.Fixes
             OpeningSounds.Destroy();
             Took.Clear(); V2Active = false; V2Level = float.NaN;
             Beds.Clear(); IndoorRain.Clear();
-            RestoreRain(); RainSrc.Clear();
+            RestoreRain(); DestroyMirrors(); RainSrc.Clear();
             _found = false; _nextFind = 0f; _sceneSearched = false; _expSm = -1f; RoofRainApplied = 1f;
             _under2 = _under2Candidate = false; _under2Since = 0f; _under2Gate = 1f; _roofMatGain = 1f; _noRainGate = 1f; DoorwayBlend.ResetIndoorParams();
             RoomTone.Reset();
@@ -175,11 +175,14 @@ namespace RealSoundSimulation.Fixes
         {
             if (RainSrc.Count == 0) return;
             if (_rainGame.Length != RainSrc.Count) { _rainGame = new float[RainSrc.Count]; _rainWritten = new float[RainSrc.Count]; _rainTracking = false; }
-            RoofRainApplied += (RoofRainFactor - RoofRainApplied) * (1f - Mathf.Exp(-dt / Smooth));
+            // 0.9.3: in over 0.5 s, out over 1.5 s (was 0.35 s both ways): a brief dip in the roof reading no longer pulls the rain down
+            RoofRainApplied += (RoofRainFactor - RoofRainApplied) * (1f - Mathf.Exp(-dt / (RoofRainFactor > RoofRainApplied ? RoofAttackS : RoofReleaseS)));
             if (!_rainTracking) { for (int i = 0; i < RainSrc.Count; i++) { _rainGame[i] = RainSrc[i] != null ? RainSrc[i].volume : 0f; _rainWritten[i] = -1f; } _rainTracking = true; }
             // 0.6.9: if the indoor-layer fade (openings around you) also turns the rain player's mixer down, undo it here:
             // roof rain follows the roof only (raid 28 tags 2-3: 0.65 from the probe x 0.53-0.68 from the fade)
-            RoofRainComp = DoorwayBlend.IndoorParamsIncludeRain ? 1f / Mathf.Max(DoorwayBlend.IndoorApplied, 0.1f) : 1f;
+            bool one = Plugin.RoofRainOnePlayer.Value && Plugin.RoofRainOutdoorSpots.Value;
+            RoofRainComp = !one && DoorwayBlend.IndoorParamsIncludeRain ? 1f / Mathf.Max(DoorwayBlend.IndoorApplied, 0.1f) : 1f;
+            if (_rainWanted.Length != RainSrc.Count) _rainWanted = new float[RainSrc.Count];
             // 0.6.33 "9t": the game's indoor rain volume is baked per room (0.05 in much of the Capital, 0 in a trailer it thinks is outdoors).
             // 0.6.34: and 1 in others, so "at least 0.3" still jumped between rooms (raid 43 tag 4: 0.74 and 0.225 with the roof unchanged).
             // While it rains and the probe traces the roof, the room's value no longer counts: one level, times the game's own factor for how
@@ -208,15 +211,207 @@ namespace RealSoundSimulation.Fixes
                 if (s == null) continue;
                 if (Mathf.Abs(s.volume - _rainWritten[i]) > 1e-4f) _rainGame[i] = s.volume; // the game changed it (crossfade)
                 float baseVol = ownLevel && playing > 0 && s.isPlaying && s.clip != null ? level * (sum > 1e-3f ? _rainGame[i] / sum : 1f / playing) : _rainGame[i];
-                _rainWritten[i] = Mathf.Min(1f, baseVol * RoofRainApplied * RoofRainComp);
+                float wanted = Mathf.Min(1f, baseVol * RoofRainApplied * RoofRainComp);
+                _rainWanted[i] = s.isPlaying && s.clip != null ? wanted : 0f;
+                // step 3: one player for all roof rain, the mod's copy; the game's own is held silent so the two never play at once
+                // (doorways sounded phasey with both, and the hand-over at a door was heard as rain cutting in and out)
+                _rainWritten[i] = one ? 0f : wanted;
                 s.volume = _rainWritten[i];
             }
+        }
+
+        // 0.9.3 "roof rain in spots the map calls outdoor" (raid_20261115_160302 mark 5, a train car: roof directly overhead, roof rain
+        // traced at full and the indoor rain player at 0.30, yet the user heard none; the same in containers in yards). The indoor rain
+        // player plays into the game's indoor rain group, which the game's outdoor mix silences where its zone says outdoor. There, the
+        // mod plays a copy of each rain source (same clip, kept in step, same level, position, spread and muffling) into the master
+        // group, which the outdoor mix doesn't touch, with Unity's own panning. It fades in over 0.5 s as the
+        // zone turns outdoor and out as it turns indoor, where the game's own player is heard again. No extra voice indoors.
+        private static readonly List<AudioSource> Mirror = new List<AudioSource>();
+        private static readonly List<AudioLowPassFilter> MirrorLp = new List<AudioLowPassFilter>(), SrcLp = new List<AudioLowPassFilter>();
+        private static UnityEngine.Audio.AudioMixerGroup _outRoofGroup;
+        public static float OutdoorRoofMix;
+        public static float RoofNear, RoofNearShare;
+
+        // 0.9.3 step 3 of the roof rain review ("Roof rain - one player, from the roof it hits"): the level comes from the roofs the probe's
+        // paths actually hit, each with its own material (its tag, else the first tagged surface just above it) and its height, summed over
+        // the probe's 3 s memory, so the material no longer flips per update (155 flips in 21.5 still minutes on 15 Nov) and a canopy's
+        // metal counts from the first rays that reach it (no +11 dB step at its edge). Heavy roofs (concrete, stone) fade with
+        // (1 - outdoorness)^2: silent under an overpass outdoors, a faint trace under a concrete roof indoors. "Roofs" below the ears
+        // (undersides of heaps, trailers, trucks) don't count. Calibrated on Customs raid_20261115_183233:
+        //   above  sqrt of the material-weighted upward level, cut below a roof level of 1% (traces from nearby rooftops in the open)
+        //   side   roofs 1 m+ above the ears reached by other paths: nothing below a side level of 0.02 (open ground p90 0.022, indoors
+        //          under a floor p90 0.020), half level (-6 dB) at 0.06 (the canopy edge), times the side roofs' own material
+        private const float UpKnee = 0.01f, SideKnee = 0.02f, SideK = 6.25f;
+        private static float StepThreeFactor()
+        {
+            float o = DoorwayBlend.Active && !float.IsNaN(DoorwayBlend.Outdoorness) ? Mathf.Clamp01(DoorwayBlend.Outdoorness) : (EnvProbe.GameSaysOutdoor ? 1f : 0f);
+            float h2 = (1f - o) * (1f - o);
+            float rl = AcousticProbe.RoofLevel;
+            float u = Mathf.Max(0f, AcousticProbe.RoofUpLight + AcousticProbe.RoofUpHeavy * h2);
+            float up = rl > UpKnee ? Mathf.Sqrt(u * (1f - UpKnee / rl)) : 0f;
+            float side = 0f, sl = AcousticProbe.RoofSideLevel;
+            if (Plugin.RoofRainNear.Value && sl > SideKnee)
+            {
+                float gSide = Mathf.Sqrt(Mathf.Max(0f, AcousticProbe.RoofSideLight + AcousticProbe.RoofSideHeavy * h2) / sl);
+                side = gSide * Mathf.Min(NearMax, Mathf.Sqrt(SideK * (sl - SideKnee)));
+            }
+            RoofNear = side;
+            RoofNearShare = side > up ? Mathf.Clamp01((side - up) / Mathf.Max(side, 1e-4f)) : 0f;
+            return Mathf.Max(up, side);
+        }
+
+        // 0.9.3 "wide when the roof is overhead": how one-sided the roof is, 0 (all around and above you) .. 1 (off to one side).
+        // Rain on a roof right over you comes from the whole roof, so it plays mostly flat and wide at full level; only a roof to one
+        // side (walking up to it, near its edge, a car partly open to the sky, a clear direction) is placed in 3D. Fully 3D through
+        // the spatializer cost the stereo recording much of its level (raid_20261115_175337: a metal container at the volume cap,
+        // "still too quiet"). Off = the 3D share follows how enclosed you are, as before.
+        internal static float RoofSidedness()
+        {
+            if (!Plugin.RoofRainWideOverhead.Value) return 1f;
+            float s = Mathf.Max(RoofNearShare, Mathf.InverseLerp(0.35f, 0.8f, AcousticProbe.RoofFocus));
+            if (AcousticProbe.RoofLevel > 0.05f) s = Mathf.Max(s, 0.6f * Mathf.InverseLerp(0.1f, 0.5f, AcousticProbe.SkyOpen));
+            return Mathf.Clamp01(s);
+        } // 0.9.3: roof rain from a roof beside you (0..NearMax), and how much of what plays it is
+        private const float NearFrom = 0.01f, NearTo = 0.06f, NearMax = 0.5f;
+        public static EFT.Ballistics.MaterialType RoofMatNow = EFT.Ballistics.MaterialType.None;
+        private static AudioListener _listener;
+        private const float RoofAttackS = 0.5f, RoofReleaseS = 1.5f, CopyTurnS = 1f, CopyStopAfterS = 5f;
+        private static Vector3 _copyDir = Vector3.up;
+        private static float _copyBlend, _copySilentSince = -1f, _copyCut = 22000f;
+        private const float CopyDistM = 3f;
+        private const float OutdoorSnapshotRainDb = -80f; // assumed: the outdoor snapshot's level for the indoor rain group
+        public static long OutdoorRoofFrames, OutdoorRoofOnFrames;
+
+        private static void OutdoorRoofRain(float dt)
+        {
+            // 0.9.3: the copy fills in what the game's own player has lost, following fix 3's snapshot fade rather than the on/off zone
+            // (raid_20261115_165446: silent in doorways, outdoorness 0.29-0.51, the zone already indoor so the copy was off). Snapshot
+            // weights lerp the indoor rain group's level in dB, so at outdoorness o the game's rain is at about 10^(o*SnapDb/20) and
+            // the copy adds the rest of the power.
+            float o = DoorwayBlend.Active && !float.IsNaN(DoorwayBlend.Outdoorness) ? Mathf.Clamp01(DoorwayBlend.Outdoorness) : (EnvProbe.GameSaysOutdoor ? 1f : 0f);
+            float gIn = Mathf.Pow(10f, o * OutdoorSnapshotRainDb / 20f);
+            bool one = Plugin.RoofRainOnePlayer.Value;
+            float want = Plugin.RoofRainOutdoorSpots.Value && RainSrc.Count > 0 ? (one ? 1f : Mathf.Sqrt(Mathf.Max(0f, 1f - gIn * gIn))) : 0f;
+            OutdoorRoofMix += (want - OutdoorRoofMix) * (1f - Mathf.Exp(-dt / 0.1f));
+            if (want <= 0f && OutdoorRoofMix < 0.01f) OutdoorRoofMix = 0f;
+            OutdoorRoofFrames++;
+            if (OutdoorRoofMix <= 0f)
+            {
+                // 0.9.3: stop only after 5 s of silence (it started and stopped 2-42 times a raid)
+                if (_copySilentSince < 0f) _copySilentSince = Time.time;
+                foreach (AudioSource mm in Mirror) if (mm != null && mm.isPlaying) { mm.volume = 0f; if (Time.time - _copySilentSince > CopyStopAfterS) mm.Stop(); }
+                return;
+            }
+            _copySilentSince = -1f;
+            OutdoorRoofOnFrames++;
+            EnsureMirrors();
+            // 0.9.3: the copy is placed by the roof tracing itself (RoofArrival, CopyDistM away), always 3D with the spatializer, spread
+            // wider the less focused the roof is. Before, it followed the game's source, which is often flat (2D, 477 m away in
+            // raid_20261115_171426), so it sounded stereo and from nowhere. Under a concrete or stone roof the map calls outdoor (an
+            // overpass) there's no roof rain: a heavy deck doesn't drum, you hear the rain around you.
+            if (_listener == null) _listener = UnityEngine.Object.FindObjectOfType<AudioListener>();
+            Vector3 head = _listener != null ? _listener.transform.position : Vector3.zero;
+            Vector3 dir = AcousticProbe.RoofArrival.sqrMagnitude > 1e-6f ? AcousticProbe.RoofArrival.normalized : Vector3.up;
+            if (RoofNearShare > 0f)
+            {
+                // near a roof the paths reach it from below (arrival elevation -30 to -77 deg): use its side, 30 deg up. Step 3 takes the
+                // side from the side roofs' own arrival.
+                Vector3 sideSrc = one && AcousticProbe.RoofSideArrival.sqrMagnitude > 1e-6f ? AcousticProbe.RoofSideArrival : dir;
+                Vector3 flat = new Vector3(sideSrc.x, 0f, sideSrc.z);
+                Vector3 side = flat.sqrMagnitude > 1e-6f ? (flat.normalized * 0.866f + Vector3.up * 0.5f).normalized : Vector3.up;
+                dir = Vector3.Slerp(dir.y > 0f ? dir : Vector3.up, side, RoofNearShare).normalized;
+            }
+            // 0.9.3: the direction and the 3D share turn over about 1 s (they were raw every frame; the roof bed already slerps)
+            float ka = 1f - Mathf.Exp(-dt / CopyTurnS);
+            _copyDir = Vector3.Slerp(_copyDir, dir, ka).normalized;
+            dir = _copyDir;
+            // raid_20261115_172816: fully 3D with a flat rolloff and the spatializer's defaults, the copy was "much weaker" at the same volume
+            // (the spatializer's own distance handling). Now the same recipe as the roof rain bed (BedDirection): part flat, part from the
+            // roof (the bed's Blend, else the roof focus), logarithmic rolloff from 50 m (no loss at 3 m), and with the Meta mode a
+            // volumetric radius, no reflections and no reverb send.
+            float blend = Plugin.RoofRainWideOverhead.Value ? RoofSidedness()
+                : (BedDirection.Roof.Blend > 0f ? BedDirection.Roof.Blend : Mathf.Clamp01(AcousticProbe.RoofFocus * 2f));
+            bool meta = !Plugin.RoofRainWideOverhead.Value && Plugin.RoofBedMode.Value == BedDirection.Mode.MetaHrtf; // Unity's panner keeps the level
+            _copyBlend += (blend - _copyBlend) * (1f - Mathf.Exp(-dt / CopyTurnS));
+            float radius = Mathf.Lerp(3f, 0.3f, AcousticProbe.RoofFocus);
+            float heavy = !one && Acoustics.Materials.IsHeavyRoof(RoofMatNow) && EnvProbe.GameSaysOutdoor ? 0f : 1f; // step 3: the mapping fades heavy roofs
+            _copyCut = Mathf.Exp(Mathf.Log(_copyCut) + (Mathf.Log(Mathf.Clamp(AcousticProbe.RoofCutoffHz, 300f, 22000f)) - Mathf.Log(_copyCut)) * (1f - Mathf.Exp(-dt / Smooth)));
+            for (int i = 0; i < RainSrc.Count && i < Mirror.Count; i++)
+            {
+                AudioSource s = RainSrc[i], m = Mirror[i];
+                if (s == null || m == null) continue;
+                float lvl = one ? (i < _rainWanted.Length ? _rainWanted[i] : 0f) : s.volume;
+                if (!s.isPlaying || s.clip == null || lvl <= 0f) { if (m.isPlaying) m.volume = 0f; continue; }
+                if (m.clip != s.clip || !m.isPlaying)
+                {
+                    m.clip = s.clip;
+                    m.timeSamples = Mathf.Clamp(s.timeSamples, 0, Mathf.Max(0, s.clip.samples - 1));
+                    m.Play();
+                }
+                m.volume = lvl * OutdoorRoofMix * heavy;
+                m.transform.position = head + dir * CopyDistM;
+                m.spatialBlend = _copyBlend; m.spread = 0f;
+                if (m.spatialize != meta) m.spatialize = meta;
+                if (meta) { m.SetSpatializerFloat(4, radius); m.SetSpatializerFloat(5, 1f); m.SetSpatializerFloat(11, -60f); }
+                AudioLowPassFilter sl = SrcLp[i], ml = MirrorLp[i];
+                if (ml != null && one) { ml.enabled = _copyCut < 21500f; ml.cutoffFrequency = _copyCut; } // the roof's own muffling
+                else if (ml != null)
+                {
+                    bool on = sl != null && sl.enabled;
+                    ml.enabled = on;
+                    if (on) ml.cutoffFrequency = sl.cutoffFrequency;
+                }
+            }
+        }
+
+        private static void EnsureMirrors()
+        {
+            if (_outRoofGroup == null && MonoBehaviourSingleton<BetterAudio>.Instantiated)
+            {
+                // raid_20261115_164015: on CommonAmbOutBypass the copy was heard in the part of a train car open to the sky (outdoor level
+                // -4.4 dB) but not under its full roof (-10 dB), at the same volume: that group follows the outdoor mix. The master group
+                // (where the mod's ear ring and heartbeat play) follows only the overall volume.
+                // 0.9.3: the master group sits above the concussion cut, the world low-pass and the headset, so roof rain on it stayed
+                // loud through a blast. The game's standard world group (VeryStandartMixerGroup) is under those and isn't silenced by
+                // the outdoor mix. Master only if it is missing.
+                BetterAudio ba = MonoBehaviourSingleton<BetterAudio>.Instance;
+                _outRoofGroup = ba.VeryStandartMixerGroup != null ? ba.VeryStandartMixerGroup : ba.MasterMixerGroup;
+                Plugin.Log.LogInfo("roof rain in outdoor spots: plays into " + (_outRoofGroup != null ? _outRoofGroup.name : "none"));
+            }
+            while (Mirror.Count < RainSrc.Count) { Mirror.Add(null); MirrorLp.Add(null); SrcLp.Add(null); }
+            for (int i = 0; i < RainSrc.Count; i++)
+            {
+                AudioSource s = RainSrc[i];
+                if (s == null || Mirror[i] != null) continue;
+                var go = new GameObject("RealSoundSimulation outdoor roof rain " + i);
+                UnityEngine.Object.DontDestroyOnLoad(go); // placed each frame by the roof tracing, not by the game's source
+                AudioSource m = go.AddComponent<AudioSource>();
+                m.playOnAwake = false; m.loop = true; m.dopplerLevel = 0f; m.priority = s.priority;
+                m.spatialize = false; m.spatialBlend = 0f; m.rolloffMode = AudioRolloffMode.Logarithmic; m.minDistance = 50f; m.maxDistance = 500f; // no loss at 3 m
+                m.bypassReverbZones = s.bypassReverbZones; m.reverbZoneMix = s.reverbZoneMix;
+                m.outputAudioMixerGroup = _outRoofGroup;
+                AudioLowPassFilter lp = go.AddComponent<AudioLowPassFilter>(); lp.lowpassResonanceQ = 1f; lp.enabled = false;
+                Mirror[i] = m; MirrorLp[i] = lp; SrcLp[i] = s.GetComponent<AudioLowPassFilter>();
+            }
+        }
+
+        private static void StopMirrors()
+        {
+            OutdoorRoofMix = 0f;
+            foreach (AudioSource m in Mirror) if (m != null && m.isPlaying) m.Stop();
+        }
+
+        private static void DestroyMirrors()
+        {
+            foreach (AudioSource m in Mirror) if (m != null) UnityEngine.Object.Destroy(m.gameObject);
+            Mirror.Clear(); MirrorLp.Clear(); SrcLp.Clear(); OutdoorRoofMix = 0f; _outRoofGroup = null; _listener = null;
         }
 
         // 0.6.8: the game's indoor rain player, every 0.25 s (raid 27: roof rain went silent at car dealer spots while our
         // factor held at 0.55). rain2.csv.
         private static float _nextRainRow;
-        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp,lowpassHz,noRainGate";
+        private static float[] _rainWanted = new float[0]; // 0.9.3 step 3: the roof rain level each source should play at
+        public const string RainHeader = "t,source,clip,channels,playing,virtual,mute,gameVolume,ourFactor,volume,spatialBlend,spread,spatialize,mixer,fadeComp,lowpassHz,noRainGate,outdoorCopy";
         private static void LogRain()
         {
             if (!DiagLog.IsOpen || Time.time < _nextRainRow) return;
@@ -230,7 +425,7 @@ namespace RealSoundSimulation.Fixes
                     s.isPlaying ? "1" : "0", s.isVirtual ? "1" : "0", s.mute ? "1" : "0", i < _rainGame.Length ? DiagLog.F(_rainGame[i]) : "", DiagLog.F(RoofRainApplied),
                     DiagLog.F(s.volume), DiagLog.F(s.spatialBlend), DiagLog.F(s.spread, "0"), s.spatialize ? "1" : "0",
                     s.outputAudioMixerGroup != null ? s.outputAudioMixerGroup.name : "", DiagLog.F(RoofRainComp),
-                    LpOf(s), DiagLog.F(_noRainGate)));
+                    LpOf(s), DiagLog.F(_noRainGate), DiagLog.F(i < Mirror.Count && Mirror[i] != null && Mirror[i].isPlaying ? Mirror[i].volume : 0f, "0.000")));
             }
         }
 
@@ -279,6 +474,7 @@ namespace RealSoundSimulation.Fixes
                     OpeningSounds.Restore();
                     BedDirection.RestoreAll();
                     RestoreRain();
+                    StopMirrors();
                     RoomToneBlend.Off();
                     RoomTone.Off();
                     RoofRainFactor = 1f;
@@ -309,9 +505,23 @@ namespace RealSoundSimulation.Fixes
                     // the raid, even standing still. Now it must hold 2 s (was 0.5) and the change fades over 1.5 s.
                     if (Time.time - _under2Since >= Under2HoldS) _under2 = _under2Candidate;
                     _under2Gate = Mathf.MoveTowards(_under2Gate, _under2 ? 0f : 1f, dt / Under2FadeS);
-                    float matGain = Mathf.LerpUnclamped(1f, Acoustics.Materials.RoofRainGain(AcousticProbe.RoofMat), Plugin.RoofRainByMaterial.Value);
+                    // 0.9.3: probe v2 read the concrete overpass as untagged (RoofMat None, gain 1) where the exposure probe saw Concrete
+                    // (raid_20261115_171426 mark 2), so the untagged case falls back to it; and the stretched gain can't go below 0.
+                    RoofMatNow = AcousticProbe.RoofMat != EFT.Ballistics.MaterialType.None ? AcousticProbe.RoofMat : OutdoorExposure.RoofMat;
+                    float matGain = Mathf.Max(0f, Mathf.LerpUnclamped(1f, Acoustics.Materials.RoofRainGain(RoofMatNow), Plugin.RoofRainByMaterial.Value));
                     _roofMatGain += (matGain - _roofMatGain) * (1f - Mathf.Exp(-dt / 0.5f)); // 0.6.31 "9r"
-                    RoofRainFactor = _under2Gate * Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel)) * _roofMatGain;
+                    // 0.9.3 "near a roof": in the open beside a canopy or overpass the probe's rays already reach its underside (the
+                    // all-paths roof level 0.03-0.05 a few metres from the edge, raid_20261115_172816 at 156-162 s) while the overhead
+                    // level stays near 0. That share brings roof rain in as you approach, up to half level (-6 dB) at the edge, from the
+                    // roof's side. Under the roof the overhead level takes over. Only with the sky mostly open around you.
+                    if (Plugin.RoofRainOnePlayer.Value) RoofRainFactor = _under2Gate * StepThreeFactor();
+                    else
+                    {
+                        float over = Mathf.Sqrt(Mathf.Clamp01(AcousticProbe.RoofLevel));
+                        RoofNear = Plugin.RoofRainNear.Value && AcousticProbe.SkyOpen > 0.3f ? NearMax * Mathf.InverseLerp(NearFrom, NearTo, AcousticProbe.RoofLevelAll) : 0f;
+                        RoofNearShare = RoofNear > over ? Mathf.Clamp01((RoofNear - over) / Mathf.Max(RoofNear, 1e-4f)) : 0f;
+                        RoofRainFactor = _under2Gate * Mathf.Max(over, RoofNear) * _roofMatGain;
+                    }
                     _roofCandidate = RoofRainFactor; _roofCandidateSince = Time.time;
                 }
                 else
@@ -323,6 +533,8 @@ namespace RealSoundSimulation.Fixes
                     if (Time.time - _roofCandidateSince >= 0.5f) RoofRainFactor = _roofCandidate;
                 }
                 RoofRain(dt);
+                try { OutdoorRoofRain(dt); } // 0.9.3
+                catch (Exception e) { DiagRunner.ReportOnce("roof rain in outdoor spots", e); }
                 LogRain();
                 try { RoomToneBlend.Tick(dt); } // 0.9.3 "8h"
                 catch (Exception e) { DiagRunner.ReportOnce("8h room tone blend", e); }
@@ -335,7 +547,7 @@ namespace RealSoundSimulation.Fixes
                     if (BedPan != 0f) foreach (Bed b in Beds) if (b.Src != null) b.Src.panStereo = 0f;
                     BedPan = 0f; BedCutoff = 22000f;
                     BedDirection.Outdoor.Tick(dt, lt2, true, AcousticProbe.Arrival, AcousticProbe.Focus * (1f - FloorShare(V2Level)), AcousticProbe.Enclosed);
-                    BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed, AcousticProbe.RoofCutoffHz);
+                    BedDirection.Roof.Tick(dt, lt2, roofV2, AcousticProbe.RoofArrival, AcousticProbe.RoofFocus, AcousticProbe.Enclosed * RoofSidedness(), AcousticProbe.RoofCutoffHz);
                     return;
                 }
                 BedDirection.Outdoor.Tick(dt, lt2, false, Vector3.zero, 0f, 0f);

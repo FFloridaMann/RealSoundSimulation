@@ -46,7 +46,8 @@ About **2% FPS** (122 instead of 125 on a Ryzen 7 9800X3D, Factory with 8 bots) 
   - some semi-auto guns (the ADAR 2-15 most clearly) have a slight static at the end of their tails after quick single shots;
   - the G36 doesn't blend its indoor and outdoor recordings;
   - with Bring Back Concussion, crossing a doorway as your hearing comes back can leave the indoor ambience at the old level for a while;
-  - on Icebreaker (Manimal's custom map), outdoor ambience doesn't fade smoothly at doorways, because the map has no ambience blender for it; the map's own sound handles that. Before 0.9.2 the map also stuttered with this mod.
+  - gunshots farther than about 100 m are heard at full through the walls of the building you're in (the game doesn't muffle sounds beyond its own range); to be fixed in 0.9.4;
+  - on Icebreaker (Manimal's custom map), outdoor ambience didn't fade smoothly at doorways before 0.9.3, and the map stuttered with this mod before 0.9.2.
 
 ## Roadmap
 
@@ -55,6 +56,8 @@ About **2% FPS** (122 instead of 125 on a Ryzen 7 9800X3D, Factory with 8 bots) 
 - **0.9.0 (out now):** the first public beta.
 - **0.9.1:** fixes only. The debug overlay (F9, clashed with Fika) and ray view (F11) are gone from the public build, and the bug report key (F10) only works while bug report logs are on.
 - **0.9.2:** fixes the stutter on custom maps without the game's ambience blender, such as Icebreaker.
+- **0.9.3:** less mod work as a raid starts; outdoor wind and rain keep their low end; broken windows let sound through; Icebreaker's doorways fade smoothly; no building hum in small open shacks and containers; roof rain reworked (train cars, yard containers, canopies, doorways, roof material and height, none under concrete overpasses or in basements).
+- **0.9.4 (next):** far gunshots muffled through your own building's walls.
 - **1.0:** better raid start loading, final testing, polishing, bug fixes from your beta reports, and fixes for any Fika issues you report.
 - **After 1.0, in order:** weather, a headsets revamp (each headset protects and sounds as it's really built), **footsteps and everyday sounds**, bots feeling blasts too, the crack of passing bullets, and room reverb for other guns (a shot in a big hall next door brings the hall's reverb).
 

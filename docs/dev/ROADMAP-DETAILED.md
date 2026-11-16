@@ -13,6 +13,9 @@ How things work now is in [DESIGN.md](DESIGN.md), and each feature's details in 
 
 0.9 is a beta (13 Nov 2026) so players on other PCs and maps can report what sounds wrong. No new features until 1.0: only fixes, tests and clean-up.
 
+### 0.9.4: far gunshots through your own walls
+Woods raid_20261115_192921 mark 5: a Remington 700 at 548 m played at full through a cabin's wooden walls. containers.csv: every container farther than its max distance (about 80-100 m for gunshots) is `OutOfRange` and gets no occlusion (9 of them at 400-815 m at that moment). 9k (`DistantThroughOpenings`) already does the right thing indoors (level from `AcousticProbe.Through` towards the source, moved to the opening, blended by enclosure) but only takes sounds placed off the baked map (`DistantOffMap`). Widen the entry test, at the start (`PlayPostfix`) and per tick, to on-map sounds beyond their source's max distance and 80 m+. Test indoors during a distant fight on Woods or Customs; distant.csv shows each one taken.
+
 ### Beta feedback
 Bug reports arrive as zips from the **Bug report - logs** switch: the raid folder, selfcheck, patches, errors, the player's mod list and BepInEx log. Sort each into a known issue, a fix for 1.0, or a clash with another mod (say so on the Forge page).
 
@@ -67,6 +70,8 @@ In order: weather, the headsets revamp, footsteps and body sounds, bots feel bla
 - wind bends sound with height, and gusts make it waver;
 - drops hitting nearby roofs, cars and puddles as sound sources.
 
+**Rain runoff at roof edges.** Under an overpass or canopy, rain pours off the edge and is louder along that line than in the open (user, 15 Nov 2026). A strip of louder rain where the probe finds the roof's edge against open sky.
+
 **Our own roof rain sounds.** Patter loops per roof material made offline (tin, wood, concrete, tarp; three intensities), each drop a tiny impact ringing at that material's frequencies, as one layer over the game's rain. Listened to as WAVs before they go in the game. Until then the roof material only changes the level (`9r`).
 
 **The ground between you and a distant shooter `(G)`.** Grass takes mids and treble off a far shot, asphalt doesn't. One filter per gun, no voices; needs the ground sampled along the path. Never a separate ground echo: at these delays the ground changes the tone, and the recordings already hold a bounce. Details: [MATERIALS.md](MATERIALS.md).
@@ -76,6 +81,10 @@ In order: weather, the headsets revamp, footsteps and body sounds, bots feel bla
 **Rooms with more character.** On Factory most gunshots sound basically the same across the map (user, 11 Nov 2026: a small item, after 1.0). Give halls and small rooms more of their own sound. Related:
 - the room changes the through-wall thump: a small hard room pushes more through a wall than a big hall;
 - your own room counts for the shock wave's sound too (`ShockWave.FireCore`), as it already does for concussion.
+
+**Maybe (from the container reports, 15 Nov 2026):**
+- **Indoor and outdoor ambience as one matched pair.** The outdoor beds follow probe v2's outdoor level and the indoor layers follow how covered the sky is, set separately; in a half-open space both can be loud at once. Plain SPT crossfades them. Drive both from one measurement so they always add up to one consistent "how far inside am I". Broad: in a dry run it moved the indoor layer in 23-46% of indoor time on Streets and Customs, so it needs a switch and an A/B on Streets, the sound the user liked.
+- **Containers and small boxes inside a building hear that building's hum through their opening,** quieter and duller than in the hall itself (raid_20261115_130407 tags 8-10: full factory hum inside containers in the workshop). Only matters if it sounds wrong in play.
 
 ### Other people
 
@@ -98,6 +107,7 @@ In order: weather, the headsets revamp, footsteps and body sounds, bots feel bla
 
 **Maybe, at the end:**
 - **EFT 1.0 recordings on full-auto guns `(6b)`.** Sound Engine Backport's recordings are single shots, and the game loops one recording while the trigger is held. Play one take per round fired instead, with varied takes and a tail on release. A maybe because it adds load (about one voice per bursting gun, capped at 2-3 overlapping takes).
+- **Your gun in small open spaces.** Since 0.7.14 any small enclosed room plays the gun's indoor recording (the room tail sets the size), and EFT's indoor recordings sound like big concrete interiors. In a box open at one end (a shipping container, a train car) most of the shot goes out of the opening: blend toward the outdoor recording by how much of the shot reaches open air from the muzzle, and keep the box's short ring from the measured room tail. Possibly what a beta player meant by "a small container sounds like a factory" (15 Nov 2026); untested, so first fire inside and next to an outdoor container in a logged raid.
 - **Every gun `(7)`.** A pass over each gun's recordings: loudness across guns and calibres, suppressed against unsuppressed, near/far and indoor/outdoor sets that match, full-auto loops and tails. Needs the recordings' real loudness, measured from the output. Last, so every gun is judged in the finished acoustics.
 
 ### Big fights and performance

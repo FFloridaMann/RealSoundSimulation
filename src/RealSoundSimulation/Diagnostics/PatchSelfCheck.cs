@@ -59,6 +59,9 @@ namespace RealSoundSimulation.Diagnostics
             new Target("10b", "Audio.SpatialSystem.SpatialAudioDataLoader", "DataLoadedHandler", "M"),
             new Target("10b", "Audio.SpatialSystem.SpatialAudioDataLoader", "_fullPath", "F"),
             new Target("0.9.3", "EFT.Utilities.ClientMetricsEvents", "SetLocationLoaded", "M"), // raid start loading: the loading-screen step
+            new Target("0.9.3", "Audio.AmbientSubsystem.BaseAmbientSoundPlayer", "Play", "M"), // small open spaces: the indoor tone players
+            new Target("0.9.3", "Audio.AmbientSubsystem.BaseAmbientSoundPlayer", "_spatialBlend", "F"),
+            new Target("0.9.3", "Audio.AmbientSubsystem.BaseAmbientSoundPlayer", "_mixerGroup", "F"),
             new Target("0", "WeaponSoundPlayer", "FireBullet", "M"),
             new Target("0", "WeaponSoundPlayer", "Body", "F"),
             new Target("0", "WeaponSoundPlayer", "BodySilenced", "F"),

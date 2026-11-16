@@ -102,7 +102,7 @@ namespace RealSoundSimulation.Acoustics
         private static Vector3 _prevListener; private static bool _hasPrevListener; private static float _speed;
         // 0.6.32 "9s": what has come in over the last 0.4 s, compared with the 3 s memory
         private const float FastTau = 0.4f, ChangeCooldownS = 0.25f, ChangeFollowS = 1f;
-        private const double ChangeZ = 3.5, MinRatio = 1.6, MinRoofDiff = 0.02, MinLeakDiff = 0.02, MinFastStarts = 8, MinFastDeep = 4;
+        private const double ChangeZ = 3.5, MinRatio = 1.6, MinRoofDiff = 0.02, MinLeakDiff = 0.02, MinFastStarts = 8, MinFastDeep = 4, MinFastRoofStarts = 16;
         private const int FollowMinEscapes = 8; // 0.6.34: fewer escaping paths than this can't justify a quick rise
         private static float _levelTrend;
         private const float ShaftFreeM = 6f; // 0.6.34 "9u": roof rain carries this far along a bounced path before it starts to fade
@@ -177,8 +177,13 @@ namespace RealSoundSimulation.Acoustics
             public double UpRoofRaw;         // 0.6.34: UpRoofE before "9u", to log what the shaft took off
             public double RoofCutLog;        // 0.6.10: energy-weighted log of how bright roof paths arrive
             public double UpRoofCutLog;      // 0.6.14: the same for upward paths
+            // 0.9.3 step 2 (log only): roof energy x the roof's material gain^2, split by where the roof is. Up = upward paths at a roof
+            // 0.2 m or more above the ears; Side = other paths at a roof 1 m or more above the ears; Junk = any path at a "roof" below
+            // 0.2 m above the ears (undersides of heaps, vehicles, pipes), which step 3 would ignore. Heavy = concrete, stone, asphalt, tile.
+            public double UpLightG, UpHeavyG, SideLightG, SideHeavyG, SideE, SideX, SideY, SideZ, JunkE;
             public void Scale(double k)
             {
+                UpLightG *= k; UpHeavyG *= k; SideLightG *= k; SideHeavyG *= k; SideE *= k; SideX *= k; SideY *= k; SideZ *= k; JunkE *= k;
                 UpRoofE *= k; UpStarts *= k; RoofCutLog *= k; UpRoofCutLog *= k; UpRoofRaw *= k;
                 Alpha *= k; Hits *= k; Len *= k; LenN *= k; CutLog *= k; LateEsc *= k; LateLeg *= k; LateLegN *= k;
                 OldEsc *= k; OldLeg *= k; DeepBase *= k; DeepEsc *= k; DeepRem *= k;
@@ -188,6 +193,8 @@ namespace RealSoundSimulation.Acoustics
             }
             public void Add(in Stats o)
             {
+                UpLightG += o.UpLightG; UpHeavyG += o.UpHeavyG; SideLightG += o.SideLightG; SideHeavyG += o.SideHeavyG;
+                SideE += o.SideE; SideX += o.SideX; SideY += o.SideY; SideZ += o.SideZ; JunkE += o.JunkE;
                 UpRoofE += o.UpRoofE; UpStarts += o.UpStarts; RoofCutLog += o.RoofCutLog; UpRoofCutLog += o.UpRoofCutLog; UpRoofRaw += o.UpRoofRaw;
                 Alpha += o.Alpha; Hits += o.Hits; Len += o.Len; LenN += o.LenN; CutLog += o.CutLog; LateEsc += o.LateEsc;
                 LateLeg += o.LateLeg; LateLegN += o.LateLegN; OldEsc += o.OldEsc; OldLeg += o.OldLeg;
@@ -596,6 +603,33 @@ namespace RealSoundSimulation.Acoustics
                 float er = er0 * ShaftLoss(p.Len + hit.distance, p.Bounces); // 0.6.34 "9u"
                 s.RoofE += er; s.RoofX += p.First.x * er; s.RoofY += p.First.y * er; s.RoofZ += p.First.z * er; if (through >= 0.1f) s.RoofN++;
                 if (p.First.y > UpY) { s.UpRoofE += er; s.UpRoofRaw += er0; }
+                // 0.9.3 step 2 (log only): the material of the roof actually hit (its own tag, else the topmost tag found just above it),
+                // and its height above the ears
+                {
+                    float above = hit.point.y - _listener.y;
+                    MaterialType rm = m != MaterialType.None ? m : _lastTopMat;
+                    float g = Mathf.Max(0f, Mathf.LerpUnclamped(1f, Materials.RoofRainGain(rm), Plugin.RoofRainByMaterial.Value));
+                    double eg = er * g * g;
+                    // 0.9.3: a high roof is further and more diffuse (raid_20261115_184638 tag 1: a warehouse's metal roof 9 m up played as
+                    // loud as a container's just overhead): -3 dB per doubling of height from 3 m to 9 m (-4.8 dB at 9 m), then -6 dB per
+                    // doubling above 9 m for halls and hangars (-10.8 dB at 18 m, -15 dB at 30 m)
+                    if (Plugin.RoofRainHeight.Value && above > RoofFullHeightM)
+                        eg *= above <= RoofSteepHeightM ? RoofFullHeightM / above
+                            : (RoofFullHeightM / RoofSteepHeightM) * (RoofSteepHeightM / above) * (RoofSteepHeightM / above);
+                    bool heavy = Materials.IsHeavyRoof(rm);
+                    // 0.9.3: a stair overhead counts at a third of the level (energy x 0.12, about -9 dB). Its collider is a solid block
+                    // whether the stair is a grating rain falls through or solid steel that drums (raid_20261115_184638 tag 6, the dorm's
+                    // outside stair "colider_ladder2", metal from "lod2_ladder2" above it, played full metal roof rain); the game data can't
+                    // tell the two apart, so it sits in between.
+                    if (IsStair(c)) eg *= StairEnergy;
+                    if (above < 0.2f) s.JunkE += er;
+                    else if (p.First.y > UpY) { if (heavy) s.UpHeavyG += eg; else s.UpLightG += eg; }
+                    else if (above >= 1f)
+                    {
+                        if (heavy) s.SideHeavyG += eg; else s.SideLightG += eg;
+                        s.SideE += er; s.SideX += p.First.x * er; s.SideY += p.First.y * er; s.SideZ += p.First.z * er;
+                    }
+                }
                 // 0.6.10: how bright this path is when it reaches the roof: the dullest surface it passed or reflected off,
                 // and RoofBounceDull per reflection on the way (scattering and edge diffraction; a placeholder until the
                 // materials overhaul). Straight up: 22 kHz; down a stair shaft after 3 bounces: ~5 kHz.
@@ -709,7 +743,8 @@ namespace RealSoundSimulation.Acoustics
         private const float FloorGapM = 1f, UntaggedFloorDb = 25f, FloorSearchM = 60f;
         private const int MaxFloorCasts = 16;
         private const float MinLowDetailFloorM = 4f; // 0.6.36: wider than a car both ways, so props above you aren't floors
-        private struct Floors { public int N, BlockN; public float Db, BlockDb; } // 0.6.36: Block* = main solid layers only, the count up to 0.6.35
+        private struct Floors { public int N, BlockN, WideN; public float Db, BlockDb, WideDb; public MaterialType TopMat; } // 0.9.3: TopMat = first tagged surface within 1.5 m above the roof hit // 0.6.36: Block* = main solid layers only, the count up to 0.6.35; 0.9.3: Wide* = only floors 2 m wide both ways
+        private const float MinWideFloorM = 2f; // 0.9.3: raid_20261115_130407 tag 6, under a sheet roof in a hall: 3 "floors" above (beams and the like), roof rain cut to 31%
         private static readonly Dictionary<long, Floors> FloorCache = new Dictionary<long, Floors>();
         public static readonly long[] FloorHist = new long[4]; // 0, 1, 2, 3+ floors above
         public static long OldRoofTestWrong;
@@ -718,7 +753,10 @@ namespace RealSoundSimulation.Acoustics
         private static float RoofThrough(Vector3 pt, Collider c)
         {
             if (!Plugin.RoofCountsFloors.Value) return IsRoof(pt, c) ? 1f : 0f;
-            long key = ((long)c.GetInstanceID() * 73856093L) ^ ((long)Mathf.FloorToInt(pt.x) * 19349663L) ^ ((long)Mathf.FloorToInt(pt.z) * 83492791L);
+            // 0.9.3: the height is part of the key. One collider can be the ceiling at several heights (a building's single concrete
+            // mesh), and a basement could take the count of the floor above it (raid_20261115_145057 mark 5: under the chemical factory,
+            // 2 m of slab and a whole floor above, yet "no floors" and roof rain at 94%).
+            long key = ((long)c.GetInstanceID() * 73856093L) ^ ((long)Mathf.FloorToInt(pt.x) * 19349663L) ^ ((long)Mathf.FloorToInt(pt.z) * 83492791L) ^ ((long)Mathf.FloorToInt(pt.y) * 2654435761L);
             if (!FloorCache.TryGetValue(key, out Floors f))
             {
                 if (FloorCache.Count > 50000) FloorCache.Clear();
@@ -729,11 +767,13 @@ namespace RealSoundSimulation.Acoustics
                 if (f.N > 0 && IsRoof(pt, c)) OldRoofTestWrong++;
             }
             bool low = Plugin.RoofCountsLowDetail.Value; // 0.6.36 "9v": both counts are cached, so the switch is live
-            int n = low ? f.N : f.BlockN;
-            float db = low ? f.Db : f.BlockDb;
-            _lastFloorN = n; _lastFloorOldN = f.BlockN;
-            if (n == 0) return 1f;
-            return Mathf.Pow(10f, -db * Mathf.Max(0f, Plugin.RoofFloorLossScale.Value) / 10f);
+            bool wide = low && Plugin.RoofFloorsWide.Value; // 0.9.3: also cached, also live
+            int n = wide ? f.WideN : low ? f.N : f.BlockN;
+            float db = wide ? f.WideDb : low ? f.Db : f.BlockDb;
+            _lastFloorN = n; _lastFloorOldN = f.BlockN; _lastTopMat = f.TopMat;
+            float through = n == 0 ? 1f : Mathf.Pow(10f, -db * Mathf.Max(0f, Plugin.RoofFloorLossScale.Value) / 10f);
+            NoteCeiling(c, pt, f, n, through);
+            return through;
         }
 
         // 0.6.34 "9u" (raid 43 tag 6): a path that bounces its way up a concrete stair shaft to the real roof lost only absorption (2% a bounce),
@@ -749,13 +789,100 @@ namespace RealSoundSimulation.Acoustics
         // 0.6.34: the floors the sound is using, from the straight-up rays' first ceilings (last second or so), for the overlay and probe2.csv
         private static readonly float[] FloorVotes = new float[4], FloorVotesOld = new float[4];
         private static int _lastFloorN, _lastFloorOldN;
+        private static MaterialType _lastTopMat = MaterialType.None; // 0.9.3: the roof's material from just above an untagged roof hit
+        private const float RoofFullHeightM = 3f, RoofSteepHeightM = 9f, StairEnergy = 0.12f;
+        private static readonly Dictionary<int, bool> StairCache = new Dictionary<int, bool>();
+        private static bool IsStair(Collider c)
+        {
+            int id = c.GetInstanceID();
+            if (StairCache.TryGetValue(id, out bool st)) return st;
+            if (StairCache.Count > 20000) StairCache.Clear();
+            string n = c.name;
+            st = n.IndexOf("ladder", StringComparison.OrdinalIgnoreCase) >= 0 || n.IndexOf("stair", StringComparison.OrdinalIgnoreCase) >= 0;
+            StairCache[id] = st;
+            return st;
+        }
         public static int FloorsNow = -1, FloorsOldNow = -1;
         public static float RoofLossDb;
+        public static float RoofUpLight, RoofUpHeavy, RoofSideLight, RoofSideHeavy, RoofSideLevel, RoofJunkLevel; // 0.9.3 step 2, log only
+        public static Vector3 RoofSideArrival = Vector3.up;
 
         public static string AboveText()
         {
             string floors = FloorsNow >= 3 ? "3+ floors" : FloorsNow == 2 ? "2 floors" : FloorsNow == 1 ? "1 floor" : "no floors";
             return $"{floors} above the ceiling (9p; main layers alone {(FloorsOldNow >= 3 ? "3+" : FloorsOldNow.ToString())}), surface overhead {RoofMat}, roof rain {RoofLevel:0.00}, faded {-RoofLossDb:0} dB getting here";
+        }
+
+        // 0.9.3: the last ceilings the rain tracing evaluated (the probe's own rays, not one straight-up line), for floors.csv at F10
+        private struct CeilingNote { public Collider C; public Vector3 Pt; public int N, BlockN, WideN, Used; public float Through, T; }
+        private static readonly CeilingNote[] Ceilings = new CeilingNote[64];
+        private static int _ceilingNext;
+        private static void NoteCeiling(Collider c, Vector3 pt, Floors f, int used, float through)
+        {
+            if (!Diagnostics.DiagLog.IsOpen) return;
+            Ceilings[_ceilingNext] = new CeilingNote { C = c, Pt = pt, N = f.N, BlockN = f.BlockN, WideN = f.WideN, Used = used, Through = through, T = Time.time };
+            _ceilingNext = (_ceilingNext + 1) % Ceilings.Length;
+        }
+
+        // 0.9.3: at each F10, what is above your head: every surface straight up to 60 m, its size, material and whether it counts as a
+        // floor (all, and with "only wide floors"). floors.csv, bug report logs only.
+        public const string FloorsHeader = "t,mark,i,heightM,name,layer,widthM,depthM,material,lossDb,mainLayer,countsAll,countsWide";
+        public static void DumpFloors(int mark, float t)
+        {
+            if (!Diagnostics.DiagLog.IsOpen || Camera.main == null) return;
+            Vector3 pt = Camera.main.transform.position;
+            bool was = Physics.queriesHitBackfaces;
+            Physics.queriesHitBackfaces = true;
+            try
+            {
+                float lastY = pt.y, wideLastY = pt.y, top = pt.y + FloorSearchM;
+                bool first = true;
+                Vector3 o = pt;
+                for (int i = 0; i < MaxFloorCasts && o.y < top; i++)
+                {
+                    if (!Physics.Raycast(o, Vector3.up, out RaycastHit h, top - o.y, _mask, QueryTriggerInteraction.Ignore)) break;
+                    bool block = (_blockMask & (1 << h.collider.gameObject.layer)) != 0;
+                    Vector3 size = h.collider.bounds.size;
+                    MaterialType mat = Surfaces.Material(h.collider);
+                    float db = Materials.TryGet(mat, out Materials.Surface s) && !float.IsInfinity(s.T1k) ? s.T1k : UntaggedFloorDb;
+                    bool counted = block || Mathf.Min(size.x, size.z) >= MinLowDetailFloorM;
+                    bool all = !first && counted && h.point.y - lastY >= FloorGapM;
+                    bool wide = !first && counted && Mathf.Min(size.x, size.z) >= MinWideFloorM && h.point.y - wideLastY >= FloorGapM;
+                    if (first) { lastY = wideLastY = h.point.y; first = false; } // the ceiling itself
+                    else
+                    {
+                        if (counted) lastY = h.point.y;
+                        if (counted && Mathf.Min(size.x, size.z) >= MinWideFloorM) wideLastY = h.point.y;
+                    }
+                    Diagnostics.DiagLog.Row("floors.csv", string.Join(",", Diagnostics.DiagLog.F(t, "0.00"), mark.ToString(), i.ToString(),
+                        Diagnostics.DiagLog.F(h.point.y - pt.y, "0.0"), Diagnostics.DiagLog.Csv(h.collider.name), LayerMask.LayerToName(h.collider.gameObject.layer),
+                        Diagnostics.DiagLog.F(size.x, "0.0"), Diagnostics.DiagLog.F(size.z, "0.0"), mat.ToString(), Diagnostics.DiagLog.F(db, "0"),
+                        block ? "1" : "0", i == 0 ? "ceiling" : all ? "1" : "0", i == 0 ? "ceiling" : wide ? "1" : "0"));
+                    o = h.point + Vector3.up * Skin;
+                }
+            }
+            catch (Exception e) { Diagnostics.DiagRunner.ReportOnce("floors dump", e); }
+            finally { Physics.queriesHitBackfaces = was; }
+            // the rain tracing's own view: the last ceilings its rays reached (up to 64, last 3 s), each once
+            try
+            {
+                var seen = new HashSet<long>();
+                for (int k = 0; k < Ceilings.Length; k++)
+                {
+                    CeilingNote n = Ceilings[k];
+                    if (n.C == null || Time.time - n.T > 3f) continue;
+                    long id = ((long)n.C.GetInstanceID() << 20) ^ ((long)Mathf.FloorToInt(n.Pt.y * 2f) << 10) ^ (long)Mathf.FloorToInt(n.Pt.x);
+                    if (!seen.Add(id)) continue;
+                    Diagnostics.DiagLog.Row("floors.csv", string.Join(",", Diagnostics.DiagLog.F(t, "0.00"), mark.ToString(), "probe",
+                        Diagnostics.DiagLog.F(n.Pt.y - pt.y, "0.0"), Diagnostics.DiagLog.Csv(n.C.name), LayerMask.LayerToName(n.C.gameObject.layer),
+                        Diagnostics.DiagLog.F(Vector3.Distance(new Vector3(n.Pt.x, pt.y, n.Pt.z), pt), "0.0"), "", Surfaces.Material(n.C).ToString(),
+                        Diagnostics.DiagLog.F(n.Through, "0.000"), "", $"all {n.N} main {n.BlockN} wide {n.WideN}", $"used {n.Used}"));
+                }
+                Diagnostics.DiagLog.Row("floors.csv", string.Join(",", Diagnostics.DiagLog.F(t, "0.00"), mark.ToString(), "summary",
+                    Diagnostics.DiagLog.F(RoofLevel, "0.000"), $"floorsNow {FloorsNow}", "", Diagnostics.DiagLog.F(RoofLevelAll, "0.000"), "",
+                    $"up-path share {(_acc.RoofE > 1e-12 ? _acc.UpRoofE / _acc.RoofE : 0):0.00}", Diagnostics.DiagLog.F(RoofLossDb, "0.0"), "", "", ""));
+            }
+            catch (Exception e) { Diagnostics.DiagRunner.ReportOnce("floors dump (probe)", e); }
         }
 
         private static Floors CountFloors(Vector3 pt)
@@ -768,18 +895,24 @@ namespace RealSoundSimulation.Acoustics
                 // 0.6.36 "9v" (raid 44 tag 1, Capital meeting room: roof rain 0.18 with floors above): much of the Capital's floors are low-detail
                 // colliders on layers the main mask leaves out, so looking up from a ceiling found nothing and it counted as the top roof.
                 // Now those count too when they are large; the old count is kept beside it for the log.
-                float lastY = pt.y, blockLastY = pt.y, top = pt.y + FloorSearchM;
+                float lastY = pt.y, blockLastY = pt.y, wideLastY = pt.y, top = pt.y + FloorSearchM;
                 Vector3 o = pt + Vector3.up * Skin;
                 for (int i = 0; i < MaxFloorCasts && o.y < top; i++)
                 {
                     if (!CountedRay.Raycast(o, Vector3.up, out RaycastHit h, top - o.y, _mask, QueryTriggerInteraction.Ignore)) break;
                     bool block = (_blockMask & (1 << h.collider.gameObject.layer)) != 0;
                     Vector3 size = h.collider.bounds.size;
+                    if (f.TopMat == MaterialType.None && h.point.y - pt.y < 1.5f) { MaterialType tm = Surfaces.Material(h.collider); if (tm != MaterialType.None) f.TopMat = tm; }
                     if (block || Mathf.Min(size.x, size.z) >= MinLowDetailFloorM)
                     {
                         float db = Materials.TryGet(Surfaces.Material(h.collider), out Materials.Surface t) && !float.IsInfinity(t.T1k) ? t.T1k : UntaggedFloorDb;
                         if (h.point.y - lastY >= FloorGapM) { f.N++; f.Db += db; }
                         lastY = h.point.y;
+                        if (Mathf.Min(size.x, size.z) >= MinWideFloorM)
+                        {
+                            if (h.point.y - wideLastY >= FloorGapM) { f.WideN++; f.WideDb += db; }
+                            wideLastY = h.point.y;
+                        }
                         if (block)
                         {
                             if (h.point.y - blockLastY >= FloorGapM) { f.BlockN++; f.BlockDb += db; }
@@ -808,7 +941,15 @@ namespace RealSoundSimulation.Acoustics
             // 0.6.34: the direction check is gone. Raid 43: 56 of 57 resets were direction, 43 of them standing still, because arrival direction
             // from a few paths wanders. Moving already shortens the memory, so it added noise and no speed.
             if (kind == 0) return;
-            _acc = _fast;
+            if (kind == 1)
+            {
+                // 0.9.3 (Fable review of the 15 Nov Customs rain raids): a roof reset replaced 3 s of memory (2238 paths) with as few as 8.5,
+                // and roof rain dipped 6.7 dB standing still in a train car (raid_20261115_175947 at 30.1 s). Now it needs 16 upward paths,
+                // and a quarter of the old memory is kept.
+                if (_fast.UpStarts < MinFastRoofStarts) return;
+                Stats keep = _acc; keep.Scale(0.25); _acc = _fast; _acc.Add(keep);
+            }
+            else _acc = _fast;
             _lastChange = now;
             if (kind == 1) ChangesRoof++; else ChangesLeak++;
             if (_speed < 0.2f) ChangesStill++;
@@ -1133,6 +1274,15 @@ namespace RealSoundSimulation.Acoustics
             // 0.6.7: roof rain, traced from the roof
             RoofPaths = (float)_acc.RoofN;
             RoofLevelAll = _acc.Starts > 1 ? Mathf.Clamp01((float)(_acc.RoofE / _acc.Starts) / RoofRef) : 0f;
+            // 0.9.3 step 2 (log only)
+            RoofUpLight = _acc.UpStarts > 1 ? (float)(_acc.UpLightG / _acc.UpStarts) / RoofRefUp : 0f;
+            RoofUpHeavy = _acc.UpStarts > 1 ? (float)(_acc.UpHeavyG / _acc.UpStarts) / RoofRefUp : 0f;
+            RoofSideLight = _acc.Starts > 1 ? (float)(_acc.SideLightG / _acc.Starts) / RoofRef : 0f;
+            RoofSideHeavy = _acc.Starts > 1 ? (float)(_acc.SideHeavyG / _acc.Starts) / RoofRef : 0f;
+            RoofSideLevel = _acc.Starts > 1 ? Mathf.Clamp01((float)(_acc.SideE / _acc.Starts) / RoofRef) : 0f;
+            RoofJunkLevel = _acc.Starts > 1 ? Mathf.Clamp01((float)(_acc.JunkE / _acc.Starts) / RoofRef) : 0f;
+            Vector3 sv = new Vector3((float)_acc.SideX, (float)_acc.SideY, (float)_acc.SideZ);
+            if (sv.sqrMagnitude > 1e-12f) RoofSideArrival = sv.normalized;
             // 0.6.9: per UPWARD path (raid 28: under a roof right overhead in a room with big openings, most paths escaped
             // sideways first, so the all-paths level read 0.42 - "half a roof". The roof radiates the same either way.)
             RoofLevel = _acc.UpStarts > 1 ? Mathf.Clamp01((float)(_acc.UpRoofE / _acc.UpStarts) / RoofRefUp) : RoofLevelAll;
@@ -1262,7 +1412,7 @@ namespace RealSoundSimulation.Acoustics
 
         // ---------------- logs ----------------
 
-        public const string Header = "t,level,levelDb,direct,traced,tail,remaining,escapeRate,absorption,meanFreePathM,rt60S,skyOpen,enclosed,coverage,roofMat,cutoffHz,arrivalAz,arrivalEl,focus,diffuseShare,room,size,hardRoom,raysPerS,escapeRateOld,tailOld,deepEscShare,deepRemShare,escapes,openings,relErr,smoothS,focusEarly,focusBuildUp,buildUpAz,buildUpEl,buildUpCount,roofLevel,roofAz,roofEl,roofFocus,roofCount,roofLevelAll,roofCutoffHz,memoryS,speedMs,fastRoof,changes,floorsNow,roofLossDb,floorsOldNow";
+        public const string Header = "t,level,levelDb,direct,traced,tail,remaining,escapeRate,absorption,meanFreePathM,rt60S,skyOpen,enclosed,coverage,roofMat,cutoffHz,arrivalAz,arrivalEl,focus,diffuseShare,room,size,hardRoom,raysPerS,escapeRateOld,tailOld,deepEscShare,deepRemShare,escapes,openings,relErr,smoothS,focusEarly,focusBuildUp,buildUpAz,buildUpEl,buildUpCount,roofLevel,roofAz,roofEl,roofFocus,roofCount,roofLevelAll,roofCutoffHz,memoryS,speedMs,fastRoof,changes,floorsNow,roofLossDb,floorsOldNow,roofUpLight,roofUpHeavy,roofSideLight,roofSideHeavy,roofSideLevel,roofSideAz,roofSideEl,roofJunk,topMat";
 
         private static float _lastRaysT; private static long _lastRays; private static float _raysPerS;
 
@@ -1281,7 +1431,10 @@ namespace RealSoundSimulation.Acoustics
                 DiagLog.F(BuildUpCount, "0.0"), DiagLog.F(RoofLevel), DiagLog.F(RelAz(lt, RoofArrival), "0"),
                 DiagLog.F(Mathf.Asin(Mathf.Clamp(RoofArrival.y, -1f, 1f)) * Mathf.Rad2Deg, "0"), DiagLog.F(RoofFocus), DiagLog.F(RoofPaths, "0.0"), DiagLog.F(RoofLevelAll), DiagLog.F(RoofCutoffHz, "0"), DiagLog.F(StatTauNow, "0.00"), DiagLog.F(_speed, "0.0"),
                 DiagLog.F(_fast.UpStarts > 1 ? Mathf.Clamp01((float)(_fast.UpRoofE / _fast.UpStarts) / RoofRefUp) : 0f), (ChangesRoof + ChangesLeak).ToString(),
-                FloorsNow.ToString(), DiagLog.F(RoofLossDb, "0.0"), FloorsOldNow.ToString());
+                FloorsNow.ToString(), DiagLog.F(RoofLossDb, "0.0"), FloorsOldNow.ToString(),
+                DiagLog.F(RoofUpLight, "0.0000"), DiagLog.F(RoofUpHeavy, "0.0000"), DiagLog.F(RoofSideLight, "0.0000"), DiagLog.F(RoofSideHeavy, "0.0000"),
+                DiagLog.F(RoofSideLevel, "0.0000"), DiagLog.F(RelAz(lt, RoofSideArrival), "0"), DiagLog.F(Mathf.Asin(Mathf.Clamp(RoofSideArrival.y, -1f, 1f)) * Mathf.Rad2Deg, "0"),
+                DiagLog.F(RoofJunkLevel, "0.0000"), _lastTopMat.ToString());
         }
 
         public static float RelAz(Transform lt, Vector3 dir)
